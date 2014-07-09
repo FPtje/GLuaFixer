@@ -82,7 +82,10 @@ tokens :-
 	"..."														{ wrapToken (const VarArg) }
 {
 
-data MToken = MToken AlexPosn Token deriving (Show)
+data MToken = MToken AlexPosn Token
+
+instance Show MToken where
+	show (MToken (AlexPn _ line col) token) = "[" ++ (show line) ++ ":" ++ (show col) ++ "](" ++ (show token) ++ ")"
 
 wrapToken :: (String -> Token) -> AlexPosn -> String -> MToken
 wrapToken token pos str =  MToken pos (token str)
