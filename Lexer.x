@@ -11,7 +11,7 @@ $digit = 0-9
 $hexa  = [0-9a-fA-F]
 $alpha = [a-zA-Z]
 $all   = [.\n\r]
-
+$any   = [.]
 
 tokens :-
 	$white+														{ wrapToken Whitespace }
@@ -80,6 +80,9 @@ tokens :-
 	"."															{ wrapToken (const Dot) }
 	".."														{ wrapToken (const Concatenate) }
 	"..."														{ wrapToken (const VarArg) }
+
+	\" ($any # \"|\\ $any # \")* \"								{ wrapToken (DQString . tail . init) }
+	\' ($any # \'|\\ $any # \')* \'								{ wrapToken (SQString . tail . init) }
 	[a-zA-Z_][a-zA-Z_0-9]*										{ wrapToken Identifier }
 {
 

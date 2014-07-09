@@ -11,6 +11,10 @@ data Token =
 	Label String				|	-- ::
 	Identifier String 			|
 
+	DQString String				|	-- Double quote string
+	SQString String				|	-- Single quote string
+	MLString String				|	-- Multiline string
+
 	-- Keywords
 	And							|
 	CAnd						|
@@ -76,6 +80,10 @@ type TokenAlgebra token = (
 	String -> token,	-- Label
 	String -> token,	-- Identifier
 
+	String -> token,	-- DQString
+	String -> token,	-- SQString
+	String -> token,	-- MLString
+
 	token,				-- And
 	token,				-- CAnd
 	token,				-- Break
@@ -130,7 +138,7 @@ type TokenAlgebra token = (
 	)
 
 foldToken :: TokenAlgebra t -> Token -> t
-foldToken (tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tTNumber, tLabel, tIdentifier, tAnd, tCAnd, tBreak, tDo, tElse, tElseif, tEnd, tTFalse, tFor, tFunction, tGoto, tIf, tIn, tLocal, tNil, tNot, tOr, tCOr, tRepeat, tReturn, tThen, tTTrue, tUntil, tWhile, tPlus, tMinus, tMulitply, tDivide, tModulus, tPower, tHash, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare, tSemicolon, tColon, tComma, tDot, tConcatenate, tVarArg) = fold
+foldToken (tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tTNumber, tLabel, tIdentifier, tDQString, tSQString, tMLString, tAnd, tCAnd, tBreak, tDo, tElse, tElseif, tEnd, tTFalse, tFor, tFunction, tGoto, tIf, tIn, tLocal, tNil, tNot, tOr, tCOr, tRepeat, tReturn, tThen, tTTrue, tUntil, tWhile, tPlus, tMinus, tMulitply, tDivide, tModulus, tPower, tHash, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare, tSemicolon, tColon, tComma, tDot, tConcatenate, tVarArg) = fold
 	where
 		fold (Whitespace str) = tWhitespace str
 		fold (DashComment str) = tDashComment str
@@ -140,6 +148,9 @@ foldToken (tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBl
 		fold (TNumber str) = tTNumber str
 		fold (Label str) = tLabel str
 		fold (Identifier str) = tIdentifier str
+		fold (DQString str) = tDQString str
+		fold (SQString str) = tSQString str
+		fold (MLString str) = tMLString str
 		fold And = tAnd
 		fold CAnd = tCAnd
 		fold Break = tBreak
@@ -202,6 +213,9 @@ instance Show Token where
 		id,
 		id,
 		id,
+		\s -> "\"" ++ s ++ "\"",
+		\s -> "'" ++ s ++ "'",
+		id,
 		"and",
 		"&&",
 		"break",
@@ -256,4 +270,4 @@ instance Show Token where
 		)
 
 isWhitespace :: Token -> Bool
-isWhitespace = foldToken (const True, const False, const False, const False, const False, const False, const False, const False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False)
+isWhitespace = foldToken (const True, const False, const False, const False, const False, const False, const False, const False, const False, const False, const False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False)
