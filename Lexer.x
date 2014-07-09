@@ -22,7 +22,7 @@ tokens :-
 	"/*" ($all # \* | \* $all # \/)* \*+ \/ 					{ wrapToken SlashBlockComment }
 
 	-- Matches any number
-	(((0[xX]$hexa+)(\.?$hexa*))|([0-9]+)(\.?[0-9]*))[eEpP]?[\+\-]?[0-9]* { wrapToken TNumber }
+	(((0[xX]$hexa+)(\.?$hexa*))|($digit+)(\.?$digit*))[eEpP]?[\+\-]?$digit* { wrapToken TNumber }
 
 	-- Keywords
 	"and"														{ wrapToken (const And) }
