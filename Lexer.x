@@ -26,6 +26,7 @@ tokens :-
 
 	-- Keywords
 	"and"														{ wrapToken (const And) }
+	"&&"														{ wrapToken (const CAnd) }
 	"break"														{ wrapToken (const Break) }
 	"do"														{ wrapToken (const Do) }
 	"else"														{ wrapToken (const Else) }
@@ -41,6 +42,7 @@ tokens :-
 	"nil"														{ wrapToken (const Nil) }
 	"not"														{ wrapToken (const Not) }
 	"or"														{ wrapToken (const Or) }
+	"||"														{ wrapToken (const COr) }
 	"repeat"													{ wrapToken (const Repeat) }
 	"return"													{ wrapToken (const Return) }
 	"then"														{ wrapToken (const Then) }

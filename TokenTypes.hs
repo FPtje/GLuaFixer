@@ -11,6 +11,7 @@ data Token =
 
 	-- Keywords
 	And							|
+	CAnd						|
 	Break						|
 	Do							|
 	Else						|
@@ -26,6 +27,7 @@ data Token =
 	Nil							|
 	Not							|
 	Or							|
+	COr							|
 	Repeat						|
 	Return						|
 	Then						|
