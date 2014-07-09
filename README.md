@@ -2,8 +2,6 @@ GLuaParser
 ==========
 
 WIP Lexer/Parser for Garry's mod's variant of Lua.
->>>>>>> ef91c123521c07aee0fc056ae2c728cff8461526
-
 
 # Compiling
 
