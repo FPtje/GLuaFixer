@@ -83,6 +83,7 @@ tokens :-
 
 	\" ($any # \"|\\ $any # \")* \"								{ wrapToken (DQString . tail . init) }
 	\' ($any # \'|\\ $any # \')* \'								{ wrapToken (SQString . tail . init) }
+	\[\=*\[	($any # \] | \] $any # \])* \]\=*\]					{ wrapToken (MLString . (drop 2) . init . init) }
 	[a-zA-Z_][a-zA-Z_0-9]*										{ wrapToken Identifier }
 {
 

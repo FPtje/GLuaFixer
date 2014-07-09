@@ -215,7 +215,7 @@ instance Show Token where
 		id,
 		\s -> "\"" ++ s ++ "\"",
 		\s -> "'" ++ s ++ "'",
-		id,
+		\s -> "[[" ++ s ++ "]]",
 		"and",
 		"&&",
 		"break",
