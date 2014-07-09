@@ -80,6 +80,7 @@ tokens :-
 	"."															{ wrapToken (const Dot) }
 	".."														{ wrapToken (const Concatenate) }
 	"..."														{ wrapToken (const VarArg) }
+	[a-zA-Z_][a-zA-Z_0-9]*										{ wrapToken Identifier }
 {
 
 data MToken = MToken AlexPosn Token
