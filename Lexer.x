@@ -61,6 +61,7 @@ tokens :-
 	"#"															{ wrapToken (const Hash) }
 	"=="														{ wrapToken (const TEq) }
 	"~="														{ wrapToken (const TNEq) }
+	"!="														{ wrapToken (const TCNEq) }
 	"<="														{ wrapToken (const TLEQ) }
 	">="														{ wrapToken (const TGEQ) }
 	"<"															{ wrapToken (const TLT) }

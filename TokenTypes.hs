@@ -45,6 +45,7 @@ data Token =
 	Hash						|	-- #
 	TEq							|	-- ==
 	TNEq						|	-- ~=
+	TCNEq						|	-- !=
 	TLEQ						|	-- <=
 	TGEQ						|	-- >=
 	TLT							|	-- <
@@ -106,6 +107,7 @@ type TokenAlgebra token = (
 	token,				-- Hash
 	token,				-- TEq
 	token,				-- TNEq
+	token,				-- TCNEq
 	token,				-- TLEQ
 	token,				-- TGEQ
 	token,				-- TLT
@@ -126,7 +128,7 @@ type TokenAlgebra token = (
 	)
 
 foldToken :: TokenAlgebra t -> Token -> t
-foldToken (tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tTNumber, tLabel, tAnd, tCAnd, tBreak, tDo, tElse, tElseif, tEnd, tTFalse, tFor, tFunction, tGoto, tIf, tIn, tLocal, tNil, tNot, tOr, tCOr, tRepeat, tReturn, tThen, tTTrue, tUntil, tWhile, tPlus, tMinus, tMulitply, tDivide, tModulus, tPower, tHash, tTEq, tTNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare, tSemicolon, tColon, tComma, tDot, tConcatenate, tVarArg) = fold
+foldToken (tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tTNumber, tLabel, tAnd, tCAnd, tBreak, tDo, tElse, tElseif, tEnd, tTFalse, tFor, tFunction, tGoto, tIf, tIn, tLocal, tNil, tNot, tOr, tCOr, tRepeat, tReturn, tThen, tTTrue, tUntil, tWhile, tPlus, tMinus, tMulitply, tDivide, tModulus, tPower, tHash, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare, tSemicolon, tColon, tComma, tDot, tConcatenate, tVarArg) = fold
 	where
 		fold (Whitespace str) = tWhitespace str
 		fold (DashComment str) = tDashComment str
@@ -168,6 +170,7 @@ foldToken (tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBl
 		fold Hash = tHash
 		fold TEq = tTEq
 		fold TNEq = tTNEq
+		fold TCNEq = tTCNEq
 		fold TLEQ = tTLEQ
 		fold TGEQ = tTGEQ
 		fold TLT = tTLT
@@ -228,6 +231,7 @@ instance Show Token where
 		"#",
 		"==",
 		"~=",
+		"!=",
 		"<=",
 		">=",
 		"<",
