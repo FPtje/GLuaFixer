@@ -90,4 +90,15 @@ instance Show MToken where
 wrapToken :: (String -> Token) -> AlexPosn -> String -> MToken
 wrapToken token pos str =  MToken pos (token str)
 
+toToken :: MToken -> Token
+toToken (MToken _ t) = t
+
+listTokens :: [MToken] -> [Token]
+listTokens = map toToken
+
+listPureTokens :: [MToken] -> [Token]
+listPureTokens = filter (not . isWhitespace) . listTokens
+
+
+
 }

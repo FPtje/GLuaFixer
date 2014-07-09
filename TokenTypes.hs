@@ -250,3 +250,6 @@ instance Show Token where
 		"..",
 		"..."
 		)
+
+isWhitespace :: Token -> Bool
+isWhitespace = foldToken (const True, const False, const False, const False, const False, const False, const False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False)
