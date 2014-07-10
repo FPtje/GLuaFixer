@@ -230,8 +230,8 @@ instance Show Token where
         ),
         (
         id, -- TNumber
-        id, -- DQString
-        id, -- SQString
+        \s -> "\"" ++ s ++ "\"", -- DQString
+        \s -> "'" ++ s ++ "'", -- SQString
         id, -- MLString
         "true", -- TTrue
         "false", -- TFalse
