@@ -1,53 +1,31 @@
 module TokenTypes where
 
 data Token =
+	-- Comments and whitespace
 	Whitespace String			|
 	DashComment String			|
 	DashBlockComment String		|
 	SlashComment String			|
 	SlashBlockComment String	|
+	Semicolon					|	-- ;
 
+	-- Constants
 	TNumber String				|
-	Label String				|	-- ::
-	Identifier String 			|
-
 	DQString String				|	-- Double quote string
 	SQString String				|	-- Single quote string
 	MLString String				|	-- Multiline string
-
-	-- Keywords
-	And							|
-	CAnd						|
-	Break						|
-	Do							|
-	Else						|
-	Elseif						|
-	End							|
-	TFalse						|
-	For							|
-	Function					|
-	Goto						|
-	If							|
-	In							|
-	Local						|
-	Nil							|
-	Not							|
-	Or							|
-	COr							|
-	Repeat						|
-	Return						|
-	Then						|
 	TTrue						|
-	Until						|
-	While						|
+	TFalse						|
+	Nil							|
+	VarArg						|	-- ...
 
+	-- Operators
 	Plus						|	-- +
 	Minus						|	-- -
 	Mulitply					|	-- *
 	Divide						|	-- /
 	Modulus						|	-- %
 	Power						|	-- ^
-	Hash						|	-- #
 	TEq							|	-- ==
 	TNEq						|	-- ~=
 	TCNEq						|	-- !=
@@ -56,89 +34,126 @@ data Token =
 	TLT							|	-- <
 	TGT							|	-- >
 	Equals						|	-- =
+	Concatenate					|	-- ..
+	Colon						|	-- :
+	Dot							|	-- .
+	Comma						|	-- ,
+	Hash						|	-- #
+	Not							|
+	CNot						|	-- !
+	And							|
+	CAnd						|
+	Or							|
+	COr							|
+
+	-- Keywords
+	Function					|
+	Local						|
+	If							|
+	Then						|
+	Elseif						|
+	Else						|
+	For							|
+	In							|
+	Do							|
+	While						|
+	Until						|
+	Repeat						|
+	Break						|
+	Return						|
+	End							|
+	Goto						|
+
 	LRound						|	-- (
 	RRound						|	-- )
 	LCurly						|	-- {
 	RCurly						|	-- }
 	LSquare						|	-- [
 	RSquare 					|	-- ]
-	Semicolon					|	-- ;
-	Colon						|	-- :
-	Comma						|	-- ,"
-	Dot							|	-- .
-	Concatenate					|	-- ..
-	VarArg							-- ...
+	Label String				|	-- ::
+	Identifier String
 
 
 type TokenAlgebra token = (
-	String -> token,	-- Whitespace
-	String -> token,	-- DashComment
-	String -> token,	-- DashBlockComment
-	String -> token,	-- SlashComment
-	String -> token,	-- SlashBlockComment
-	String -> token,	-- TNumber
-	String -> token,	-- Label
-	String -> token,	-- Identifier
-
-	String -> token,	-- DQString
-	String -> token,	-- SQString
-	String -> token,	-- MLString
-
-	token,				-- And
-	token,				-- CAnd
-	token,				-- Break
-	token,				-- Do
-	token,				-- Else
-	token,				-- Elseif
-	token,				-- End
-	token,				-- TFalse
-	token,				-- For
-	token,				-- Function
-	token,				-- Goto
-	token,				-- If
-	token,				-- In
-	token,				-- Local
-	token,				-- Nil
-	token,				-- Not
-	token,				-- Or
-	token,				-- COr
-	token,				-- Repeat
-	token,				-- Return
-	token,				-- Then
-	token,				-- TTrue
-	token,				-- Until
-	token,				-- While
-	token,				-- Plus
-	token,				-- Minus
-	token,				-- Mulitply
-	token,				-- Divide
-	token,				-- Modulus
-	token,				-- Power
-	token,				-- Hash
-	token,				-- TEq
-	token,				-- TNEq
-	token,				-- TCNEq
-	token,				-- TLEQ
-	token,				-- TGEQ
-	token,				-- TLT
-	token,				-- TGT
-	token,				-- Equals
-	token,				-- LRound
-	token,				-- RRound
-	token,				-- LCurly
-	token,				-- RCurly
-	token,				-- LSquare
-	token,				-- RSquare
-	token,				-- Semicolon
-	token,				-- Colon
-	token,				-- Comma
-	token,				-- Dot
-	token,				-- Concatenate
-	token				-- VarArg
+	( -- Comments and whitespace
+		String -> token,	-- Whitespace
+		String -> token,	-- DashComment
+		String -> token,	-- DashBlockComment
+		String -> token,	-- SlashComment
+		String -> token,	-- SlashBlockComment
+		token				-- Semicolon
+	),
+	( -- Constants
+		String -> token,	-- TNumber
+		String -> token,	-- DQString
+		String -> token,	-- SQString
+		String -> token,	-- MLString
+		token,				-- TTrue
+		token,				-- TFalse
+		token,				-- Nil
+		token				-- VarArg
+	), -- operators
+	(
+		token,				-- Plus
+		token,				-- Minus
+		token,				-- Mulitply
+		token,				-- Divide
+		token,				-- Modulus
+		token,				-- Power
+		token,				-- TEq
+		token,				-- TNEq
+		token,				-- TCNEq
+		token,				-- TLEQ
+		token,				-- TGEQ
+		token,				-- TLT
+		token,				-- TGT
+		token,				-- Equals
+		token,				-- Concatenate
+		token,				-- Colon
+		token,				-- Dot
+		token,				-- Comma
+		token,				-- Hash
+		token,				-- Not
+		token,				-- CNot
+		token,				-- And
+		token,				-- CAnd
+		token,				-- Or
+		token				-- COr
+	),
+	( -- Keywords
+		token,				-- Function
+		token,				-- Local
+		token,				-- If
+		token,				-- Then
+		token,				-- Elseif
+		token,				-- Else
+		token,				-- For
+		token,				-- In
+		token,				-- Do
+		token,				-- While
+		token,				-- Until
+		token,				-- Repeat
+		token,				-- Break
+		token,				-- Return
+		token,				-- End
+		token				-- Goto
+	),
+	( -- Brackets
+		token,				-- LRound
+		token,				-- RRound
+		token,				-- LCurly
+		token,				-- RCurly
+		token,				-- LSquare
+		token				-- RSquare
+	),
+	( -- Other
+		String -> token,	-- Label
+		String -> token		-- Identifier
+	)
 	)
 
 foldToken :: TokenAlgebra t -> Token -> t
-foldToken (tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tTNumber, tLabel, tIdentifier, tDQString, tSQString, tMLString, tAnd, tCAnd, tBreak, tDo, tElse, tElseif, tEnd, tTFalse, tFor, tFunction, tGoto, tIf, tIn, tLocal, tNil, tNot, tOr, tCOr, tRepeat, tReturn, tThen, tTTrue, tUntil, tWhile, tPlus, tMinus, tMulitply, tDivide, tModulus, tPower, tHash, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare, tSemicolon, tColon, tComma, tDot, tConcatenate, tVarArg) = fold
+foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tSemicolon), (tTNumber, tDQString, tSQString, tMLString, tTTrue, tTFalse, tNil, tVarArg), (tPlus, tMinus, tMulitply, tDivide, tModulus, tPower, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tConcatenate, tColon, tDot, tComma, tHash, tNot, tCNot, tAnd, tCAnd, tOr, tCOr), (tFunction, tLocal, tIf, tThen, tElseif, tElse, tFor, tIn, tDo, tWhile, tUntil, tRepeat, tBreak, tReturn, tEnd, tGoto), (tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare), (tLabel, tIdentifier)) = fold
 	where
 		fold (Whitespace str) = tWhitespace str
 		fold (DashComment str) = tDashComment str
@@ -167,6 +182,7 @@ foldToken (tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBl
 		fold Local = tLocal
 		fold Nil = tNil
 		fold Not = tNot
+		fold CNot = tCNot
 		fold Or = tOr
 		fold COr = tCOr
 		fold Repeat = tRepeat
@@ -204,70 +220,84 @@ foldToken (tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBl
 		fold VarArg = tVarArg
 
 instance Show Token where
-	show = foldToken (
-		id,
-		id,
-		id,
-		id,
-		id,
-		id,
-		id,
-		id,
-		\s -> "\"" ++ s ++ "\"",
-		\s -> "'" ++ s ++ "'",
-		\s -> "[[" ++ s ++ "]]",
-		"and",
-		"&&",
-		"break",
-		"do",
-		"else",
-		"elseif",
-		"end",
-		"false",
-		"for",
-		"function",
-		"goto",
-		"if",
-		"in",
-		"local",
-		"nil",
-		"not",
-		"or",
-		"||",
-		"repeat",
-		"return",
-		"then",
-		"true",
-		"until",
-		"while",
-		"+",
-		"-",
-		"*",
-		"/",
-		"%",
-		"^",
-		"#",
-		"==",
-		"~=",
-		"!=",
-		"<=",
-		">=",
-		"<",
-		">",
-		"=",
-		"(",
-		")",
-		"{",
-		"}",
-		"[",
-		"]",
-		";",
-		":",
-		",",
-		".",
-		"..",
-		"..."
+	show = foldToken ((
+		\s -> "{" ++ s ++ "}", -- Whitespace
+		id, -- DashComment
+		id, -- DashBlockComment
+		id, -- SlashComment
+		id, -- SlashBlockComment
+		";" -- Semicolon
+		),
+		(
+		id, -- TNumber
+		id, -- DQString
+		id, -- SQString
+		id, -- MLString
+		"true", -- TTrue
+		"false", -- TFalse
+		"nil", -- Nil
+		"..." -- VarArg
+		),
+		(
+		"+", -- Plus
+		"-", -- Minus
+		"*", -- Mulitply
+		"/", -- Divide
+		"%", -- Modulus
+		"^", -- Power
+		"==", -- TEq
+		"~=", -- TNEq
+		"!=", -- TCNEq
+		"<=", -- TLEQ
+		">=", -- TGEQ
+		"<", -- TLT
+		">", -- TGT
+		"=", -- Equals
+		"..", -- Concatenate
+		":", -- Colon
+		".", -- Dot
+		",", -- Comma
+		"#", -- Hash
+		"not", -- Not
+		"!", -- CNot
+		"and", -- And
+		"&&", -- CAnd
+		"or", -- Or
+		"||" -- COr
+		),
+		(
+		"function", -- Function
+		"local", -- Local
+		"if", -- If
+		"then", -- Then
+		"elseif", -- Elseif
+		"else", -- Else
+		"for", -- For
+		"in", -- In
+		"do", -- Do
+		"while", -- While
+		"until", -- Until
+		"repeat", -- Repeat
+		"break", -- Break
+		"return", -- Return
+		"end", -- End
+		"goto" -- Goto
+		),
+		(
+		"(", -- LRound
+		")", -- RRound
+		"{", -- LCurly
+		"}", -- RCurly
+		"[", -- LSquare
+		"]" -- RSquare
+		),
+		(
+		\s -> "::" ++ s, -- Label
+		id -- Identifier
+		)
 		)
 
 isWhitespace :: Token -> Bool
-isWhitespace = foldToken (const True, const False, const False, const False, const False, const False, const False, const False, const False, const False, const False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False)
+isWhitespace = foldToken ((const True,const False,const False,const False,const False,False),( const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+
+

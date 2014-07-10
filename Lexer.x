@@ -49,6 +49,7 @@ tokens :-
 	"true"														{ wrapToken (const TTrue) }
 	"until"														{ wrapToken (const Until) }
 	"while"														{ wrapToken (const While) }
+	"!"															{ wrapToken (const CNot) }
 
 
 	-- operators
