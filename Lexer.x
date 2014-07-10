@@ -16,7 +16,7 @@ $any   = [.]
 tokens :-
     $white+                                                     { wrapToken Whitespace }
     "--[" (=)* "[" ($all # \] | \] $all # [=\]])* "]"(=)*"]"    { wrapToken DashBlockComment }
-    "--" (. # \[) .*                                            { wrapToken DashComment }
+    "--" (. # \[ | \[ (\=)* . # [=\[]) .*                                            { wrapToken DashComment }
     "//" .*                                                     { wrapToken SlashComment }
     -- /* with ((anything except *) or (* but no / after it))* then */
     "/*" ($all # \* | \* $all # \/)* \*+ \/                     { wrapToken SlashBlockComment }
