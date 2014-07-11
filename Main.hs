@@ -1,6 +1,6 @@
 module Main where
 
-import Lexer
+import Lexer2
 import TokenTypes
 import System.FilePath
 import System.Environment
@@ -10,6 +10,6 @@ main = do
 	args <- getArgs
 	let file = head args
 	contents <- readFile file
-	let lex = alexScanTokens contents
+	let lex = execParseTokens contents
 
 	print . show $ lex

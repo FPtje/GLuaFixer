@@ -97,7 +97,7 @@ parseIdentifier = (++) <$> anyKeyword <*> pSome allowed <<|>
     where
         allowed = pSym '_' <|> pLetter <|> pDigit
         anyKeyword :: Parser String
-        anyKeyword = pToken "true" <|> pToken "false" <|> pToken "nil" <|> pToken "not" <|> pToken "and" <|> pToken "or" <|> pToken "function" <|> pToken "local" <|> pToken "if" <|> pToken "then" <|> pToken "elseif" <|> pToken "else" <|> pToken "for" <|> pToken "in" <|> pToken "do" <|> pToken "while" <|> pToken "until" <|> pToken "repeat" <|> pToken "break" <|> pToken "return" <|> pToken "end" <|> pToken "goto"
+        anyKeyword = pToken "true" <|> pToken "false" <|> pToken "nil" <|> pToken "not" <|> pToken "and" <|> pToken "or" <|> pToken "function" <|> pToken "local" <|> pToken "if" <|> pToken "then" <|> pToken "elseif" <|> pToken "else" <|> pToken "for" <|> pToken "in" <|> pToken "do" <|> pToken "while" <|> pToken "until" <|> pToken "repeat" <|> pToken "continue" <|> pToken "break" <|> pToken "return" <|> pToken "end" <|> pToken "goto"
 
 parseLabel :: Parser String
 parseLabel = pToken "::" *> parseIdentifier
@@ -161,6 +161,7 @@ parseToken =    (:[]) . Whitespace <$> parseWhitespace      <|>
                 lexToken While "while"                      <|>
                 lexToken Until "until"                      <|>
                 lexToken Repeat "repeat"                    <|>
+                lexToken Continue "continue"                <|>
                 lexToken Break "break"                      <|>
                 lexToken Return "return"                    <|>
                 lexToken End "end"                          <|>

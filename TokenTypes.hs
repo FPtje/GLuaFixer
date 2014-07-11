@@ -59,6 +59,7 @@ data Token =
     While                       |
     Until                       |
     Repeat                      |
+    Continue                    |
     Break                       |
     Return                      |
     End                         |
@@ -133,6 +134,7 @@ type TokenAlgebra token = (
         token,              -- While
         token,              -- Until
         token,              -- Repeat
+        token,              -- Continue
         token,              -- Break
         token,              -- Return
         token,              -- End
@@ -153,7 +155,7 @@ type TokenAlgebra token = (
     )
 
 foldToken :: TokenAlgebra t -> Token -> t
-foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tSemicolon), (tTNumber, tDQString, tSQString, tMLString, tTTrue, tTFalse, tNil, tVarArg), (tPlus, tMinus, tMulitply, tDivide, tModulus, tPower, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tConcatenate, tColon, tDot, tComma, tHash, tNot, tCNot, tAnd, tCAnd, tOr, tCOr), (tFunction, tLocal, tIf, tThen, tElseif, tElse, tFor, tIn, tDo, tWhile, tUntil, tRepeat, tBreak, tReturn, tEnd, tGoto), (tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare), (tLabel, tIdentifier)) = fold
+foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tSemicolon), (tTNumber, tDQString, tSQString, tMLString, tTTrue, tTFalse, tNil, tVarArg), (tPlus, tMinus, tMulitply, tDivide, tModulus, tPower, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tConcatenate, tColon, tDot, tComma, tHash, tNot, tCNot, tAnd, tCAnd, tOr, tCOr), (tFunction, tLocal, tIf, tThen, tElseif, tElse, tFor, tIn, tDo, tWhile, tUntil, tRepeat, tContinue, tBreak, tReturn, tEnd, tGoto), (tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare), (tLabel, tIdentifier)) = fold
     where
         fold (Whitespace str) = tWhitespace str
         fold (DashComment str) = tDashComment str
@@ -186,6 +188,7 @@ foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashB
         fold Or = tOr
         fold COr = tCOr
         fold Repeat = tRepeat
+        fold Continue = tContinue
         fold Return = tReturn
         fold Then = tThen
         fold TTrue = tTTrue
@@ -278,6 +281,7 @@ instance Show Token where
         "while", -- While
         "until", -- Until
         "repeat", -- Repeat
+        "continue", -- Continue
         "break", -- Break
         "return", -- Return
         "end", -- End
@@ -298,6 +302,6 @@ instance Show Token where
         )
 
 isWhitespace :: Token -> Bool
-isWhitespace = foldToken ((const True,const False,const False,const False,const False,False),( const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+isWhitespace = foldToken ((const True,const False,const False,const False,const False,False),( const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
 
