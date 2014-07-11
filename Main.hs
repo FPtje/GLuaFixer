@@ -12,4 +12,4 @@ main = do
 	contents <- readFile file
 	let lex = execParseTokens contents
 
-	print . show $ lex
+	print . show . snd $ lex

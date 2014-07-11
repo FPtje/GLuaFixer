@@ -16,12 +16,6 @@ import Text.ParserCombinators.UU.Derived
 parseWhitespace :: Parser String
 parseWhitespace = pSome (pSym ' ' <|> pSym '\n' <|> pSym '\t' <|> pSym '\r')
 
-pUntilEnd :: Parser String
-pUntilEnd = pMunch (\c -> c /= '\n' && c /= '\r')
-
-parseLineComment :: String -> Parser String
-parseLineComment prefix = flip const <$> pToken prefix <*> pUntilEnd
-
 parseAnyChar :: Parser Char
 parseAnyChar = pSatisfy (const True) (Insertion "Any character" 'y' 5)
 
@@ -48,12 +42,18 @@ parseMLString = (++) <$> pToken "[" <*> nested 0
         restString n = pToken ("]" ++ replicate n '=' ++ "]") <<|>
                        (:) <$> parseAnyChar <*> restString n
 
+pUntilEnd :: Parser String
+pUntilEnd = pMunch (\c -> c /= '\n' && c /= '\r')
+
+parseLineComment :: String -> Parser String
+parseLineComment prefix = flip const <$> pToken prefix <*> pUntilEnd
+
 parseDashBlockComment :: Parser String
 parseDashBlockComment = pToken "--" *> parseMLString
 
 parseComment :: Parser Token
-parseComment =  DashBlockComment <$> parseDashBlockComment <<|>
-                DashComment <$> parseLineComment "--" <|>
+parseComment =  pToken "--" <**> -- Dash block comment and dash comment both start with "--"
+                    (const <$> (DashBlockComment <$> parseMLString <<|> DashComment <$> pUntilEnd)) <|>
                 SlashBlockComment <$ pToken "/*" <*> parseCBlockComment <|>
                 SlashComment <$> parseLineComment "//"
 
@@ -91,7 +91,6 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pNumber) <*> opt pSuffix "
                     <*> pSome pDigit
 
 parseIdentifier :: Parser String
--- parseIdentifier = (:) <$> (pSym '_' <|> pLetter) <*> pMany (pSym '_' <|> pLetter <|> pDigit)
 parseIdentifier = (++) <$> anyKeyword <*> pSome allowed <<|>
                   (:)  <$> (pSym '_' <|> pLetter) <*> pMany allowed
     where
@@ -110,13 +109,13 @@ lexeme2 p = (\a b -> [a, Whitespace b]) <$> p <*> parseWhitespace
 
 
 parseToken :: Parser Token
-parseToken =    Identifier <$> parseIdentifier <<|>
-                (Whitespace <$> parseWhitespace      <|>
+parseToken =    (Whitespace <$> parseWhitespace      <|>
                 parseComment                      <<|>
 
                 -- Constants
                 parseString                       <|>
                 parseNumber                       <|>
+                Semicolon <$ pToken ";"                      <|>
                 TTrue <$ pToken "true"                       <|>
                 TFalse <$ pToken "false"                     <|>
                 Nil <$ pToken "nil"                          <|>
@@ -173,10 +172,11 @@ parseToken =    Identifier <$> parseIdentifier <<|>
                 LCurly <$ pToken "{"                      <|>
                 RCurly <$ pToken "}"                      <|>
                 LSquare <$ pToken "["                     <|>
-                RSquare <$ pToken "]")
+                RSquare <$ pToken "]")                    <|>
+                Identifier <$> parseIdentifier
 
 parseTokens :: Parser [Token]
-parseTokens = pMany parseToken
+parseTokens = head <$> amb (pMany parseToken)
 
 
 execParseTokens :: String -> ([Token], [Error LineColPos])
