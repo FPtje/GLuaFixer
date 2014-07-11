@@ -175,4 +175,9 @@ parseToken =    (:[]) . Whitespace <$> parseWhitespace      <|>
                 lexeme2 (Identifier <$> parseIdentifier)
                 -- Number
 
-parseTokens = pMany parseToken
+parseTokens :: Parser [Token]
+parseTokens = concat <$> pMany parseToken
+
+
+execParseTokens :: String -> ([Token], [Error LineColPos])
+execParseTokens = execParser parseTokens . (++ " ")
