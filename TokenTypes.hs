@@ -227,7 +227,7 @@ instance Show Token where
         id, -- Whitespace
         id, -- DashComment
         \s -> "--" ++ s, -- DashBlockComment
-        id, -- SlashComment
+        \s -> "//" ++ s, -- SlashComment
         \s -> "/*" ++ s ++ "*/", -- SlashBlockComment
         ";" -- Semicolon
         ),

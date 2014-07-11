@@ -23,11 +23,6 @@ parseCBlockComment :: Parser String
 parseCBlockComment = const "" <$> pToken "*/" <<|>
             (:) <$> parseAnyChar <*> parseCBlockComment
 
-{-parseNestedString :: Parser String
-parseNestedString = (\str -> "=" ++ str ++ "=") <$ pToken "=" <*> parseNestedString <* pToken "=" <|>
-                    (\str -> "[" ++ str) <$ pToken "[" <*> endStr
-                where endStr = pToken "]" <|> (:) <$> parseAnyChar <*> endStr-}
-
 -- Parse a multiline string
 parseMLString :: Parser String
 parseMLString = (++) <$> pToken "[" <*> nested 0
@@ -53,9 +48,13 @@ parseDashBlockComment = pToken "--" *> parseMLString
 
 parseComment :: Parser Token
 parseComment =  pToken "--" <**> -- Dash block comment and dash comment both start with "--"
-                    (const <$> (DashBlockComment <$> parseMLString <<|> DashComment <$> pUntilEnd)) <|>
-                SlashBlockComment <$ pToken "/*" <*> parseCBlockComment <|>
-                SlashComment <$> parseLineComment "//"
+                    (const <$> (DashBlockComment <$> parseMLString <<|> DashComment <$> pUntilEnd)) <<|>
+                pToken "/" <**>
+                    (const <$>
+                        (SlashBlockComment <$ pToken "*" <*> parseCBlockComment <<|>
+                        SlashComment <$> parseLineComment "/" <<|>
+                        pReturn Divide -- The /-sign is here because it also starts with '/'
+                        ))
 
 -- Parse single line strings e.g. "sdf", 'werf'
 parseLineString :: Char -> Parser String
@@ -90,13 +89,18 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pNumber) <*> opt pSuffix "
                     <*> opt (pToken "+" <|> pToken "-") ""
                     <*> pSome pDigit
 
-parseIdentifier :: Parser String
-parseIdentifier = (++) <$> anyKeyword <*> pSome allowed <<|>
-                  (:)  <$> (pSym '_' <|> pLetter) <*> pMany allowed
+-- Parse a keyword. Note: It must really a key/word/! This parser makes sure to return an identifier when
+-- it's actually an identifier that starts with that keyword
+parseKeyword :: Token -> String -> Parser Token
+parseKeyword tok word = pToken word <**>
+                            ((\k -> Identifier . (++) k) <$$> pSome allowed <<|> const <$> pReturn tok)
     where
         allowed = pSym '_' <|> pLetter <|> pDigit
-        anyKeyword :: Parser String
-        anyKeyword = pToken "true" <|> pToken "false" <|> pToken "nil" <|> pToken "not" <|> pToken "and" <|> pToken "or" <|> pToken "function" <|> pToken "local" <|> pToken "if" <|> pToken "then" <|> pToken "elseif" <|> pToken "else" <|> pToken "for" <|> pToken "in" <|> pToken "do" <|> pToken "while" <|> pToken "until" <|> pToken "repeat" <|> pToken "continue" <|> pToken "break" <|> pToken "return" <|> pToken "end" <|> pToken "goto"
+
+parseIdentifier :: Parser String
+parseIdentifier = (:)  <$> (pSym '_' <|> pLetter) <*> pMany allowed
+    where
+        allowed = pSym '_' <|> pLetter <|> pDigit
 
 parseLabel :: Parser String
 parseLabel = pToken "::" *> parseIdentifier
@@ -109,16 +113,39 @@ lexeme2 p = (\a b -> [a, Whitespace b]) <$> p <*> parseWhitespace
 
 
 parseToken :: Parser Token
-parseToken =    (Whitespace <$> parseWhitespace      <|>
+parseToken =    Whitespace <$> parseWhitespace      <|>
                 parseComment                      <<|>
 
                 -- Constants
-                parseString                       <|>
-                parseNumber                       <|>
+                parseString                                  <|>
+                parseNumber                                  <|>
+                parseKeyword TTrue "true"                    <|>
+                parseKeyword TFalse "false"                  <|>
+                parseKeyword Nil "nil"                       <|>
+                parseKeyword Not "not"                       <|>
+                parseKeyword And "and"                       <|>
+                parseKeyword Or "or"                         <|>
+                parseKeyword Function "function"             <|>
+                parseKeyword Local "local"                   <|>
+                parseKeyword If "if"                         <|>
+                parseKeyword Then "then"                     <|>
+                parseKeyword Elseif "elseif"                 <|>
+                parseKeyword Else "else"                     <|>
+                parseKeyword For "for"                       <|>
+                parseKeyword In "in"                         <|>
+                parseKeyword Do "do"                         <|>
+                parseKeyword While "while"                   <|>
+                parseKeyword Until "until"                   <|>
+                parseKeyword Repeat "repeat"                 <|>
+                parseKeyword Continue "continue"             <|>
+                parseKeyword Break "break"                   <|>
+                parseKeyword Return "return"                 <|>
+                parseKeyword End "end"                       <|>
+                parseKeyword Goto "goto"                     <<|>
+
+                Identifier <$> parseIdentifier               <|>
+
                 Semicolon <$ pToken ";"                      <|>
-                TTrue <$ pToken "true"                       <|>
-                TFalse <$ pToken "false"                     <|>
-                Nil <$ pToken "nil"                          <|>
                 VarArg <$ pToken "..."                       <<|>
 
                 -- Operators
@@ -127,7 +154,6 @@ parseToken =    (Whitespace <$> parseWhitespace      <|>
                 Plus <$ pToken "+"                           <|>
                 Minus <$ pToken "-"                          <|>
                 Mulitply <$ pToken "*"                       <|>
-                Divide <$ pToken "/"                         <|>
                 Modulus <$ pToken "%"                        <|>
                 Power <$ pToken "^"                          <|>
                 TEq <$ pToken "=="                           <<|>
@@ -143,40 +169,18 @@ parseToken =    (Whitespace <$> parseWhitespace      <|>
                 Colon <$ pToken ":"                          <|>
                 Comma <$ pToken ","                          <|>
                 Hash <$ pToken "#"                           <|>
-                Not <$ pToken "not"                          <|>
-                And <$ pToken "and"                          <|>
                 CAnd <$ pToken "&&"                          <|>
-                Or <$ pToken "or"                            <|>
                 COr <$ pToken "||"                           <|>
-
-                Function <$ pToken "function"                <|>
-                Local <$ pToken "local"                      <|>
-                If <$ pToken "if"                            <|>
-                Then <$ pToken "then"                        <|>
-                Elseif <$ pToken "elseif"                    <|>
-                Else <$ pToken "else"                        <|>
-                For <$ pToken "for"                          <|>
-                In <$ pToken "in"                            <|>
-                Do <$ pToken "do"                            <|>
-                While <$ pToken "while"                      <|>
-                Until <$ pToken "until"                      <|>
-                Repeat <$ pToken "repeat"                    <|>
-                Continue <$ pToken "continue"                <|>
-                Break <$ pToken "break"                      <|>
-                Return <$ pToken "return"                    <|>
-                End <$ pToken "end"                          <|>
-                Goto <$ pToken "goto"                        <|>
 
                 LRound <$ pToken "("                      <|>
                 RRound <$ pToken ")"                      <|>
                 LCurly <$ pToken "{"                      <|>
                 RCurly <$ pToken "}"                      <|>
                 LSquare <$ pToken "["                     <|>
-                RSquare <$ pToken "]")                    <|>
-                Identifier <$> parseIdentifier
+                RSquare <$ pToken "]"
 
 parseTokens :: Parser [Token]
-parseTokens = head <$> amb (pMany parseToken)
+parseTokens = pMany parseToken
 
 
 execParseTokens :: String -> ([Token], [Error LineColPos])
