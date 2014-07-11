@@ -109,76 +109,75 @@ lexeme2 :: Parser Token -> Parser [Token]
 lexeme2 p = (\a b -> [a, Whitespace b]) <$> p <*> parseWhitespace
 
 
-parseToken :: Parser [Token]
-parseToken =    (:[]) . Whitespace <$> parseWhitespace      <|>
-                (:[]) <$> parseComment                      <<|>
+parseToken :: Parser Token
+parseToken =    Identifier <$> parseIdentifier <<|>
+                (Whitespace <$> parseWhitespace      <|>
+                parseComment                      <<|>
 
                 -- Constants
-                (:[]) <$> parseString                       <|>
-                (:[]) <$> parseNumber                       <|>
-                lexToken TTrue "true"                       <|>
-                lexToken TFalse "false"                     <|>
-                lexToken Nil "nil"                          <|>
-                lexToken VarArg "..."                       <<|>
+                parseString                       <|>
+                parseNumber                       <|>
+                TTrue <$ pToken "true"                       <|>
+                TFalse <$ pToken "false"                     <|>
+                Nil <$ pToken "nil"                          <|>
+                VarArg <$ pToken "..."                       <<|>
 
                 -- Operators
-                lexToken Concatenate ".."                   <<|>
-                lexToken Dot "."                            <|>
-                lexToken Plus "+"                           <|>
-                lexToken Minus "-"                          <|>
-                lexToken Mulitply "*"                       <|>
-                lexToken Divide "/"                         <|>
-                lexToken Modulus "%"                        <|>
-                lexToken Power "^"                          <|>
-                lexToken TEq "=="                           <<|>
-                lexToken Equals "="                         <|>
-                lexToken TNEq "~="                          <|>
-                lexToken TCNEq "!="                         <<|>
-                lexToken CNot "!"                           <|>
-                lexToken TLEQ "<="                          <<|>
-                lexToken TLT "<"                            <|>
-                lexToken TGEQ ">="                          <<|>
-                lexToken TGT ">"                            <|>
-                lexeme2 (Label <$> parseLabel)              <<|>
-                lexToken Colon ":"                          <|>
-                lexToken Comma ","                          <|>
-                lexToken Hash "#"                           <|>
-                lexToken Not "not"                          <|>
-                lexToken And "and"                          <|>
-                lexToken CAnd "&&"                          <|>
-                lexToken Or "or"                            <|>
-                lexToken COr "||"                           <|>
+                Concatenate <$ pToken ".."                   <<|>
+                Dot <$ pToken "."                            <|>
+                Plus <$ pToken "+"                           <|>
+                Minus <$ pToken "-"                          <|>
+                Mulitply <$ pToken "*"                       <|>
+                Divide <$ pToken "/"                         <|>
+                Modulus <$ pToken "%"                        <|>
+                Power <$ pToken "^"                          <|>
+                TEq <$ pToken "=="                           <<|>
+                Equals <$ pToken "="                         <|>
+                TNEq <$ pToken "~="                          <|>
+                TCNEq <$ pToken "!="                         <<|>
+                CNot <$ pToken "!"                           <|>
+                TLEQ <$ pToken "<="                          <<|>
+                TLT <$ pToken "<"                            <|>
+                TGEQ <$ pToken ">="                          <<|>
+                TGT <$ pToken ">"                            <|>
+                Label <$> parseLabel              <<|>
+                Colon <$ pToken ":"                          <|>
+                Comma <$ pToken ","                          <|>
+                Hash <$ pToken "#"                           <|>
+                Not <$ pToken "not"                          <|>
+                And <$ pToken "and"                          <|>
+                CAnd <$ pToken "&&"                          <|>
+                Or <$ pToken "or"                            <|>
+                COr <$ pToken "||"                           <|>
 
-                lexToken Function "function"                <|>
-                lexToken Local "local"                      <|>
-                lexToken If "if"                            <|>
-                lexToken Then "then"                        <|>
-                lexToken Elseif "elseif"                    <|>
-                lexToken Else "else"                        <|>
-                lexToken For "for"                          <|>
-                lexToken In "in"                            <|>
-                lexToken Do "do"                            <|>
-                lexToken While "while"                      <|>
-                lexToken Until "until"                      <|>
-                lexToken Repeat "repeat"                    <|>
-                lexToken Continue "continue"                <|>
-                lexToken Break "break"                      <|>
-                lexToken Return "return"                    <|>
-                lexToken End "end"                          <|>
-                lexToken Goto "goto"                        <|>
+                Function <$ pToken "function"                <|>
+                Local <$ pToken "local"                      <|>
+                If <$ pToken "if"                            <|>
+                Then <$ pToken "then"                        <|>
+                Elseif <$ pToken "elseif"                    <|>
+                Else <$ pToken "else"                        <|>
+                For <$ pToken "for"                          <|>
+                In <$ pToken "in"                            <|>
+                Do <$ pToken "do"                            <|>
+                While <$ pToken "while"                      <|>
+                Until <$ pToken "until"                      <|>
+                Repeat <$ pToken "repeat"                    <|>
+                Continue <$ pToken "continue"                <|>
+                Break <$ pToken "break"                      <|>
+                Return <$ pToken "return"                    <|>
+                End <$ pToken "end"                          <|>
+                Goto <$ pToken "goto"                        <|>
 
-                [LRound] <$ pToken "("                      <|>
-                [RRound] <$ pToken ")"                      <|>
-                [LCurly] <$ pToken "{"                      <|>
-                [RCurly] <$ pToken "}"                      <|>
-                [LSquare] <$ pToken "["                     <|>
-                [RSquare] <$ pToken "]"                     <|>
-                lexeme2 (Identifier <$> parseIdentifier)
-                -- Number
+                LRound <$ pToken "("                      <|>
+                RRound <$ pToken ")"                      <|>
+                LCurly <$ pToken "{"                      <|>
+                RCurly <$ pToken "}"                      <|>
+                LSquare <$ pToken "["                     <|>
+                RSquare <$ pToken "]")
 
 parseTokens :: Parser [Token]
-parseTokens = concat <$> pMany parseToken
+parseTokens = pMany parseToken
 
 
 execParseTokens :: String -> ([Token], [Error LineColPos])
-execParseTokens = execParser parseTokens . (++ " ")
+execParseTokens = execParser parseTokens
