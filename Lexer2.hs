@@ -14,7 +14,7 @@ import Text.ParserCombinators.UU.BasicInstances
 import Text.ParserCombinators.UU.Derived
 
 parseWhitespace :: Parser String
-parseWhitespace = pSome (pSym ' ' <|> pSym '\n' <|> pSym '\t' <|> pSym '\r')
+parseWhitespace = pSome (pSym ' ' <<|> pSym '\n' <<|> pSym '\t' <<|> pSym '\r')
 
 parseAnyChar :: Parser Char
 parseAnyChar = pSatisfy (const True) (Insertion "Any character" 'y' 5)
@@ -25,23 +25,28 @@ parseCBlockComment = const "" <$> pToken "*/" <<|>
 
 -- Parse a multiline string
 parseMLString :: Parser String
-parseMLString = (++) <$> pToken "[" <*> nested 0
-    where
-        -- The amount of =-signs in the string delimiter is n
-        nested :: Int -> Parser String
-        nested n = (\str -> "=" ++ str) <$ pToken "=" <*> nested (n + 1) <|>
-                   ('[' :) <$ pToken "[" <*> restString n
-
-        -- Right-recursive grammar. This part searches for the rest of the string until it finds the ]=^n] token
-        restString :: Int -> Parser String
-        restString n = pToken ("]" ++ replicate n '=' ++ "]") <<|>
-                       (:) <$> parseAnyChar <*> restString n
+parseMLString = (++) <$> pToken "[" <*> nestedString
 
 pUntilEnd :: Parser String
 pUntilEnd = pMunch (\c -> c /= '\n' && c /= '\r')
 
 parseLineComment :: String -> Parser String
 parseLineComment prefix = flip const <$> pToken prefix <*> pUntilEnd
+
+-- Parses a multiline string except for its first character (e.g. =[ string ]=])
+-- This is because the first [ could also just be parsed as a square bracket.
+nestedString :: Parser String
+nestedString = nested 0
+    where
+        -- The amount of =-signs in the string delimiter is n
+        nested :: Int -> Parser String
+        nested n = (\str -> "=" ++ str) <$ pToken "=" <*> nested (n + 1) <<|>
+                   ('[' :) <$ pToken "[" <*> restString n
+
+        -- Right-recursive grammar. This part searches for the rest of the string until it finds the ]=^n] token
+        restString :: Int -> Parser String
+        restString n = pToken ("]" ++ replicate n '=' ++ "]") <<|>
+                       (:) <$> parseAnyChar <*> restString n
 
 parseComment :: Parser Token
 parseComment =  pToken "--" <**> -- Dash block comment and dash comment both start with "--"
@@ -63,12 +68,15 @@ parseLineString c = pSym c *> innerString
                       (:) <$> parseAnyChar <*> innerString
 
 parseString :: Parser Token
-parseString = DQString <$> parseLineString '"' <|>
-              SQString <$> parseLineString '\'' <|>
-              MLString <$> parseMLString
+parseString = DQString <$> parseLineString '"' <<|>
+              SQString <$> parseLineString '\'' <<|>
+              -- Parse either a multiline string or just a bracket.
+              -- Placed here because they have the first token '[' in common
+              pSym '[' <**> ((\_ -> MLString . (:) '[') <$$> nestedString <<|>
+                        const <$> pReturn LSquare)
 
 parseNumber :: Parser Token
-parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pNumber) <*> opt pSuffix "")
+parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber) <*> opt pSuffix "")
 
     where
         pNumber :: Parser String
@@ -78,12 +86,12 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pNumber) <*> opt pSuffix "
         pHexadecimal = (++) <$> pToken "0x" <*> pSome pHex
 
         pHex :: Parser Char
-        pHex = pDigit <|> pSym 'a' <|> pSym 'b' <|> pSym 'c' <|> pSym 'd' <|> pSym 'e' <|> pSym 'f'
-                      <|> pSym 'A' <|> pSym 'B' <|> pSym 'C' <|> pSym 'D' <|> pSym 'E' <|> pSym 'F'
+        pHex = pDigit <<|> pSym 'a' <<|> pSym 'b' <<|> pSym 'c' <<|> pSym 'd' <<|> pSym 'e' <<|> pSym 'f'
+                      <<|> pSym 'A' <<|> pSym 'B' <<|> pSym 'C' <<|> pSym 'D' <<|> pSym 'E' <<|> pSym 'F'
 
         pSuffix :: Parser String
-        pSuffix = (\e s d -> e : s ++ d) <$> (pSym 'e' <|> pSym 'E' <|> pSym 'p' <|> pSym 'P')
-                    <*> opt (pToken "+" <|> pToken "-") ""
+        pSuffix = (\e s d -> e : s ++ d) <$> (pSym 'e' <<|> pSym 'E' <<|> pSym 'p' <<|> pSym 'P')
+                    <*> opt (pToken "+" <<|> pToken "-") ""
                     <*> pSome pDigit
 
 -- Parse a keyword. Note: It must really a key/word/! This parser makes sure to return an identifier when
@@ -92,12 +100,12 @@ parseKeyword :: Token -> String -> Parser Token
 parseKeyword tok word = pToken word <**>
                             ((\k -> Identifier . (++) k) <$$> pSome allowed <<|> const <$> pReturn tok)
     where
-        allowed = pSym '_' <|> pLetter <|> pDigit
+        allowed = pSym '_' <<|> pLetter <<|> pDigit
 
 parseIdentifier :: Parser String
-parseIdentifier = (:)  <$> (pSym '_' <|> pLetter) <*> pMany allowed
+parseIdentifier = (:)  <$> (pSym '_' <<|> pLetter) <*> pMany allowed
     where
-        allowed = pSym '_' <|> pLetter <|> pDigit
+        allowed = pSym '_' <<|> pLetter <<|> pDigit
 
 parseLabel :: Parser String
 parseLabel = pToken "::" *> parseIdentifier
@@ -118,8 +126,8 @@ parseDots = pToken "." <**> ( -- A dot means it's either a VarArg (...), concate
                 )
 
 parseToken :: Parser Token
-parseToken =    Whitespace <$> parseWhitespace      <<|>
-                parseComment                      <<|>
+parseToken =    Whitespace <$> parseWhitespace               <<|>
+                parseComment                                 <<|>
 
                 -- Constants
                 parseString                                  <<|>
@@ -179,12 +187,10 @@ parseToken =    Whitespace <$> parseWhitespace      <<|>
                 RRound <$ pToken ")"                         <<|>
                 LCurly <$ pToken "{"                         <<|>
                 RCurly <$ pToken "}"                         <<|>
---                LSquare <$ pToken "["                        <<|>
-                RSquare <$ pToken "]"
+                RSquare <$ pToken "]" -- Other square bracket is parsed in parseString
 
 parseTokens :: Parser [Token]
 parseTokens = pMany parseToken
-
 
 execParseTokens :: String -> ([Token], [Error LineColPos])
 execParseTokens = execParser parseTokens
