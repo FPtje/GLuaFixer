@@ -12,7 +12,8 @@ main = do
     let file = head args
     contents <- readFile file
     let lex = execParseTokens contents
-    let newcontents = concatMap show $ fst lex
+    let newcontents = show . makeMTokens $ fst lex
+    putStrLn newcontents
 
     unless (null $ snd lex) $
         print . snd $ lex
