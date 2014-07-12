@@ -1,6 +1,6 @@
 module Main where
 
-import Lexer2
+import Lexer
 import TokenTypes
 import System.FilePath
 import System.Environment

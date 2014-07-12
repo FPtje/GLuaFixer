@@ -4,7 +4,7 @@
             Rank2Types, FlexibleContexts, NoMonomorphismRestriction,
             CPP #-}
 
-module Lexer2 where
+module Lexer where
 
 import TokenTypes
 
