@@ -63,7 +63,7 @@ parseLineString :: Char -> Parser String
 parseLineString c = pSym c *> innerString
     where
         innerString :: Parser String
-        innerString = (++) <$> pToken ['\\', c] <*> innerString <<|>
+        innerString = (\bs c str -> bs : c : str) <$> pSym '\\' <*> parseAnyChar <*> innerString <<|> -- escaped char
                       const "" <$> pSym c <<|>
                       (:) <$> parseAnyChar <*> innerString
 
