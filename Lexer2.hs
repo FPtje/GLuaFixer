@@ -43,9 +43,6 @@ pUntilEnd = pMunch (\c -> c /= '\n' && c /= '\r')
 parseLineComment :: String -> Parser String
 parseLineComment prefix = flip const <$> pToken prefix <*> pUntilEnd
 
-parseDashBlockComment :: Parser String
-parseDashBlockComment = pToken "--" *> parseMLString
-
 parseComment :: Parser Token
 parseComment =  pToken "--" <**> -- Dash block comment and dash comment both start with "--"
                     (const <$> (DashBlockComment <$> parseMLString <<|> DashComment <$> pUntilEnd)) <<|>
@@ -111,72 +108,81 @@ lexToken tok t = (tok :) . (: []) <$ pToken t <*> (Whitespace <$> parseWhitespac
 lexeme2 :: Parser Token -> Parser [Token]
 lexeme2 p = (\a b -> [a, Whitespace b]) <$> p <*> parseWhitespace
 
+parseDots :: Parser Token
+parseDots = pToken "." <**> ( -- A dot means it's either a VarArg (...), concatenation (..) or just a dot (.)
+                const <$> (pToken "." <**> (
+                    const VarArg <$ pToken "." <<|>
+                    const <$> pReturn Concatenate
+                )) <<|>
+                const <$> pReturn Dot
+                )
 
 parseToken :: Parser Token
-parseToken =    Whitespace <$> parseWhitespace      <|>
+parseToken =    Whitespace <$> parseWhitespace      <<|>
                 parseComment                      <<|>
 
                 -- Constants
-                parseString                                  <|>
-                parseNumber                                  <|>
-                parseKeyword TTrue "true"                    <|>
-                parseKeyword TFalse "false"                  <|>
-                parseKeyword Nil "nil"                       <|>
-                parseKeyword Not "not"                       <|>
-                parseKeyword And "and"                       <|>
-                parseKeyword Or "or"                         <|>
-                parseKeyword Function "function"             <|>
-                parseKeyword Local "local"                   <|>
-                parseKeyword If "if"                         <|>
-                parseKeyword Then "then"                     <|>
-                parseKeyword Elseif "elseif"                 <|>
-                parseKeyword Else "else"                     <|>
-                parseKeyword For "for"                       <|>
-                parseKeyword In "in"                         <|>
-                parseKeyword Do "do"                         <|>
-                parseKeyword While "while"                   <|>
-                parseKeyword Until "until"                   <|>
-                parseKeyword Repeat "repeat"                 <|>
-                parseKeyword Continue "continue"             <|>
-                parseKeyword Break "break"                   <|>
-                parseKeyword Return "return"                 <|>
-                parseKeyword End "end"                       <|>
+                parseString                                  <<|>
+                parseNumber                                  <<|>
+                parseKeyword TTrue "true"                    <<|>
+                parseKeyword TFalse "false"                  <<|>
+                parseKeyword Nil "nil"                       <<|>
+                parseKeyword Not "not"                       <<|>
+                parseKeyword And "and"                       <<|>
+                parseKeyword Or "or"                         <<|>
+                parseKeyword Function "function"             <<|>
+                parseKeyword Local "local"                   <<|>
+                parseKeyword If "if"                         <<|>
+                parseKeyword Then "then"                     <<|>
+                parseKeyword Elseif "elseif"                 <<|>
+                parseKeyword Else "else"                     <<|>
+                parseKeyword For "for"                       <<|>
+                parseKeyword In "in"                         <<|>
+                parseKeyword Do "do"                         <<|>
+                parseKeyword While "while"                   <<|>
+                parseKeyword Until "until"                   <<|>
+                parseKeyword Repeat "repeat"                 <<|>
+                parseKeyword Continue "continue"             <<|>
+                parseKeyword Break "break"                   <<|>
+                parseKeyword Return "return"                 <<|>
+                parseKeyword End "end"                       <<|>
                 parseKeyword Goto "goto"                     <<|>
 
-                Identifier <$> parseIdentifier               <|>
+                Identifier <$> parseIdentifier               <<|>
 
-                Semicolon <$ pToken ";"                      <|>
-                VarArg <$ pToken "..."                       <<|>
+                Semicolon <$ pToken ";"                      <<|>
+                parseDots                                    <<|>
+                --VarArg <$ pToken "..."                       <<|>
 
                 -- Operators
-                Concatenate <$ pToken ".."                   <<|>
-                Dot <$ pToken "."                            <|>
-                Plus <$ pToken "+"                           <|>
-                Minus <$ pToken "-"                          <|>
-                Mulitply <$ pToken "*"                       <|>
-                Modulus <$ pToken "%"                        <|>
-                Power <$ pToken "^"                          <|>
+                --Concatenate <$ pToken ".."                   <<|>
+                --Dot <$ pToken "."                            <|>
+                Plus <$ pToken "+"                           <<|>
+                Minus <$ pToken "-"                          <<|>
+                Mulitply <$ pToken "*"                       <<|>
+                Modulus <$ pToken "%"                        <<|>
+                Power <$ pToken "^"                          <<|>
                 TEq <$ pToken "=="                           <<|>
-                Equals <$ pToken "="                         <|>
-                TNEq <$ pToken "~="                          <|>
+                Equals <$ pToken "="                         <<|>
+                TNEq <$ pToken "~="                          <<|>
                 TCNEq <$ pToken "!="                         <<|>
-                CNot <$ pToken "!"                           <|>
+                CNot <$ pToken "!"                           <<|>
                 TLEQ <$ pToken "<="                          <<|>
-                TLT <$ pToken "<"                            <|>
+                TLT <$ pToken "<"                            <<|>
                 TGEQ <$ pToken ">="                          <<|>
-                TGT <$ pToken ">"                            <|>
-                Label <$> parseLabel              <<|>
-                Colon <$ pToken ":"                          <|>
-                Comma <$ pToken ","                          <|>
-                Hash <$ pToken "#"                           <|>
-                CAnd <$ pToken "&&"                          <|>
-                COr <$ pToken "||"                           <|>
-
-                LRound <$ pToken "("                      <|>
-                RRound <$ pToken ")"                      <|>
-                LCurly <$ pToken "{"                      <|>
-                RCurly <$ pToken "}"                      <|>
-                LSquare <$ pToken "["                     <|>
+                TGT <$ pToken ">"                            <<|>
+                Label <$> parseLabel                         <<|>
+                Colon <$ pToken ":"                          <<|>
+                Comma <$ pToken ","                          <<|>
+                Hash <$ pToken "#"                           <<|>
+                CAnd <$ pToken "&&"                          <<|>
+                COr <$ pToken "||"                           <<|>
+--
+                LRound <$ pToken "("                         <<|>
+                RRound <$ pToken ")"                         <<|>
+                LCurly <$ pToken "{"                         <<|>
+                RCurly <$ pToken "}"                         <<|>
+                LSquare <$ pToken "["                        <<|>
                 RSquare <$ pToken "]"
 
 parseTokens :: Parser [Token]

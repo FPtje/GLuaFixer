@@ -225,7 +225,7 @@ foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashB
 instance Show Token where
     show = foldToken ((
         id, -- Whitespace
-        id, -- DashComment
+        \s -> "--" ++ s, -- DashComment
         \s -> "--" ++ s, -- DashBlockComment
         \s -> "//" ++ s, -- SlashComment
         \s -> "/*" ++ s ++ "*/", -- SlashBlockComment
