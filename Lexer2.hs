@@ -23,9 +23,32 @@ parseCBlockComment :: Parser String
 parseCBlockComment = const "" <$> pToken "*/" <<|>
             (:) <$> parseAnyChar <*> parseCBlockComment
 
--- Parse a multiline string
-parseMLString :: Parser String
-parseMLString = (++) <$> pToken "[" <*> nestedString
+-- Try to parse a block comment
+-- Might actually return a single line Dash comment, because for example
+-- the following line is a line comment, rather than a block comment
+--[===== <- missing the last '[' bracket
+parseBlockComment :: Parser Token
+parseBlockComment = pToken "[" *> nested 0
+    where
+        -- The amount of =-signs in the string delimiter is n
+        nested :: Int -> Parser Token
+        nested n = pToken "=" *> nested (n + 1) <<|>
+                   blockComment n <$ pToken "[" <*> restString n <<|>
+                   lineComment n <$> pUntilEnd
+
+        -- Turn the string into a block comment
+        blockComment :: Int -> String -> Token
+        blockComment n str = DashBlockComment $ '[' : replicate n '=' ++ '[' : str
+
+        -- Turns out we were describing a line comment all along, cheeky bastard!
+        -- (the last [ of the block comment start token is missing)
+        lineComment :: Int -> String -> Token
+        lineComment n str = DashComment $ '[' : replicate n '=' ++ str
+
+        -- Right-recursive grammar. This part searches for the rest of the string until it finds the ]=^n] token
+        restString :: Int -> Parser String
+        restString n = pToken ("]" ++ replicate n '=' ++ "]") <<|>
+                       (:) <$> parseAnyChar <*> restString n
 
 pUntilEnd :: Parser String
 pUntilEnd = pMunch (\c -> c /= '\n' && c /= '\r')
@@ -50,7 +73,7 @@ nestedString = nested 0
 
 parseComment :: Parser Token
 parseComment =  pToken "--" <**> -- Dash block comment and dash comment both start with "--"
-                    (const <$> (DashBlockComment <$> parseMLString <<|> DashComment <$> pUntilEnd)) <<|>
+                    (const <$> (parseBlockComment <<|> DashComment <$> pUntilEnd)) <<|>
                 pToken "/" <**>
                     (const <$>
                         (SlashBlockComment <$ pToken "*" <*> parseCBlockComment <<|>
