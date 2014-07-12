@@ -152,11 +152,8 @@ parseToken =    Whitespace <$> parseWhitespace      <<|>
 
                 Semicolon <$ pToken ";"                      <<|>
                 parseDots                                    <<|>
-                --VarArg <$ pToken "..."                       <<|>
 
                 -- Operators
-                --Concatenate <$ pToken ".."                   <<|>
-                --Dot <$ pToken "."                            <|>
                 Plus <$ pToken "+"                           <<|>
                 Minus <$ pToken "-"                          <<|>
                 Mulitply <$ pToken "*"                       <<|>
@@ -177,12 +174,12 @@ parseToken =    Whitespace <$> parseWhitespace      <<|>
                 Hash <$ pToken "#"                           <<|>
                 CAnd <$ pToken "&&"                          <<|>
                 COr <$ pToken "||"                           <<|>
---
+
                 LRound <$ pToken "("                         <<|>
                 RRound <$ pToken ")"                         <<|>
                 LCurly <$ pToken "{"                         <<|>
                 RCurly <$ pToken "}"                         <<|>
-                LSquare <$ pToken "["                        <<|>
+--                LSquare <$ pToken "["                        <<|>
                 RSquare <$ pToken "]"
 
 parseTokens :: Parser [Token]
