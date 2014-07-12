@@ -13,10 +13,7 @@ main = do
     contents <- readFile file
     let lex = execParseTokens contents
     let newcontents = concatMap show $ fst lex
-    --putStrLn newcontents
 
     unless (null $ snd lex) $
         print . snd $ lex
 
-    when (newcontents /= contents) $
-        putStrLn $ "NOT the same! " ++ file

@@ -301,7 +301,85 @@ instance Show Token where
         )
         )
 
+-- Whether a token is whitespace
 isWhitespace :: Token -> Bool
 isWhitespace = foldToken ((const True,const False,const False,const False,const False,False),( const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
-
+-- the size of a token in characters
+tokenSize = foldToken ((
+    length, -- Whitespace
+    (+2) . length, -- DashComment
+    (+2) . length, -- DashBlockComment
+    (+2) . length, -- SlashComment
+    (+4) . length, -- SlashBlockComment
+    1 -- Semicolon
+    ),
+    (
+    length, -- TNumber
+    (+2) . length, -- DQString
+    (+2) . length, -- SQString
+    length, -- MLString
+    4, -- TTrue
+    5, -- TFalse
+    3, -- Nil
+    3 -- VarArg
+    ),
+    (
+    1, -- Plus
+    1, -- Minus
+    1, -- Mulitply
+    1, -- Divide
+    1, -- Modulus
+    1, -- Power
+    2, -- TEq
+    2, -- TNEq
+    2, -- TCNEq
+    2, -- TLEQ
+    2, -- TGEQ
+    1, -- TLT
+    1, -- TGT
+    1, -- Equals
+    2, -- Concatenate
+    1, -- Colon
+    1, -- Dot
+    1, -- Comma
+    1, -- Hash
+    3, -- Not
+    1, -- CNot
+    3, -- And
+    2, -- CAnd
+    2, -- Or
+    2 -- COr
+    ),
+    (
+    8, -- Function
+    5, -- Local
+    2, -- If
+    4, -- Then
+    6, -- Elseif
+    4, -- Else
+    3, -- For
+    2, -- In
+    2, -- Do
+    5, -- While
+    5, -- Until
+    6, -- Repeat
+    8, -- Continue
+    5, -- Break
+    6, -- Return
+    3, -- End
+    4 -- Goto
+    ),
+    (
+    1, -- LRound
+    1, -- RRound
+    1, -- LCurly
+    1, -- RCurly
+    1, -- LSquare
+    1 -- RSquare
+    ),
+    (
+    (+2) . length, -- Label
+    length -- Identifier
+    )
+    )
