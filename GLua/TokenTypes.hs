@@ -75,6 +75,7 @@ data Token =
     RSquare                     |   -- ]
     Label String                |   -- ::
     Identifier String
+    deriving (Eq)
 
 -- Describes a position in a file (line number and column)
 data TokenPos = TPos { line :: Int, column :: Int }
