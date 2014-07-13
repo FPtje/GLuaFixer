@@ -45,10 +45,10 @@ main = do
         exitWith (ExitFailure 1)
 
     when (map toLower action == "topurelua") $ do
-        mapM_ (putStr . show) . toPureLua $ tokens
+        writeFile file . concatMap show . toPureLua $ tokens
         exitSuccess
 
     when (map toLower action == "toglua") $ do
-        mapM_ (putStr . show) . toGLua $ tokens
+        writeFile file . concatMap show . toGLua $ tokens
         exitSuccess
 
