@@ -86,7 +86,11 @@ parseLineString c = pSym c *> innerString
         innerString :: Parser String
         innerString = (\bs c str -> bs : c : str) <$> pSym '\\' <*> parseAnyChar <*> innerString <<|> -- escaped char
                       const "" <$> pSym c <<|>
-                      (:) <$> parseAnyChar <*> innerString
+                      (:) <$> pNoNewline <*> innerString
+
+        pNoNewline :: Parser Char
+        pNoNewline = pSatisfy (/= '\n') (Insertion "Anything but a newline" c 5)
+
 
 parseString :: Parser Token
 parseString = DQString <$> parseLineString '"' <<|>

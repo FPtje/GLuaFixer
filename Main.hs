@@ -16,6 +16,7 @@ help = unlines ["",
  "Usage: GLuaParser <ACTION> <FILE>",
  "",
  "Possible actions:",
+ "    fix       - attempt to fix syntax errors in the Lua script",
  "    toPureLua - convert the FILE to use pure Lua operators and comments (~=, --, etc.)",
  "    toGLua    - convert the FILE to use Garry's mod Lua operators and comments (!=, //, etc.)"
  ]
@@ -42,7 +43,14 @@ main = do
     -- Print any lexing errors
     unless (null errors) $ do
         mapM_ print errors
+        -- Attempt to fix errors when asked
+        when (map toLower action == "fix") $ do
+            writeFile file . concatMap show $ tokens
+            putStrLn "Success"
+            exitSuccess
+
         exitWith (ExitFailure 1)
+
 
     when (map toLower action == "topurelua") $ do
         writeFile file . concatMap show . toPureLua $ tokens
