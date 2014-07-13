@@ -6,7 +6,7 @@ data Token =
     -- Comments and whitespace
     Whitespace String           |
     DashComment String          |
-    DashBlockComment String     |
+    DashBlockComment Int String | -- where the Int is the depth of the comment delimiter
     SlashComment String         |
     SlashBlockComment String    |
     Semicolon                   |   -- ;
@@ -111,7 +111,7 @@ type TokenAlgebra token = (
     ( -- Comments and whitespace
         String -> token,    -- Whitespace
         String -> token,    -- DashComment
-        String -> token,    -- DashBlockComment
+        Int -> String -> token,    -- DashBlockComment
         String -> token,    -- SlashComment
         String -> token,    -- SlashBlockComment
         token               -- Semicolon
@@ -191,7 +191,7 @@ foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashB
     where
         fold (Whitespace str) = tWhitespace str
         fold (DashComment str) = tDashComment str
-        fold (DashBlockComment str) = tDashBlockComment str
+        fold (DashBlockComment depth str) = tDashBlockComment depth str
         fold (SlashComment str) = tSlashComment str
         fold (SlashBlockComment str) = tSlashBlockComment str
         fold (TNumber str) = tTNumber str
@@ -258,7 +258,7 @@ instance Show Token where
     show = foldToken ((
         id, -- Whitespace
         \s -> "--" ++ s, -- DashComment
-        \s -> "--" ++ s, -- DashBlockComment
+        \d s -> let n = replicate d '=' in "--[" ++ n ++ '[' : s ++ ']' : n ++ "]", -- DashBlockComment
         \s -> "//" ++ s, -- SlashComment
         \s -> "/*" ++ s ++ "*/", -- SlashBlockComment
         ";" -- Semicolon
@@ -335,13 +335,13 @@ instance Show Token where
 
 -- Whether a token is whitespace
 isWhitespace :: Token -> Bool
-isWhitespace = foldToken ((const True,const False,const False,const False,const False,False),( const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+isWhitespace = foldToken ((const True,const False,\d s -> False,const False,const False,False),( const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
 -- the size of a token in characters
 tokenSize = foldToken ((
     length, -- Whitespace
     (+2) . length, -- DashComment
-    (+2) . length, -- DashBlockComment
+    \d s -> 6 + length s + 2 * d, -- DashBlockComment
     (+2) . length, -- SlashComment
     (+4) . length, -- SlashBlockComment
     1 -- Semicolon

@@ -35,12 +35,8 @@ parseBlockComment = pToken "[" *> nested 0
         -- The amount of =-signs in the string delimiter is n
         nested :: Int -> Parser Token
         nested n = pToken "=" *> nested (n + 1) <<|>
-                   blockComment n <$ pToken "[" <*> restString n <<|>
+                   DashBlockComment n <$ pToken "[" <*> restString n <<|>
                    lineComment n <$> pUntilEnd
-
-        -- Turn the string into a block comment
-        blockComment :: Int -> String -> Token
-        blockComment n str = DashBlockComment $ '[' : replicate n '=' ++ '[' : str
 
         -- Turns out we were describing a line comment all along, cheeky bastard!
         -- (the last [ of the block comment start token is missing)
@@ -49,7 +45,7 @@ parseBlockComment = pToken "[" *> nested 0
 
         -- Right-recursive grammar. This part searches for the rest of the string until it finds the ]=^n] token
         restString :: Int -> Parser String
-        restString n = pToken ("]" ++ replicate n '=' ++ "]") <<|>
+        restString n = const "" <$> pToken ("]" ++ replicate n '=' ++ "]") <<|>
                        (:) <$> parseAnyChar <*> restString n
 
 pUntilEnd :: Parser String
