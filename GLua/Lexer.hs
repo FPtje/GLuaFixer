@@ -4,9 +4,9 @@
             Rank2Types, FlexibleContexts, NoMonomorphismRestriction,
             CPP #-}
 
-module Lexer where
+module GLua.Lexer where
 
-import TokenTypes
+import GLua.TokenTypes
 
 import Data.List
 

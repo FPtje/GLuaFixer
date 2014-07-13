@@ -1,4 +1,4 @@
-module TokenTypes where
+module GLua.TokenTypes where
 
 data Token =
     -- Comments and whitespace

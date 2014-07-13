@@ -1,7 +1,7 @@
 module Main where
 
-import Lexer
-import TokenTypes
+import GLua.Lexer
+import GLua.TokenTypes
 import System.FilePath
 import System.Environment
 import System.IO
