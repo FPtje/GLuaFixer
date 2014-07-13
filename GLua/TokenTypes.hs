@@ -1,5 +1,7 @@
 module GLua.TokenTypes where
 
+import Data.List
+
 data Token =
     -- Comments and whitespace
     Whitespace String           |
@@ -74,6 +76,36 @@ data Token =
     Label String                |   -- ::
     Identifier String
 
+-- Describes a position in a file (line number and column)
+data TokenPos = TPos { line :: Int, column :: Int }
+instance Show TokenPos where
+    show (TPos l c) = '(' : show l ++ ':' : show c ++ ")"
+
+addLines :: Int -> TokenPos -> TokenPos
+addLines n (TPos l c) = TPos (l + n) 0
+
+addColumns :: Int -> TokenPos -> TokenPos
+addColumns n (TPos l c) = TPos l (c + n)
+
+-- Add the size of a token to a position
+addToken :: Token -> TokenPos -> TokenPos
+addToken t p@(TPos l c) = if lineCount == 0 then addColumns size p else TPos (l + lineCount) columns
+    where
+        strTok = show t
+        lineCount = length . filter (== '\n') $ strTok
+        size = tokenSize t
+        columns = size - (last . elemIndices '\n' $ strTok)
+
+-- Metatoken, stores line and column position of token
+data MToken = MToken TokenPos Token deriving (Show)
+
+-- Generate metatokens from a list of tokens
+-- it does this by assuming the first token starts at position 1 1
+makeMTokens :: [Token] -> [MToken]
+makeMTokens = build (TPos 1 1)
+    where
+        build pos (t:ts) = MToken pos t : build (addToken t pos) ts
+        build pos [] = []
 
 type TokenAlgebra token = (
     ( -- Comments and whitespace
