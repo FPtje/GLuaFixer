@@ -7,9 +7,9 @@ insertTokens :: (Token -> Token -> Maybe Token) -> [Token] -> [Token]
 insertTokens cond [t] = case cond t (Whitespace "") of
                             Just ins -> [t, ins]
                             Nothing -> [t]
-insertTokens cond (left : right : ts) = case cond left right of
-                            Just between -> left : between : right : ts
-                            Nothing -> left : right : ts
+insertTokens cond (left : xs@(right : ts)) = case cond left right of
+                            Just between -> left : between : insertTokens cond xs
+                            Nothing -> left : insertTokens cond xs
 
 ensureWhiteSpaceAfter :: Token -> [Token] -> [Token]
 ensureWhiteSpaceAfter tok = insertTokens placeWhite
