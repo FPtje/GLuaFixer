@@ -46,9 +46,11 @@ main = do
 
     when (map toLower action == "topurelua") $ do
         writeFile file . concatMap show . toPureLua $ tokens
+        putStrLn "Success"
         exitSuccess
 
     when (map toLower action == "toglua") $ do
         writeFile file . concatMap show . toGLua $ tokens
+        putStrLn "Success"
         exitSuccess
 
