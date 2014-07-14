@@ -78,7 +78,7 @@ data Token =
     deriving (Eq)
 
 -- Describes a position in a file (line number and column)
-data TokenPos = TPos { line :: Int, column :: Int }
+data TokenPos = TPos { line :: !Int, column :: !Int }
 instance Show TokenPos where
     show (TPos l c) = '(' : show l ++ ':' : show c ++ ")"
 
@@ -99,6 +99,9 @@ addToken t p@(TPos l c) = if lineCount == 0 then addColumns size p else TPos (l 
 
 -- Metatoken, stores line and column position of token
 data MToken = MToken TokenPos Token deriving (Show)
+
+instance Eq MToken where
+    (MToken _ t1) == (MToken _ t2) = t1 == t2
 
 -- Generate metatokens from a list of tokens
 -- it does this by assuming the first token starts at position 1 1
@@ -336,7 +339,15 @@ instance Show Token where
 
 -- Whether a token is whitespace
 isWhitespace :: Token -> Bool
-isWhitespace = foldToken ((const True,const False,\d s -> False,const False,const False,False),( const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+isWhitespace = foldToken ((const True,const False,\d s -> False,const False,const False,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+
+-- Whether a token is redundant (whitespace or semicolon)
+isRedundant :: Token -> Bool
+isRedundant = foldToken ((const True,const False,\d s -> False,const False,const False,True),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+
+-- Remove redundant tokens, such as whitespace and semicolons
+removeRedundant :: [Token] -> [Token]
+removeRedundant = filter isRedundant
 
 -- the size of a token in characters
 tokenSize = foldToken ((

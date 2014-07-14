@@ -2,6 +2,7 @@ module Main where
 
 import GLua.Lexer
 import GLua.TokenTypes
+import GLua.Parser
 import LexicalAnalysis
 
 import Data.Char
@@ -62,3 +63,7 @@ main = do
         putStrLn "Success"
         exitSuccess
 
+    let parseInp = makeMTokens . removeRedundant $ tokens
+    let ast = parseGLua parseInp
+
+    exitSuccess
