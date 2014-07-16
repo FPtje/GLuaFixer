@@ -28,11 +28,41 @@ instance IsLocationUpdatedBy TokenPos MToken where
 execAParser :: AParser a -> [MToken] -> (a, [Error TokenPos])
 execAParser p = parse_h ((,) <$> p <*> pEnd) . createStr (TPos 0 0)
 
+-- Parse a single Metatoken, based on a positionless token (much like pSym)
 pMTok :: Token -> AParser MToken
 pMTok t = pSatisfy isToken (Insertion ("Token " ++ show t) (MToken (TPos 0 0) Plus) 5)
     where
         isToken :: MToken -> Bool
         isToken (MToken _ tok) = t == tok
+
+-- Parse binary operator
+parseBinOp :: AParser BinOp
+parseBinOp =
+    APlus          <$ pMTok Plus           <<|>
+    BinMinus       <$ pMTok Minus          <<|>
+    AMulitply      <$ pMTok Mulitply       <<|>
+    ADivide        <$ pMTok Divide         <<|>
+    AModulus       <$ pMTok Modulus        <<|>
+    APower         <$ pMTok Power          <<|>
+    AConcatenate   <$ pMTok Concatenate    <<|>
+    ALT            <$ pMTok TLT            <<|>
+    ALEQ           <$ pMTok TLEQ           <<|>
+    AGT            <$ pMTok TGT            <<|>
+    AGEQ           <$ pMTok TGEQ           <<|>
+    AEq            <$ pMTok TEq            <<|>
+    ANEq           <$ pMTok TNEq           <<|>
+    ANEq           <$ pMTok TCNEq          <<|>
+    AAnd           <$ pMTok And            <<|>
+    AAnd           <$ pMTok CAnd           <<|>
+    AOr            <$ pMTok Or             <<|>
+    AOr            <$ pMTok COr
+
+-- Parse unary operator (-, not, #)
+parseUnOp :: AParser UnOp
+parseUnOp = UnMinus <$ pMTok Minus <<|>
+            ANot    <$ pMTok Not   <<|>
+            ANot    <$ pMTok CNot  <<|>
+            AHash   <$ pMTok Hash
 
 parseGLua :: [MToken] -> AST
 parseGLua = const AST
