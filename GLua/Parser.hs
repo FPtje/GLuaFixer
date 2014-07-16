@@ -69,6 +69,11 @@ parseLabel = pSatisfy isLabel (Insertion "Label" (MToken (TPos 0 0) (Label "some
         isLabel (MToken _ (Label _)) = True
         isLabel _ = False
 
+-- function name
+parseFuncName :: AParser FuncName
+parseFuncName = (\a b c -> FuncName (a:b) c) <$> pName <*> pMany (pMTok Dot *> pName) <*>
+                opt (Just <$ pMTok Colon <*> pName) Nothing
+
 -- Field separator
 parseFieldSep :: AParser MToken
 parseFieldSep = pMTok Comma <<|> pMTok Semicolon
