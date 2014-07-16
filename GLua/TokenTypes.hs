@@ -341,13 +341,9 @@ instance Show Token where
 isWhitespace :: Token -> Bool
 isWhitespace = foldToken ((const True,const False,\d s -> False,const False,const False,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
--- Whether a token is redundant (whitespace or semicolon)
-isRedundant :: Token -> Bool
-isRedundant = foldToken ((const True,const False,\d s -> False,const False,const False,True),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
-
--- Remove redundant tokens, such as whitespace and semicolons
+-- Remove redundant tokens, such as whitespace
 removeRedundant :: [Token] -> [Token]
-removeRedundant = filter isRedundant
+removeRedundant = filter isWhitespace
 
 -- the size of a token in characters
 tokenSize = foldToken ((
