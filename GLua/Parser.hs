@@ -40,7 +40,7 @@ parseBinOp :: AParser BinOp
 parseBinOp =
     APlus          <$ pMTok Plus           <<|>
     BinMinus       <$ pMTok Minus          <<|>
-    AMulitply      <$ pMTok Mulitply       <<|>
+    AMultiply      <$ pMTok Multiply       <<|>
     ADivide        <$ pMTok Divide         <<|>
     AModulus       <$ pMTok Modulus        <<|>
     APower         <$ pMTok Power          <<|>

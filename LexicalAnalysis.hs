@@ -45,7 +45,7 @@ toPureLua = ensureWhiteSpaceAfter Not . map (foldToken ((
     (
     Plus, -- Plus
     Minus, -- Minus
-    Mulitply, -- Mulitply
+    Multiply, -- Multiply
     Divide, -- Divide
     Modulus, -- Modulus
     Power, -- Power
@@ -126,7 +126,7 @@ toGLua = map $ foldToken ((
     (
     Plus, -- Plus
     Minus, -- Minus
-    Mulitply, -- Mulitply
+    Multiply, -- Multiply
     Divide, -- Divide
     Modulus, -- Modulus
     Power, -- Power

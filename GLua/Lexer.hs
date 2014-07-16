@@ -189,7 +189,7 @@ parseToken =    Whitespace <$> parseWhitespace               <<|>
                 -- Operators
                 Plus <$ pToken "+"                           <<|>
                 Minus <$ pToken "-"                          <<|>
-                Mulitply <$ pToken "*"                       <<|>
+                Multiply <$ pToken "*"                       <<|>
                 Modulus <$ pToken "%"                        <<|>
                 Power <$ pToken "^"                          <<|>
                 TEq <$ pToken "=="                           <<|>

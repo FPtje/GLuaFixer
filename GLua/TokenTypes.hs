@@ -24,7 +24,7 @@ data Token =
     -- Operators
     Plus                        |   -- +
     Minus                       |   -- -
-    Mulitply                    |   -- *
+    Multiply                    |   -- *
     Divide                      |   -- /
     Modulus                     |   -- %
     Power                       |   -- ^
@@ -133,7 +133,7 @@ type TokenAlgebra token = (
     (
         token,              -- Plus
         token,              -- Minus
-        token,              -- Mulitply
+        token,              -- Multiply
         token,              -- Divide
         token,              -- Modulus
         token,              -- Power
@@ -191,7 +191,7 @@ type TokenAlgebra token = (
     )
 
 foldToken :: TokenAlgebra t -> Token -> t
-foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tSemicolon), (tTNumber, tDQString, tSQString, tMLString, tTTrue, tTFalse, tNil, tVarArg), (tPlus, tMinus, tMulitply, tDivide, tModulus, tPower, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tConcatenate, tColon, tDot, tComma, tHash, tNot, tCNot, tAnd, tCAnd, tOr, tCOr), (tFunction, tLocal, tIf, tThen, tElseif, tElse, tFor, tIn, tDo, tWhile, tUntil, tRepeat, tContinue, tBreak, tReturn, tEnd, tGoto), (tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare), (tLabel, tIdentifier)) = fold
+foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tSemicolon), (tTNumber, tDQString, tSQString, tMLString, tTTrue, tTFalse, tNil, tVarArg), (tPlus, tMinus, tMultiply, tDivide, tModulus, tPower, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tConcatenate, tColon, tDot, tComma, tHash, tNot, tCNot, tAnd, tCAnd, tOr, tCOr), (tFunction, tLocal, tIf, tThen, tElseif, tElse, tFor, tIn, tDo, tWhile, tUntil, tRepeat, tContinue, tBreak, tReturn, tEnd, tGoto), (tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare), (tLabel, tIdentifier)) = fold
     where
         fold (Whitespace str) = tWhitespace str
         fold (DashComment str) = tDashComment str
@@ -232,7 +232,7 @@ foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashB
         fold While = tWhile
         fold Plus = tPlus
         fold Minus = tMinus
-        fold Mulitply = tMulitply
+        fold Multiply = tMultiply
         fold Divide = tDivide
         fold Modulus = tModulus
         fold Power = tPower
@@ -280,7 +280,7 @@ instance Show Token where
         (
         "+", -- Plus
         "-", -- Minus
-        "*", -- Mulitply
+        "*", -- Multiply
         "/", -- Divide
         "%", -- Modulus
         "^", -- Power
@@ -367,7 +367,7 @@ tokenSize = foldToken ((
     (
     1, -- Plus
     1, -- Minus
-    1, -- Mulitply
+    1, -- Multiply
     1, -- Divide
     1, -- Modulus
     1, -- Power
