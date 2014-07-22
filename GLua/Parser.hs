@@ -74,6 +74,32 @@ parseFuncName :: AParser FuncName
 parseFuncName = (\a b c -> FuncName (a:b) c) <$> pName <*> pMany (pMTok Dot *> pName) <*>
                 opt (Just <$ pMTok Colon <*> pName) Nothing
 
+parseNumber :: AParser Expr
+parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pSatisfy isNumber (Insertion "Number" (MToken (TPos 0 0) (TNumber "0")) 5)
+    where
+        isNumber :: MToken -> Bool
+        isNumber (MToken _ (TNumber str)) = True
+        isNumber _ = False
+
+parseString :: AParser Expr
+parseString = AString <$> pSatisfy isString (Insertion "String" (MToken (TPos 0 0) (DQString "0")) 5)
+    where
+        isString :: MToken -> Bool
+        isString (MToken _ (DQString str)) = True
+        isString (MToken _ (SQString str)) = True
+        isString (MToken _ (MLString str)) = True
+        isString _ = False
+
+
+-- Expressions
+parseExpression :: AParser Expr
+parseExpression = ANil <$ pMTok Nil <<|>
+                  AFalse <$ pMTok TFalse <<|>
+                  ATrue <$ pMTok TTrue <<|>
+                  parseNumber <<|>
+                  parseString <<|>
+                  AVarArg <$ pMTok VarArg
+
 -- Field separator
 parseFieldSep :: AParser MToken
 parseFieldSep = pMTok Comma <<|> pMTok Semicolon
