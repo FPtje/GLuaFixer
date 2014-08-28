@@ -99,6 +99,17 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   parseNumber <<|>
                   parseString <<|>
                   AVarArg <$ pMTok VarArg
+                  -- todo: AFunctionDef
+                  -- todo: APrefixExpr
+                  -- todo: ATableConstructor
+                  -- todo: BinOp
+                  -- todo: UnOp
+
+-- A field in a table
+parseField :: AParser Field
+parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <<|>
+             NamedField <$> pName <* pMTok Equals <*> parseExpression <<|>
+             UnnamedField <$> parseExpression
 
 -- Field separator
 parseFieldSep :: AParser MToken

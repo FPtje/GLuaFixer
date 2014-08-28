@@ -10,6 +10,8 @@ data Expr = ANil | AFalse | ATrue | ANumber String | AString MToken | AVarArg | 
             | BinOpExpr Expr BinOp Expr
             | UnOpExpr UnOp Expr deriving (Show)
 
+data Field = ExprField Expr Expr | NamedField MToken Expr | UnnamedField Expr deriving (Show)
+
 data BinOp = APlus | BinMinus | AMultiply | ADivide | AModulus | APower | AConcatenate |
              ALT | ALEQ | AGT | AGEQ | AEq | ANEq | AAnd | AOr deriving (Show)
 
