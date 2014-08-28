@@ -105,6 +105,17 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   -- todo: BinOp
                   -- todo: UnOp
 
+-- A list of table entries
+-- Grammar: field {separator field} [separator]
+parseFieldList :: AParser [Field]
+parseFieldList = parseField <**> (
+                    parseFieldSep <**> (
+                        (\flist _ field -> field : flist) <$> parseFieldList <<|>
+                        pReturn (\_ f -> [f])
+                    ) <<|>
+                    pReturn (: [])
+                )
+
 -- A field in a table
 parseField :: AParser Field
 parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <<|>
