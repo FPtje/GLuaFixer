@@ -105,6 +105,10 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   -- todo: BinOp
                   -- todo: UnOp
 
+-- Table constructor
+parseTableConstructor :: AParser [Field]
+parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly
+
 -- A list of table entries
 -- Grammar: field {separator field} [separator]
 parseFieldList :: AParser [Field]
