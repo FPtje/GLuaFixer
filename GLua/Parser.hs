@@ -87,8 +87,8 @@ parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pSatisfy isNumber (
         isNumber (MToken _ (TNumber str)) = True
         isNumber _ = False
 
-parseString :: AParser Expr
-parseString = AString <$> pSatisfy isString (Insertion "String" (MToken (TPos 0 0) (DQString "0")) 5)
+parseString :: AParser MToken
+parseString = pSatisfy isString (Insertion "String" (MToken (TPos 0 0) (DQString "0")) 5)
     where
         isString :: MToken -> Bool
         isString (MToken _ (DQString str)) = True
@@ -109,13 +109,19 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   AFalse <$ pMTok TFalse <<|>
                   ATrue <$ pMTok TTrue <<|>
                   parseNumber <<|>
-                  parseString <<|>
+                  AString <$> parseString <<|>
                   AVarArg <$ pMTok VarArg
                   -- todo: AFunctionDef
                   -- todo: APrefixExpr
                   -- todo: ATableConstructor
                   -- todo: BinOp
                   -- todo: UnOp
+
+-- arguments of a function call (including brackets)
+parseArgs :: AParser Args
+parseArgs = ListArgs <$ pMTok LRound <*> parseExpressionList <* pMTok RRound <<|>
+            TableArg <$> parseTableConstructor <<|>
+            StringArg <$> parseString
 
 -- Table constructor
 parseTableConstructor :: AParser [Field]
