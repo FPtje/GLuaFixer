@@ -110,10 +110,10 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   ATrue <$ pMTok TTrue <<|>
                   parseNumber <<|>
                   AString <$> parseString <<|>
-                  AVarArg <$ pMTok VarArg
+                  AVarArg <$ pMTok VarArg <<|>
                   -- todo: AFunctionDef
                   -- todo: APrefixExpr
-                  -- todo: ATableConstructor
+                  ATableConstructor <$> parseTableConstructor
                   -- todo: BinOp
                   -- todo: UnOp
 
