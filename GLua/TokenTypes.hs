@@ -343,7 +343,7 @@ isWhitespace = foldToken ((const True,const False,\d s -> False,const False,cons
 
 -- Remove redundant tokens, such as whitespace
 removeRedundant :: [Token] -> [Token]
-removeRedundant = filter isWhitespace
+removeRedundant = filter (not . isWhitespace)
 
 -- the size of a token in characters
 tokenSize = foldToken ((
