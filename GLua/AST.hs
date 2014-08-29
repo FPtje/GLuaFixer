@@ -4,6 +4,8 @@ import GLua.TokenTypes
 
 data AST = AST deriving (Show)
 
+data AReturn = AReturn [Expr] deriving (Show)
+
 data FuncName = FuncName [MToken] (Maybe MToken) deriving (Show)-- name(.name)*(:name)?
 
 data Expr = ANil | AFalse | ATrue | ANumber String | AString MToken | AVarArg | AFunctionDef {- todo -} | APrefixExpr {- todo -} | ATableConstructor [Field]

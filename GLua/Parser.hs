@@ -67,6 +67,9 @@ parseParList = pName <**> (
                     pReturn (: [])
                )
 
+parseReturn :: AParser AReturn
+parseReturn = AReturn <$ pMTok Return <*> parseExpressionList
+
 -- Label
 parseLabel :: AParser MToken
 parseLabel = pSatisfy isLabel (Insertion "Label" (MToken (TPos 0 0) (Label "something")) 5)
