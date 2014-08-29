@@ -96,6 +96,12 @@ parseString = AString <$> pSatisfy isString (Insertion "String" (MToken (TPos 0 
         isString (MToken _ (MLString str)) = True
         isString _ = False
 
+-- list of expressions
+parseExpressionList :: AParser [Expr]
+parseExpressionList = parseExpression <**> (
+                          (\_ list exp -> exp : list) <$> pMTok Comma <*> parseExpressionList <<|>
+                          flip (:) <$> pReturn []
+                      )
 
 -- Expressions
 parseExpression :: AParser Expr
