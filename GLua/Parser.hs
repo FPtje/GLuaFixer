@@ -8,6 +8,7 @@ module GLua.Parser where
 
 import GLua.TokenTypes
 import GLua.AST
+import qualified GLua.Lexer as Lex
 
 import Text.ParserCombinators.UU
 import Text.ParserCombinators.UU.Utils
@@ -23,6 +24,11 @@ instance IsLocationUpdatedBy TokenPos MToken where
     -- advance :: TokenPos -> MToken3 -> TokenPos
     -- Recalculate pos in case a token was inserted by the error correction
     advance pos (MToken _ t) = addToken t pos
+
+
+-- parse a string directly
+parseFromString :: AParser a -> String -> (a, [Error TokenPos])
+parseFromString p = execAParser p . makeMTokens . removeRedundant . fst . Lex.execParseTokens
 
 -- Text.ParserCombinators.UU.Utils.execParser modified to parse MTokens
 execAParser :: AParser a -> [MToken] -> (a, [Error TokenPos])
