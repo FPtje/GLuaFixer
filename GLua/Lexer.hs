@@ -84,9 +84,10 @@ parseLineString :: Char -> Parser String
 parseLineString c = pSym c *> innerString
     where
         innerString :: Parser String
-        innerString = (\bs c str -> bs : c : str) <$> pSym '\\' <*> parseAnyChar <*> innerString <<|> -- escaped char
-                      const "" <$> pSym c <<|>
-                      (:) <$> pNoNewline <*> innerString
+        innerString = pSym '\\' <**> -- Escaped character in string always starts with backslash
+                         ((\c str esc -> esc : c : str) <$> parseAnyChar <*> innerString) <<|>
+                      const "" <$> pSym c <<|> -- the end of the string
+                      (:) <$> pNoNewline <*> innerString -- the next character in the string
 
         pNoNewline :: Parser Char
         pNoNewline = pSatisfy (/= '\n') (Insertion "Anything but a newline" c 5)
