@@ -5,8 +5,7 @@ WIP Lexer/Parser for Garry's mod's variant of Lua.
 
 # Compiling
 
-- Make sure [Alex](http://www.haskell.org/alex/) is installed.
-- Run `alex Lexer.x` in the terminal
-
-After that the `Lexer` module can be imported into your project.
+- Make sure cabal is installed
+- `cabal configure && cabal build`
+- The executable will appear in the `dist/build/gluaparser/` folder
 
