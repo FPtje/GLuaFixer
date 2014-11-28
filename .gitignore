@@ -1,2 +1,4 @@
 *.o
 *.hi
+dist/
+*.lua
