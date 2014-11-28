@@ -99,6 +99,10 @@ parseString = pSatisfy isString (Insertion "String" (MToken (TPos 0 0) (DQString
         isString (MToken _ (MLString str)) = True
         isString _ = False
 
+-- single variable
+parseVar :: AParser Var
+parseVar = Var <$> pName
+
 -- list of expressions
 parseExpressionList :: AParser [Expr]
 parseExpressionList = parseExpression <**> (
@@ -115,10 +119,22 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   AString <$> parseString <<|>
                   AVarArg <$ pMTok VarArg <<|>
                   -- todo: AFunctionDef
-                  -- todo: APrefixExpr
+                  APrefixExpr <$> parsePrefixExp <<|>
                   ATableConstructor <$> parseTableConstructor
                   -- todo: BinOp
                   -- todo: UnOp
+
+-- Prefix expression
+parsePrefixExp :: AParser PrefixExp
+parsePrefixExp = FuncCall <$> parseFunctionCall <<|>
+                 PfVar <$> parseVar <<|>
+                 PFExp <$ pMTok LRound <*> parseExpression <* pMTok RRound
+
+-- Function calls
+parseFunctionCall :: AParser FunctionCall
+parseFunctionCall = parsePrefixExp <**>
+                      ((\c name args pf -> FCMeta pf name args) <$> pMTok Colon <*> pName <*> parseArgs <<|>
+                       flip FC <$> parseArgs)
 
 -- arguments of a function call (including brackets)
 parseArgs :: AParser Args
