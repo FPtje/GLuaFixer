@@ -8,11 +8,9 @@ data AReturn = AReturn [Expr] deriving (Show)
 
 data FuncName = FuncName [MToken] (Maybe MToken) deriving (Show)-- name(.name)*(:name)?
 
-data Var = Var MToken | TblIndexExpr PrefixExp Expr | TblIndexStr PrefixExp MToken deriving (Show)
+data PrefixExp = PFVar MToken [PFExprSuffix] | ExprVar Expr [PFExprSuffix] deriving (Show)
 
-data PrefixExp = PfVar Var | FuncCall FunctionCall | PFExp Expr deriving (Show)
-
-data FunctionCall = FC PrefixExp Args | FCMeta PrefixExp MToken Args deriving (Show)
+data PFExprSuffix = Call Args | MetaCall MToken Args | ExprIndex Expr | DotIndex MToken deriving (Show)
 
 data Expr = ANil | AFalse | ATrue | ANumber String | AString MToken | AVarArg | AFunctionDef {- todo -} | APrefixExpr PrefixExp | ATableConstructor [Field]
             | BinOpExpr Expr BinOp Expr

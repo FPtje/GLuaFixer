@@ -100,7 +100,8 @@ parseString = pSatisfy isString (Insertion "String" (MToken (TPos 0 0) (DQString
         isString _ = False
 
 -- single variable
-parseVar :: AParser Var
+-- Can be either just an identifier or a prefix expression ending in an indexation
+parseVar :: AParser PrefixExp
 parseVar = Var <$> pName
 
 -- list of expressions
@@ -124,21 +125,36 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   -- todo: BinOp
                   -- todo: UnOp
 
--- Prefix expression
+-- Prefix expressions
+-- can have any arbitrary list of expression suffixes
 parsePrefixExp :: AParser PrefixExp
-parsePrefixExp = FuncCall <$> parseFunctionCall <<|>
-                 PfVar <$> parseVar <<|>
-                 PFExp <$ pMTok LRound <*> parseExpression <* pMTok RRound
+parsePrefixExp = pPrefixExp (pMany pPFExprSuffix)
 
--- Function calls
-parseFunctionCall :: AParser FunctionCall
-parseFunctionCall = parsePrefixExp <**>
-                      ((\c name args pf -> FCMeta pf name args) <$> pMTok Colon <*> pName <*> parseArgs <<|>
-                       flip FC <$> parseArgs)
+-- Prefix expressions
+-- The suffixes define rules on the allowed suffixes
+pPrefixExp :: AParser [PFExprSuffix] -> AParser PrefixExp
+pPrefixExp suffixes = PFVar <$> pName <*> (reverse <$> suffixes) <<|>
+                      ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound <*> (reverse <$> suffixes)
+
+-- Parse any expression suffix
+pPFExprSuffix :: AParser PFExprSuffix
+pPFExprSuffix = Call <$> parseArgs <<|>
+                MetaCall <$ pMTok Colon <*> pName <*> parseArgs <<|>
+                ExprIndex <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <<|>
+                DotIndex <$ pMTok Dot <*> pName
+
+-- Function calls are prefix expressions, but the last suffix MUST be either a function call or a metafunction call
+pFunctionCall :: AParser PrefixExp
+pFunctionCall = pPrefixExp suffixes
+    where
+        suffixes = (:) <$> pPFExprSuffix <*> suffixes <|>
+                   (flip (:) [] . Call) <$> parseArgs <|>
+                   (\n a -> [MetaCall n a]) <$ pMTok Colon <*> pName <*> parseArgs
+
 
 -- arguments of a function call (including brackets)
 parseArgs :: AParser Args
-parseArgs = ListArgs <$ pMTok LRound <*> parseExpressionList <* pMTok RRound <<|>
+parseArgs = ListArgs <$ pMTok LRound <*> opt parseExpressionList [] <* pMTok RRound <<|>
             TableArg <$> parseTableConstructor <<|>
             StringArg <$> parseString
 
