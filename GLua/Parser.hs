@@ -99,10 +99,16 @@ parseString = pSatisfy isString (Insertion "String" (MToken (TPos 0 0) (DQString
         isString (MToken _ (MLString str)) = True
         isString _ = False
 
--- single variable
--- Can be either just an identifier or a prefix expression ending in an indexation
+-- single variable. Note: definition differs from reference to circumvent the left recursion
+-- var ::= Name [{PFExprSuffix}* indexation] | '(' exp ')' {PFExprSuffix}* indexation
+-- where "{PFExprSuffix}* indexation" is any arbitrary sequence of prefix expression suffixes that end with an indexation
 parseVar :: AParser PrefixExp
-parseVar = Var <$> pName
+parseVar = PFVar <$> pName <*> (reverse <$> opt suffixes []) <<|>
+           ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound <*> (reverse <$> suffixes)
+    where
+        suffixes = (:) <$> pPFExprSuffix <*> suffixes <|>
+                   (flip (:) [] . ExprIndex) <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <|>
+                   (flip (:) [] . DotIndex) <$ pMTok Dot <*> pName
 
 -- list of expressions
 parseExpressionList :: AParser [Expr]
