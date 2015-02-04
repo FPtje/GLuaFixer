@@ -132,8 +132,37 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   -- todo: AFunctionDef
                   APrefixExpr <$> parsePrefixExp <<|>
                   ATableConstructor <$> parseTableConstructor
-                  -- todo: BinOp
                   -- todo: UnOp
+                  -- todo: BinOp
+
+-- Parse operators of the same precedence in a chain
+samePrio :: [(Token, BinOp)] -> AParser Expr -> AParser Expr
+samePrio ops p = pChainl (choice (map f ops)) p
+  where
+    choice = foldr (<<|>) pFail
+    f :: (Token, BinOp) -> AParser (Expr -> Expr -> Expr)
+    f (t, at) = BinOpExpr at <$ pMTok t
+
+-- Operators, sorted by priority
+-- Priority from: http://www.lua.org/manual/5.2/manual.html#3.4.7
+operators :: [[(Token, BinOp)]]
+operators = [
+  [(Or, AOr)],
+  [(And, AAnd)],
+  [(TLT, ALT), (TGT, AGT), (TLEQ, ALEQ), (TGEQ, AGEQ), (TNEq, ANEq), (TCNEq, ANEq), (TEq, AEq)],
+  [(Concatenate, AConcatenate)],
+  [(Plus, APlus), (Minus, BinMinus)],
+  [(Multiply, AMultiply), (Divide, ADivide), (Modulus, AModulus)]
+ ]
+
+parseBinOpChain :: AParser Expr
+parseBinOpChain = bind operators
+  where
+    -- Looks like a foldr, but an actual foldr gives crazy errors
+    -- Same happens when the type signature of bind is removed
+    bind :: [[(Token, BinOp)]] -> AParser Expr
+    bind [] = parseExpression
+    bind (x : xs) = samePrio x (bind xs)
 
 -- Prefix expressions
 -- can have any arbitrary list of expression suffixes
