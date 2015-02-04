@@ -131,8 +131,8 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   AVarArg <$ pMTok VarArg <<|>
                   -- todo: AFunctionDef
                   APrefixExpr <$> parsePrefixExp <<|>
-                  ATableConstructor <$> parseTableConstructor
-                  -- todo: UnOp
+                  ATableConstructor <$> parseTableConstructor <<|>
+                  UnOpExpr <$> parseUnOp <*> parseExpression
                   -- todo: BinOp
 
 -- Parse operators of the same precedence in a chain
