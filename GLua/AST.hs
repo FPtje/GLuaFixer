@@ -5,7 +5,7 @@ import GLua.TokenTypes
 data AST = AST deriving (Show)
 
 -- Block of code
-data Block = Block [Stat] (Maybe AReturn)
+data Block = Block [Stat] (Maybe AReturn) deriving (Show)
 
 -- Statement
 data Stat = ASemicolon |
@@ -22,7 +22,7 @@ data Stat = ASemicolon |
             AFor MToken Expr [Expr] Block | -- for varname = expr, [expr]+ do block end
             AFunc FuncName [MToken] Block | -- function funcname(parameters) block end
             ALocFunc FuncName [MToken] Block -- local function funcname(parameters) block end
-
+            deriving (Show)
 
 
 -- Return [values]
@@ -38,7 +38,7 @@ data PrefixExp = PFVar MToken [PFExprSuffix] | ExprVar Expr [PFExprSuffix] deriv
 data PFExprSuffix = Call Args | MetaCall MToken Args | ExprIndex Expr | DotIndex MToken deriving (Show)
 
 -- Expressions
-data Expr = ANil | AFalse | ATrue | ANumber String | AString MToken | AVarArg | AnonymousFunc [MToken] {-TODO: function body-} | APrefixExpr PrefixExp | ATableConstructor [Field]
+data Expr = ANil | AFalse | ATrue | ANumber String | AString MToken | AVarArg | AnonymousFunc [MToken] Block | APrefixExpr PrefixExp | ATableConstructor [Field]
             | BinOpExpr BinOp Expr Expr
             | UnOpExpr UnOp Expr deriving (Show)
 

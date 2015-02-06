@@ -68,6 +68,14 @@ parseParList = pName <**> (
                     pReturn (: [])
                ) <<|> pReturn []
 
+-- Parse a block with an optional return value
+parseBlock :: AParser Block
+parseBlock = Block <$> pMany parseStat <*> (Just <$> parseReturn <<|> pReturn Nothing)
+
+-- Parse a single statement
+parseStat :: AParser Stat
+parseStat = undefined
+
 parseReturn :: AParser AReturn
 parseReturn = AReturn <$ pMTok Return <*> parseExpressionList
 
@@ -137,8 +145,8 @@ parseExpression = ANil <$ pMTok Nil <<|>
 parseAnonymFunc :: AParser Expr
 parseAnonymFunc = AnonymousFunc <$
                    pMTok Function <*>
-                   pPacked (pMTok LRound) (pMTok RRound) parseParList
-                   {-TODO: function block-} <*
+                   pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
+                   parseBlock <*
                    pMTok End
 
 
