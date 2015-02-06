@@ -161,8 +161,8 @@ samePrio ops p = pChainl (choice (map f ops)) p
 -- Operators, sorted by priority
 -- Priority from: http://www.lua.org/manual/5.2/manual.html#3.4.7
 lvl1, lvl2, lvl3, lvl4, lvl5, lvl6, lvl8 :: [(Token, BinOp)]
-lvl1 = [(Or, AOr)]
-lvl2 = [(And, AAnd)]
+lvl1 = [(Or, AOr), (COr, AOr)]
+lvl2 = [(And, AAnd), (CAnd, AAnd)]
 lvl3 = [(TLT, ALT), (TGT, AGT), (TLEQ, ALEQ), (TGEQ, AGEQ), (TNEq, ANEq), (TCNEq, ANEq), (TEq, AEq)]
 lvl4 = [(Concatenate, AConcatenate)]
 lvl5 = [(Plus, APlus), (Minus, BinMinus)]
