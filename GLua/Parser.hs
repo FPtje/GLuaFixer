@@ -70,7 +70,7 @@ parseParList = pName <**> (
 
 -- Parse a block with an optional return value
 parseBlock :: AParser Block
-parseBlock = Block <$> pMany parseStat <*> (Just <$> parseReturn <<|> pReturn Nothing)
+parseBlock = Block <$> pMany parseStat <*> (parseReturn <<|> pReturn NoReturn)
 
 -- Parse a single statement
 parseStat :: AParser Stat

@@ -5,7 +5,7 @@ import GLua.TokenTypes
 data AST = AST deriving (Show)
 
 -- Block of code
-data Block = Block [Stat] (Maybe AReturn) deriving (Show)
+data Block = Block [Stat] AReturn deriving (Show)
 
 -- Statement
 data Stat = ASemicolon |
@@ -26,7 +26,7 @@ data Stat = ASemicolon |
 
 
 -- Return [values]
-data AReturn = AReturn [Expr] deriving (Show)
+data AReturn = AReturn [Expr] | NoReturn deriving (Show)
 
 -- Function names
 data FuncName = FuncName [MToken] (Maybe MToken) deriving (Show)-- name(.name)*(:name)?
