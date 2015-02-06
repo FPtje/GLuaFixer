@@ -38,9 +38,18 @@ data PrefixExp = PFVar MToken [PFExprSuffix] | ExprVar Expr [PFExprSuffix] deriv
 data PFExprSuffix = Call Args | MetaCall MToken Args | ExprIndex Expr | DotIndex MToken deriving (Show)
 
 -- Expressions
-data Expr = ANil | AFalse | ATrue | ANumber String | AString MToken | AVarArg | AnonymousFunc [MToken] Block | APrefixExpr PrefixExp | ATableConstructor [Field]
-            | BinOpExpr BinOp Expr Expr
-            | UnOpExpr UnOp Expr deriving (Show)
+data Expr = ANil |
+            AFalse |
+            ATrue |
+            ANumber String |
+            AString MToken |
+            AVarArg |
+            AnonymousFunc [MToken] Block |
+            APrefixExpr PrefixExp |
+            ATableConstructor [Field] |
+            BinOpExpr BinOp Expr Expr |
+            UnOpExpr UnOp Expr
+            deriving (Show)
 
 -- arguments of function call: fn(list, args), fn{table, args}, fn"string args"
 data Args = ListArgs [Expr] | TableArg [Field] | StringArg MToken deriving (Show)
