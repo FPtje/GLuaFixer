@@ -85,7 +85,13 @@ parseStat = ASemicolon <$ pMTok Semicolon <<|>
             parseIf
 
 parseIf :: AParser Stat
-parseIf = undefined
+parseIf = AIf <$ pMTok If <*> parseOpChain <* pMTok Then <*>
+            parseBlock <*>
+            -- elseif
+            (pMany ((,) <$ pMTok Elseif <*> parseOpChain <* pMTok Then <*> parseBlock)) <*>
+            -- else
+            (pMany (pMTok Else *> parseBlock)) <*
+            pMTok End
 
 parseReturn :: AParser AReturn
 parseReturn = AReturn <$ pMTok Return <*> parseExpressionList
