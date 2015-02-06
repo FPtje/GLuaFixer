@@ -339,7 +339,7 @@ instance Show Token where
 
 -- Whether a token is whitespace
 isWhitespace :: Token -> Bool
-isWhitespace = foldToken ((const True,const False,\d s -> False,const False,const False,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+isWhitespace = foldToken ((const True,const True,\d s -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
 -- Remove redundant tokens, such as whitespace
 removeRedundant :: [Token] -> [Token]

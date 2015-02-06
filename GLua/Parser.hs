@@ -314,5 +314,5 @@ parseUnOp = UnMinus <$ pMTok Minus <<|>
             ANot    <$ pMTok CNot  <<|>
             AHash   <$ pMTok Hash
 
-parseGLua :: [MToken] -> AST
-parseGLua = const AST
+parseGLua :: [MToken] -> (Block, [Error TokenPos])
+parseGLua = execAParser parseBlock

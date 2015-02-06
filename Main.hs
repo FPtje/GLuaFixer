@@ -66,4 +66,6 @@ main = do
     let parseInp = makeMTokens . removeRedundant $ tokens
     let ast = parseGLua parseInp
 
+    putStrLn . show $ ast
+
     exitSuccess

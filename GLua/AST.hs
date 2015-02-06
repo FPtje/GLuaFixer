@@ -2,8 +2,6 @@ module GLua.AST where
 
 import GLua.TokenTypes
 
-data AST = AST deriving (Show)
-
 -- Block of code
 data Block = Block [Stat] AReturn deriving (Show)
 
