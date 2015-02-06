@@ -82,10 +82,10 @@ parseStat = ASemicolon <$ pMTok Semicolon <<|>
             ABreak <$ pMTok Break <<|>
             AGoto <$ pMTok Goto <*> pName <<|>
             ADo <$ pMTok Do <*> parseBlock <* pMTok End <<|>
-            AWhile <$ pMTok While <*> parseOpChain <* pMTok Do <*> parseBlock <* pMTok End <<|>
-            ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseOpChain <<|>
+            AWhile <$ pMTok While <*> parseExpression <* pMTok Do <*> parseBlock <* pMTok End <<|>
+            ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseExpression <<|>
             parseIf <<|>
-            --parseFor <<|>
+            parseFor <<|>
             AFunc <$ pMTok Function <*> parseFuncName <*>
              pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
              parseBlock <*
@@ -97,17 +97,29 @@ parseStat = ASemicolon <$ pMTok Semicolon <<|>
 
 -- Parse if then elseif then else end expressions
 parseIf :: AParser Stat
-parseIf = AIf <$ pMTok If <*> parseOpChain <* pMTok Then <*>
+parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
             parseBlock <*>
             -- elseif
-            (pMany ((,) <$ pMTok Elseif <*> parseOpChain <* pMTok Then <*> parseBlock)) <*>
+            (pMany ((,) <$ pMTok Elseif <*> parseExpression <* pMTok Then <*> parseBlock)) <*>
             -- else
             (pMany (pMTok Else *> parseBlock)) <*
             pMTok End
 
--- Parse numeric for
+-- Parse numeric and generic for loops
 parseFor :: AParser Stat
-parseFor = undefined
+parseFor = ANFor <$ pMTok For <*>
+            pName <* pMTok Equals <*> parseExpression <*
+            -- end value
+            pMTok Comma <*> parseExpression <*>
+            -- step (1 if not filled in)
+            (pMTok Comma *> parseExpression <<|> pReturn (ANumber "1")) <*
+            pMTok Do <*> parseBlock <*
+            pMTok End
+            <|>
+           AGFor <$ pMTok For <*> parseNameList <*
+            pMTok In <*> parseExpressionList <*
+            pMTok Do <*> parseBlock <*
+            pMTok End
 
 
 parseReturn :: AParser AReturn
@@ -164,9 +176,9 @@ parseExpressionList = parseExpression <**> (
                           flip (:) <$> pReturn []
                       )
 
--- Expressions
-parseExpression :: AParser Expr
-parseExpression = ANil <$ pMTok Nil <<|>
+-- Subexpressions, i.e. without operators
+parseSubExpression :: AParser Expr
+parseSubExpression = ANil <$ pMTok Nil <<|>
                   AFalse <$ pMTok TFalse <<|>
                   ATrue <$ pMTok TTrue <<|>
                   parseNumber <<|>
@@ -205,15 +217,15 @@ lvl6 = [(Multiply, AMultiply), (Divide, ADivide), (Modulus, AModulus)]
 lvl8 = [(Power, APower)]
 
 -- Parse chains of binary and unary operators
-parseOpChain :: AParser Expr
-parseOpChain = samePrio lvl1 $
+parseExpression :: AParser Expr
+parseExpression = samePrio lvl1 $
                   samePrio lvl2 $
                   samePrio lvl3 $
                   samePrio lvl4 $
                   samePrio lvl5 $
                   samePrio lvl6 $
-                  UnOpExpr <$> parseUnOp <*> parseOpChain <<|> -- lvl7
-                  samePrio lvl8 parseExpression
+                  UnOpExpr <$> parseUnOp <*> parseExpression <<|> -- lvl7
+                  samePrio lvl8 parseSubExpression
 
 -- Prefix expressions
 -- can have any arbitrary list of expression suffixes

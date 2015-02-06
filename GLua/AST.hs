@@ -19,8 +19,8 @@ data Stat = ASemicolon |
             AWhile Expr Block | -- while expr do block end
             ARepeat Block Expr | -- repeat block until expr
             AIf Expr Block [(Expr, Block)] [Block] | -- if expr then block [elseif expr then block] [else block] end
-            ANFor MToken Expr [Expr] Block | -- for varname = expr, [expr]+ do block end, numeric for
-            AGFor [MToken] [Expr] Block |
+            ANFor MToken Expr Expr Expr Block | -- for varname = expr, [expr]+ do block end, numeric for
+            AGFor [MToken] [Expr] Block | -- for namelist in expr do block end
             AFunc FuncName [MToken] Block | -- function funcname(parameters) block end
             ALocFunc FuncName [MToken] Block -- local function funcname(parameters) block end
             deriving (Show)
