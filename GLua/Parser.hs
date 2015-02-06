@@ -75,7 +75,8 @@ parseBlock = Block <$> pMany parseStat <*> (parseReturn <<|> pReturn NoReturn)
 -- Parse a single statement
 parseStat :: AParser Stat
 parseStat = ASemicolon <$ pMTok Semicolon <<|>
-            (\v e -> Def (zip v $ e ++ repeat ANil)) <$> parseVarList <* pMTok Equals <*> parseExpressionList <<|>
+            (AFuncCall <$> pFunctionCall <|>
+            (\v e -> Def (zip v $ e ++ repeat ANil)) <$> parseVarList <* pMTok Equals <*> parseExpressionList) <<|>
             ALabel <$> parseLabel <<|>
             ABreak <$ pMTok Break <<|>
             AGoto <$ pMTok Goto <*> pName <<|>

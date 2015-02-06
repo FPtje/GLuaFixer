@@ -11,7 +11,7 @@ data Block = Block [Stat] AReturn deriving (Show)
 data Stat = ASemicolon |
             Def [(PrefixExp, Expr)] | -- varlist = exprList
             LocDecl [PrefixExp] | -- local a,b,c,...
-            -- Function call |
+            AFuncCall PrefixExp | -- Function call
             ALabel MToken | -- label
             ABreak | -- break
             AGoto MToken | -- goto label
