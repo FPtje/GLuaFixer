@@ -76,6 +76,7 @@ parseBlock = Block <$> pMany parseStat <*> (parseReturn <<|> pReturn NoReturn)
 parseStat :: AParser Stat
 parseStat = ASemicolon <$ pMTok Semicolon <<|>
             (AFuncCall <$> pFunctionCall <|>
+            -- Function calls and definitions both start with a var
             (\v e -> Def (zip v $ e ++ repeat ANil)) <$> parseVarList <* pMTok Equals <*> parseExpressionList) <<|>
             ALabel <$> parseLabel <<|>
             ABreak <$ pMTok Break <<|>
@@ -83,8 +84,18 @@ parseStat = ASemicolon <$ pMTok Semicolon <<|>
             ADo <$ pMTok Do <*> parseBlock <* pMTok End <<|>
             AWhile <$ pMTok While <*> parseOpChain <* pMTok Do <*> parseBlock <* pMTok End <<|>
             ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseOpChain <<|>
-            parseIf
+            parseIf <<|>
+            --parseFor <<|>
+            AFunc <$ pMTok Function <*> parseFuncName <*>
+             pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
+             parseBlock <*
+             pMTok End <<|>
+            ALocFunc <$ pMTok Local <* pMTok Function <*> parseFuncName <*>
+             pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
+             parseBlock <*
+             pMTok End
 
+-- Parse if then elseif then else end expressions
 parseIf :: AParser Stat
 parseIf = AIf <$ pMTok If <*> parseOpChain <* pMTok Then <*>
             parseBlock <*>
@@ -93,6 +104,11 @@ parseIf = AIf <$ pMTok If <*> parseOpChain <* pMTok Then <*>
             -- else
             (pMany (pMTok Else *> parseBlock)) <*
             pMTok End
+
+-- Parse numeric for
+parseFor :: AParser Stat
+parseFor = undefined
+
 
 parseReturn :: AParser AReturn
 parseReturn = AReturn <$ pMTok Return <*> parseExpressionList
