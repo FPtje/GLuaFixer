@@ -131,8 +131,8 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   AVarArg <$ pMTok VarArg <<|>
                   -- todo: AFunctionDef
                   APrefixExpr <$> parsePrefixExp <<|>
-                  ATableConstructor <$> parseTableConstructor <<|>
-                  UnOpExpr <$> parseUnOp <*> parseExpression
+                  ATableConstructor <$> parseTableConstructor -- <<|>
+                  --UnOpExpr <$> parseUnOp <*> parseExpression
                   -- todo: BinOp
 
 -- Parse operators of the same precedence in a chain
@@ -145,24 +145,25 @@ samePrio ops p = pChainl (choice (map f ops)) p
 
 -- Operators, sorted by priority
 -- Priority from: http://www.lua.org/manual/5.2/manual.html#3.4.7
-operators :: [[(Token, BinOp)]]
-operators = [
-  [(Or, AOr)],
-  [(And, AAnd)],
-  [(TLT, ALT), (TGT, AGT), (TLEQ, ALEQ), (TGEQ, AGEQ), (TNEq, ANEq), (TCNEq, ANEq), (TEq, AEq)],
-  [(Concatenate, AConcatenate)],
-  [(Plus, APlus), (Minus, BinMinus)],
-  [(Multiply, AMultiply), (Divide, ADivide), (Modulus, AModulus)]
- ]
+lvl1, lvl2, lvl3, lvl4, lvl5, lvl6, lvl8 :: [(Token, BinOp)]
+lvl1 = [(Or, AOr)]
+lvl2 = [(And, AAnd)]
+lvl3 = [(TLT, ALT), (TGT, AGT), (TLEQ, ALEQ), (TGEQ, AGEQ), (TNEq, ANEq), (TCNEq, ANEq), (TEq, AEq)]
+lvl4 = [(Concatenate, AConcatenate)]
+lvl5 = [(Plus, APlus), (Minus, BinMinus)]
+lvl6 = [(Multiply, AMultiply), (Divide, ADivide), (Modulus, AModulus)]
+-- lvl7 is unary operators
+lvl8 = [(Power, APower)]
 
 parseBinOpChain :: AParser Expr
-parseBinOpChain = bind operators
-  where
-    -- Looks like a foldr, but an actual foldr gives crazy errors
-    -- Same happens when the type signature of bind is removed
-    bind :: [[(Token, BinOp)]] -> AParser Expr
-    bind [] = parseExpression
-    bind (x : xs) = samePrio x (bind xs)
+parseBinOpChain = samePrio lvl1 $
+                  samePrio lvl2 $
+                  samePrio lvl3 $
+                  samePrio lvl4 $
+                  samePrio lvl5 $
+                  samePrio lvl6 $
+                  UnOpExpr <$> parseUnOp <*> parseBinOpChain <<|> -- lvl7
+                  samePrio lvl8 parseExpression
 
 -- Prefix expressions
 -- can have any arbitrary list of expression suffixes
