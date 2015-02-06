@@ -4,6 +4,7 @@
             Rank2Types, FlexibleContexts, NoMonomorphismRestriction,
             CPP #-}
 
+-- Parser based on www.lua.org/manual/5.2/manual.html#9
 module GLua.Parser where
 
 import GLua.TokenTypes
@@ -131,9 +132,7 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   AVarArg <$ pMTok VarArg <<|>
                   -- todo: AFunctionDef
                   APrefixExpr <$> parsePrefixExp <<|>
-                  ATableConstructor <$> parseTableConstructor -- <<|>
-                  --UnOpExpr <$> parseUnOp <*> parseExpression
-                  -- todo: BinOp
+                  ATableConstructor <$> parseTableConstructor
 
 -- Parse operators of the same precedence in a chain
 samePrio :: [(Token, BinOp)] -> AParser Expr -> AParser Expr
@@ -155,14 +154,15 @@ lvl6 = [(Multiply, AMultiply), (Divide, ADivide), (Modulus, AModulus)]
 -- lvl7 is unary operators
 lvl8 = [(Power, APower)]
 
-parseBinOpChain :: AParser Expr
-parseBinOpChain = samePrio lvl1 $
+-- Parse chains of binary and unary operators
+parseOpChain :: AParser Expr
+parseOpChain = samePrio lvl1 $
                   samePrio lvl2 $
                   samePrio lvl3 $
                   samePrio lvl4 $
                   samePrio lvl5 $
                   samePrio lvl6 $
-                  UnOpExpr <$> parseUnOp <*> parseBinOpChain <<|> -- lvl7
+                  UnOpExpr <$> parseUnOp <*> parseOpChain <<|> -- lvl7
                   samePrio lvl8 parseExpression
 
 -- Prefix expressions
