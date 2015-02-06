@@ -8,7 +8,7 @@ data Block = Block [Stat] AReturn deriving (Show)
 -- Statement
 data Stat = ASemicolon |
             Def [(PrefixExp, Expr)] | -- varlist = exprList
-            LocDecl [PrefixExp] | -- local a,b,c,...
+            LocDef [(PrefixExp, Expr)] | -- local a,b,c, ... = ...
             AFuncCall PrefixExp | -- Function call
             ALabel MToken | -- label
             ABreak | -- break

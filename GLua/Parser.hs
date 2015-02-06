@@ -90,10 +90,16 @@ parseStat = ASemicolon <$ pMTok Semicolon <<|>
              pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
              parseBlock <*
              pMTok End <<|>
-            ALocFunc <$ pMTok Local <* pMTok Function <*> parseFuncName <*>
-             pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
-             parseBlock <*
-             pMTok End
+            -- local function and local vars both begin with "local"
+            pMTok Local <**> (
+              -- local function
+              (\n p b l -> ALocFunc n p b) <$
+                pMTok Function <*> parseFuncName <*> pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
+                parseBlock <* pMTok End <<|>
+              -- local variables
+              (\v e l -> LocDef (zip v $ e ++ repeat ANil)) <$> parseVarList <*> (pMTok Equals *> parseExpressionList <<|> pReturn [])
+            )
+
 
 -- Parse if then elseif then else end expressions
 parseIf :: AParser Stat
