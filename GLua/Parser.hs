@@ -66,7 +66,7 @@ parseParList = pName <**> (
                         (\a _ c -> c : a)  <$> parseParList
                     ) <<|>
                     pReturn (: [])
-               )
+               ) <<|> pReturn []
 
 parseReturn :: AParser AReturn
 parseReturn = AReturn <$ pMTok Return <*> parseExpressionList
@@ -130,9 +130,17 @@ parseExpression = ANil <$ pMTok Nil <<|>
                   parseNumber <<|>
                   AString <$> parseString <<|>
                   AVarArg <$ pMTok VarArg <<|>
-                  -- todo: AFunctionDef
+                  parseAnonymFunc <<|>
                   APrefixExpr <$> parsePrefixExp <<|>
                   ATableConstructor <$> parseTableConstructor
+
+parseAnonymFunc :: AParser Expr
+parseAnonymFunc = AnonymousFunc <$
+                   pMTok Function <*>
+                   pPacked (pMTok LRound) (pMTok RRound) parseParList
+                   {-TODO: function block-} <*
+                   pMTok End
+
 
 -- Parse operators of the same precedence in a chain
 samePrio :: [(Token, BinOp)] -> AParser Expr -> AParser Expr

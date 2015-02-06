@@ -12,7 +12,7 @@ data PrefixExp = PFVar MToken [PFExprSuffix] | ExprVar Expr [PFExprSuffix] deriv
 
 data PFExprSuffix = Call Args | MetaCall MToken Args | ExprIndex Expr | DotIndex MToken deriving (Show)
 
-data Expr = ANil | AFalse | ATrue | ANumber String | AString MToken | AVarArg | AFunctionDef {- todo -} | APrefixExpr PrefixExp | ATableConstructor [Field]
+data Expr = ANil | AFalse | ATrue | ANumber String | AString MToken | AVarArg | AnonymousFunc [MToken] {-TODO: function body-} | APrefixExpr PrefixExp | ATableConstructor [Field]
             | BinOpExpr BinOp Expr Expr
             | UnOpExpr UnOp Expr deriving (Show)
 
