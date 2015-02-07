@@ -130,7 +130,7 @@ parseFor = ANFor <$ pMTok For <*>
 
 
 parseReturn :: AParser AReturn
-parseReturn = AReturn <$ pMTok Return <*> parseExpressionList
+parseReturn = AReturn <$ pMTok Return <*> opt parseExpressionList []
 
 -- Label
 parseLabel :: AParser MToken
