@@ -80,6 +80,7 @@ parseStat = ASemicolon <$ pMTok Semicolon <<|>
             (\v e -> Def (zip v $ e ++ repeat ANil)) <$> parseVarList <* pMTok Equals <*> parseExpressionList) <<|>
             ALabel <$> parseLabel <<|>
             ABreak <$ pMTok Break <<|>
+            AContinue <$ pMTok Continue <<|>
             AGoto <$ pMTok Goto <*> pName <<|>
             ADo <$ pMTok Do <*> parseBlock <* pMTok End <<|>
             AWhile <$ pMTok While <*> parseExpression <* pMTok Do <*> parseBlock <* pMTok End <<|>

@@ -12,6 +12,7 @@ data Stat = ASemicolon |
             AFuncCall PrefixExp | -- Function call
             ALabel MToken | -- label
             ABreak | -- break
+            AContinue | -- continue
             AGoto MToken | -- goto label
             ADo Block | -- do block end
             AWhile Expr Block | -- while expr do block end
