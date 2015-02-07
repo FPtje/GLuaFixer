@@ -162,7 +162,7 @@ parseString = pSatisfy isString (Insertion "String" (MToken (TPos 0 0) (DQString
 
 -- Parse variable list (var1, var2, var3)
 parseVarList :: AParser [PrefixExp]
-parseVarList = pListSep (pMTok Comma) parseVar
+parseVarList = pList1Sep (pMTok Comma) parseVar
 
 -- single variable. Note: definition differs from reference to circumvent the left recursion
 -- var ::= Name [{PFExprSuffix}* indexation] | '(' exp ')' {PFExprSuffix}* indexation
