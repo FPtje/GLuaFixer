@@ -285,8 +285,8 @@ parseFieldList = parseField <**> (
 -- A field in a table
 parseField :: AParser Field
 parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <<|>
-             NamedField <$> pName <* pMTok Equals <*> parseExpression <<|>
-             UnnamedField <$> parseExpression
+             (NamedField <$> pName <* pMTok Equals <*> parseExpression <|>
+              UnnamedField <$> parseExpression)
 
 -- Field separator
 parseFieldSep :: AParser MToken
