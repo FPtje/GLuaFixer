@@ -3,7 +3,6 @@ module Main where
 import GLua.Lexer
 import GLua.TokenTypes
 import GLua.Parser
-import LexicalAnalysis
 
 import Data.Char
 
@@ -17,9 +16,7 @@ help = unlines ["",
  "Usage: GLuaParser <ACTION> <FILE>",
  "",
  "Possible actions:",
- "    fix       - attempt to fix syntax errors in the Lua script",
- "    toPureLua - convert the FILE to use pure Lua operators and comments (~=, --, etc.)",
- "    toGLua    - convert the FILE to use Garry's mod Lua operators and comments (!=, //, etc.)"
+ "    fix       - attempt to fix syntax errors in the Lua script"
  ]
 
 
@@ -52,18 +49,7 @@ main = do
 
         exitWith (ExitFailure 1)
 
-
-    when (map toLower action == "topurelua") $ do
-        writeFile file . concatMap show . toPureLua $ tokens
-        putStrLn "Success"
-        exitSuccess
-
-    when (map toLower action == "toglua") $ do
-        writeFile file . concatMap show . toGLua $ tokens
-        putStrLn "Success"
-        exitSuccess
-
-    let parseInp = makeMTokens . removeRedundant $ tokens
+    let parseInp = removeRedundant $ tokens
     let ast = parseGLua parseInp
 
     putStrLn . show $ ast

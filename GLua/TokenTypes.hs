@@ -1,6 +1,7 @@
 module GLua.TokenTypes where
 
 import Data.List
+import Text.ParserCombinators.UU.BasicInstances (LineColPos)
 
 data Token =
     -- Comments and whitespace
@@ -77,39 +78,22 @@ data Token =
     Identifier String
     deriving (Eq)
 
--- Describes a position in a file (line number and column)
-data TokenPos = TPos { line :: !Int, column :: !Int }
-instance Show TokenPos where
-    show (TPos l c) = '(' : show l ++ ':' : show c ++ ")"
-
-addLines :: Int -> TokenPos -> TokenPos
-addLines n (TPos l c) = TPos (l + n) 0
-
-addColumns :: Int -> TokenPos -> TokenPos
-addColumns n (TPos l c) = TPos l (c + n)
-
--- Add the size of a token to a position
-addToken :: Token -> TokenPos -> TokenPos
-addToken t p@(TPos l c) = if lineCount == 0 then addColumns size p else TPos (l + lineCount) columns
-    where
-        strTok = show t
-        lineCount = length . filter (== '\n') $ strTok
-        size = tokenSize t
-        columns = size - (last . elemIndices '\n' $ strTok)
-
 -- Metatoken, stores line and column position of token
-data MToken = MToken TokenPos Token deriving (Show)
+data MToken = MToken LineColPos Token deriving (Show)
 
 instance Eq MToken where
     (MToken _ t1) == (MToken _ t2) = t1 == t2
 
--- Generate metatokens from a list of tokens
--- it does this by assuming the first token starts at position 1 1
-makeMTokens :: [Token] -> [MToken]
-makeMTokens = build (TPos 1 1)
-    where
-        build pos (t:ts) = MToken pos t : build (addToken t pos) ts
-        build pos [] = []
+type MTokenAlgebra mtok = LineColPos -> Token -> mtok
+
+foldMToken :: MTokenAlgebra t -> MToken -> t
+foldMToken alg (MToken pos t) = alg pos t
+
+-- mFold: Apply a TokenAlgebra to an MToken
+mFold :: TokenAlgebra a -> MToken -> a
+mFold alg mt = foldMToken f mt
+  where
+    f p t = foldToken alg t
 
 type TokenAlgebra token = (
     ( -- Comments and whitespace
@@ -338,11 +322,11 @@ instance Show Token where
         )
 
 -- Whether a token is whitespace
-isWhitespace :: Token -> Bool
-isWhitespace = foldToken ((const True,const True,\d s -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+isWhitespace :: MToken -> Bool
+isWhitespace = mFold ((const True,const True,\d s -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
 -- Remove redundant tokens, such as whitespace
-removeRedundant :: [Token] -> [Token]
+removeRedundant :: [MToken] -> [MToken]
 removeRedundant = filter (not . isWhitespace)
 
 -- the size of a token in characters

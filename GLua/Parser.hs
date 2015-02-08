@@ -18,33 +18,33 @@ import Text.ParserCombinators.UU.Derived
 import qualified Data.ListLike as LL
 
 -- Custom parser that parses MTokens
-type AParser a = (IsLocationUpdatedBy TokenPos MToken, LL.ListLike state MToken) => P (Str MToken state TokenPos) a
+type AParser a = (IsLocationUpdatedBy LineColPos MToken, LL.ListLike state MToken) => P (Str MToken state LineColPos) a
 
--- TokenPos is a location that can be updated by MTokens
-instance IsLocationUpdatedBy TokenPos MToken where
-    -- advance :: TokenPos -> MToken3 -> TokenPos
-    -- Recalculate pos in case a token was inserted by the error correction
-    advance pos (MToken _ t) = addToken t pos
+-- LineColPos is a location that can be updated by MTokens
+instance IsLocationUpdatedBy LineColPos MToken where
+    -- advance :: LineColPos -> MToken -> LineColPos
+    -- Assume the position of the next MToken
+    advance pos (MToken p t) = p
 
 
 -- parse a string directly
-parseFromString :: AParser a -> String -> (a, [Error TokenPos])
-parseFromString p = execAParser p . makeMTokens . removeRedundant . fst . Lex.execParseTokens
+parseFromString :: AParser a -> String -> (a, [Error LineColPos])
+parseFromString p = execAParser p . removeRedundant . fst . Lex.execParseTokens
 
 -- Text.ParserCombinators.UU.Utils.execParser modified to parse MTokens
-execAParser :: AParser a -> [MToken] -> (a, [Error TokenPos])
-execAParser p = parse_h ((,) <$> p <*> pEnd) . createStr (TPos 0 0)
+execAParser :: AParser a -> [MToken] -> (a, [Error LineColPos])
+execAParser p = parse_h ((,) <$> p <*> pEnd) . createStr (LineColPos 0 0 0)
 
 -- Parse a single Metatoken, based on a positionless token (much like pSym)
 pMTok :: Token -> AParser MToken
-pMTok t = pSatisfy isToken (Insertion ("Token " ++ show t) (MToken (TPos 0 0) t) 5)
+pMTok t = pSatisfy isToken (Insertion ("Token " ++ show t) (MToken (LineColPos 0 0 0) t) 5)
     where
         isToken :: MToken -> Bool
         isToken (MToken _ tok) = t == tok
 
 -- Parse an identifier
 pName :: AParser MToken
-pName = pSatisfy isName (Insertion "Identifier" (MToken (TPos 0 0) (Identifier "something")) 5)
+pName = pSatisfy isName (Insertion "Identifier" (MToken (LineColPos 0 0 0) (Identifier "someVariable")) 5)
     where
         isName :: MToken -> Bool
         isName (MToken _ (Identifier _)) = True
@@ -134,7 +134,7 @@ parseReturn = AReturn <$ pMTok Return <*> opt parseExpressionList []
 
 -- Label
 parseLabel :: AParser MToken
-parseLabel = pSatisfy isLabel (Insertion "Label" (MToken (TPos 0 0) (Label "something")) 5)
+parseLabel = pSatisfy isLabel (Insertion "Label" (MToken (LineColPos 0 0 0) (Label "someLabel")) 5)
     where
         isLabel :: MToken -> Bool
         isLabel (MToken _ (Label _)) = True
@@ -146,14 +146,14 @@ parseFuncName = (\a b c -> FuncName (a:b) c) <$> pName <*> pMany (pMTok Dot *> p
                 opt (Just <$ pMTok Colon <*> pName) Nothing
 
 parseNumber :: AParser Expr
-parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pSatisfy isNumber (Insertion "Number" (MToken (TPos 0 0) (TNumber "0")) 5)
+parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pSatisfy isNumber (Insertion "Number" (MToken (LineColPos 0 0 0) (TNumber "0")) 5)
     where
         isNumber :: MToken -> Bool
         isNumber (MToken _ (TNumber str)) = True
         isNumber _ = False
 
 parseString :: AParser MToken
-parseString = pSatisfy isString (Insertion "String" (MToken (TPos 0 0) (DQString "0")) 5)
+parseString = pSatisfy isString (Insertion "String" (MToken (LineColPos 0 0 0) (DQString "someString")) 5)
     where
         isString :: MToken -> Bool
         isString (MToken _ (DQString str)) = True
@@ -321,5 +321,5 @@ parseUnOp = UnMinus <$ pMTok Minus <<|>
             ANot    <$ pMTok CNot  <<|>
             AHash   <$ pMTok Hash
 
-parseGLua :: [MToken] -> (Block, [Error TokenPos])
+parseGLua :: [MToken] -> (Block, [Error LineColPos])
 parseGLua = execAParser parseBlock

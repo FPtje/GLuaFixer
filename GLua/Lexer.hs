@@ -15,13 +15,15 @@ import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.BasicInstances
 import Text.ParserCombinators.UU.Derived
 
-parseWhitespace :: Parser String
+type LParser a = P (Str Char String LineColPos) a
+
+parseWhitespace :: LParser String
 parseWhitespace = pSome (pSym ' ' <<|> pSym '\n' <<|> pSym '\t' <<|> pSym '\r')
 
-parseAnyChar :: Parser Char
+parseAnyChar :: LParser Char
 parseAnyChar = pSatisfy (const True) (Insertion "Any character" 'y' 5)
 
-parseCBlockComment :: Parser String
+parseCBlockComment :: LParser String
 parseCBlockComment = const "" <$> pToken "*/" <<|>
             (:) <$> parseAnyChar <*> parseCBlockComment
 
@@ -29,11 +31,11 @@ parseCBlockComment = const "" <$> pToken "*/" <<|>
 -- Might actually return a single line Dash comment, because for example
 -- the following line is a line comment, rather than a block comment
 --[===== <- missing the last '[' bracket
-parseBlockComment :: Parser Token
+parseBlockComment :: LParser Token
 parseBlockComment = pToken "[" *> nested 0
     where
         -- The amount of =-signs in the string delimiter is n
-        nested :: Int -> Parser Token
+        nested :: Int -> LParser Token
         nested n = pToken "=" *> nested (n + 1) <<|>
                    DashBlockComment n <$ pToken "[" <*> restString n <<|>
                    lineComment n <$> pUntilEnd
@@ -44,32 +46,32 @@ parseBlockComment = pToken "[" *> nested 0
         lineComment n str = DashComment $ '[' : replicate n '=' ++ str
 
         -- Right-recursive grammar. This part searches for the rest of the string until it finds the ]=^n] token
-        restString :: Int -> Parser String
+        restString :: Int -> LParser String
         restString n = const "" <$> pToken ("]" ++ replicate n '=' ++ "]") <<|>
                        (:) <$> parseAnyChar <*> restString n
 
-pUntilEnd :: Parser String
+pUntilEnd :: LParser String
 pUntilEnd = pMunch (\c -> c /= '\n' && c /= '\r')
 
-parseLineComment :: String -> Parser String
+parseLineComment :: String -> LParser String
 parseLineComment prefix = flip const <$> pToken prefix <*> pUntilEnd
 
 -- Parses a multiline string except for its first character (e.g. =[ string ]=])
 -- This is because the first [ could also just be parsed as a square bracket.
-nestedString :: Parser String
+nestedString :: LParser String
 nestedString = nested 0
     where
         -- The amount of =-signs in the string delimiter is n
-        nested :: Int -> Parser String
+        nested :: Int -> LParser String
         nested n = (\str -> "=" ++ str) <$ pToken "=" <*> nested (n + 1) <<|>
                    ('[' :) <$ pToken "[" <*> restString n
 
         -- Right-recursive grammar. This part searches for the rest of the string until it finds the ]=^n] token
-        restString :: Int -> Parser String
+        restString :: Int -> LParser String
         restString n = pToken ("]" ++ replicate n '=' ++ "]") <<|>
                        (:) <$> parseAnyChar <*> restString n
 
-parseComment :: Parser Token
+parseComment :: LParser Token
 parseComment =  pToken "--" <**> -- Dash block comment and dash comment both start with "--"
                     (const <$> (parseBlockComment <<|> DashComment <$> pUntilEnd)) <<|>
                 pToken "/" <**>
@@ -80,20 +82,20 @@ parseComment =  pToken "--" <**> -- Dash block comment and dash comment both sta
                         ))
 
 -- Parse single line strings e.g. "sdf", 'werf'
-parseLineString :: Char -> Parser String
+parseLineString :: Char -> LParser String
 parseLineString c = pSym c *> innerString
     where
-        innerString :: Parser String
+        innerString :: LParser String
         innerString = pSym '\\' <**> -- Escaped character in string always starts with backslash
                          ((\c str esc -> esc : c : str) <$> parseAnyChar <*> innerString) <<|>
                       const "" <$> pSym c <<|> -- the end of the string
                       (:) <$> pNoNewline <*> innerString -- the next character in the string
 
-        pNoNewline :: Parser Char
+        pNoNewline :: LParser Char
         pNoNewline = pSatisfy (/= '\n') (Insertion "Anything but a newline" c 5)
 
 
-parseString :: Parser Token
+parseString :: LParser Token
 parseString = DQString <$> parseLineString '"' <<|>
               SQString <$> parseLineString '\'' <<|>
               -- Parse either a multiline string or just a bracket.
@@ -101,48 +103,48 @@ parseString = DQString <$> parseLineString '"' <<|>
               pSym '[' <**> ((\_ -> MLString . (:) '[') <$$> nestedString <<|>
                         const <$> pReturn LSquare)
 
-parseNumber :: Parser Token
+parseNumber :: LParser Token
 parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber) <*> opt pSuffix "")
 
     where
-        pNumber :: Parser String
+        pNumber :: LParser String
         pNumber = (++) <$> pSome pDigit <*> opt ((:) <$> pSym '.' <*> pSome pDigit) ""
 
-        pHexadecimal :: Parser String
+        pHexadecimal :: LParser String
         pHexadecimal = (++) <$> pToken "0x" <*> pSome pHex
 
-        pHex :: Parser Char
+        pHex :: LParser Char
         pHex = pDigit <<|> pSym 'a' <<|> pSym 'b' <<|> pSym 'c' <<|> pSym 'd' <<|> pSym 'e' <<|> pSym 'f'
                       <<|> pSym 'A' <<|> pSym 'B' <<|> pSym 'C' <<|> pSym 'D' <<|> pSym 'E' <<|> pSym 'F'
 
-        pSuffix :: Parser String
+        pSuffix :: LParser String
         pSuffix = (\e s d -> e : s ++ d) <$> (pSym 'e' <<|> pSym 'E' <<|> pSym 'p' <<|> pSym 'P')
                     <*> opt (pToken "+" <<|> pToken "-") ""
                     <*> pSome pDigit
 
 -- Parse a keyword. Note: It must really a key/word/! This parser makes sure to return an identifier when
 -- it's actually an identifier that starts with that keyword
-parseKeyword :: Token -> String -> Parser Token
+parseKeyword :: Token -> String -> LParser Token
 parseKeyword tok word = pToken word <**>
                             ((\k -> Identifier . (++) k) <$$> pSome allowed <<|> const <$> pReturn tok)
     where
         allowed = pSym '_' <<|> pLetter <<|> pDigit
 
-parseIdentifier :: Parser String
+parseIdentifier :: LParser String
 parseIdentifier = (:)  <$> (pSym '_' <<|> pLetter) <*> pMany allowed
     where
         allowed = pSym '_' <<|> pLetter <<|> pDigit
 
-parseLabel :: Parser String
+parseLabel :: LParser String
 parseLabel = pToken "::" *> parseIdentifier
 
-lexToken :: Token -> String -> Parser [Token]
+lexToken :: Token -> String -> LParser [Token]
 lexToken tok t = (tok :) . (: []) <$ pToken t <*> (Whitespace <$> parseWhitespace)
 
-lexeme2 :: Parser Token -> Parser [Token]
+lexeme2 :: LParser Token -> LParser [Token]
 lexeme2 p = (\a b -> [a, Whitespace b]) <$> p <*> parseWhitespace
 
-parseDots :: Parser Token
+parseDots :: LParser Token
 parseDots = pToken "." <**> ( -- A dot means it's either a VarArg (...), concatenation (..) or just a dot (.)
                 const <$> (pToken "." <**> (
                     const VarArg <$ pToken "." <<|>
@@ -151,7 +153,7 @@ parseDots = pToken "." <**> ( -- A dot means it's either a VarArg (...), concate
                 const <$> pReturn Dot
                 )
 
-parseToken :: Parser Token
+parseToken :: LParser Token
 parseToken =    Whitespace <$> parseWhitespace               <<|>
                 parseComment                                 <<|>
 
@@ -215,9 +217,9 @@ parseToken =    Whitespace <$> parseWhitespace               <<|>
                 RCurly <$ pToken "}"                         <<|>
                 RSquare <$ pToken "]" -- Other square bracket is parsed in parseString
 
-parseTokens :: Parser [Token]
-parseTokens = pMany parseToken
+parseTokens :: LParser [MToken]
+parseTokens = pMany (MToken <$> pPos <*> parseToken)
 
-execParseTokens :: String -> ([Token], [Error LineColPos])
-execParseTokens = execParser parseTokens
+execParseTokens :: String -> ([MToken], [Error LineColPos])
+execParseTokens = parse ((,) <$> parseTokens <*> pErrors <* pEnd) . createStr (LineColPos 0 0 0)
 
