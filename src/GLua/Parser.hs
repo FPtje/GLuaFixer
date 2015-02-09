@@ -4,7 +4,7 @@
             Rank2Types, FlexibleContexts, NoMonomorphismRestriction,
             CPP #-}
 
--- | Parser based on www.lua.org/manual/5.2/manual.html#9
+-- | Parser based on <http://www.lua.org/manual/5.2/manual.html#9>
 module GLua.Parser where
 
 import GLua.TokenTypes
