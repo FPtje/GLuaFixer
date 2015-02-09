@@ -56,10 +56,6 @@ parseNameList = (:) <$> pName <*> pMany (pMTok Comma *> pName)
 
 -- Parse list of parameters
 parseParList :: AParser [MToken]
-{-parseParList = flip (:) [] <$> pMTok VarArg <<|>
-               parseNameList <**>
-                    (flip LL.snoc <$ pMTok Comma <*> pMTok VarArg <<|>
-                    flip const <$> pReturn (MToken (TPos 0 0) Break))-}
 parseParList = pName <**> (
                     pMTok Comma <**> (
                         (\a _ c -> [c, a]) <$> pMTok VarArg <<|>
