@@ -78,7 +78,7 @@ data Token =
     deriving (Eq)
 
 -- Metatoken, stores line and column position of token
-data MToken = MToken LineColPos Token deriving (Show)
+data MToken = MToken {mpos :: LineColPos, mtok :: Token} deriving (Show)
 
 instance Eq MToken where
     (MToken _ t1) == (MToken _ t2) = t1 == t2

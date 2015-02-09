@@ -32,8 +32,10 @@ parseFromString :: AParser a -> String -> (a, [Error LineColPos])
 parseFromString p = execAParser p . fst . Lex.execParseTokens
 
 -- Text.ParserCombinators.UU.Utils.execParser modified to parse MTokens
+-- The first MToken might not be on the first line, so use the first MToken's position to start
 execAParser :: AParser a -> [MToken] -> (a, [Error LineColPos])
-execAParser p = parse_h ((,) <$> p <*> pEnd) . createStr (LineColPos 0 0 0)
+execAParser p mts@[] = parse_h ((,) <$> p <*> pEnd) . createStr (LineColPos 0 0 0) $ mts
+execAParser p mts@(m : ms) = parse_h ((,) <$> p <*> pEnd) . createStr (mpos m) $ mts
 
 -- Parse a single Metatoken, based on a positionless token (much like pSym)
 pMTok :: Token -> AParser MToken
