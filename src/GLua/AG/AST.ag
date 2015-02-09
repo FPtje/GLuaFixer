@@ -1,8 +1,13 @@
-module GLua.AST where
+module {GLua.AG.AST}{}{}
 
+imports
+{
 import Text.ParserCombinators.UU.BasicInstances
 import GLua.TokenTypes
+}
 
+
+{
 -- Root of the Abstract Syntax Tree
 data AST = AST {comments :: [MToken], chunk :: Block} deriving (Show)
 
@@ -71,3 +76,4 @@ data BinOp = APlus | BinMinus | AMultiply | ADivide | AModulus | APower | AConca
 
 -- Unary operators
 data UnOp = UnMinus | ANot | AHash deriving (Show)
+}

@@ -8,7 +8,7 @@
 module GLua.Parser where
 
 import GLua.TokenTypes
-import GLua.AST
+import GLua.AG.AST
 import qualified GLua.Lexer as Lex
 
 import Text.ParserCombinators.UU

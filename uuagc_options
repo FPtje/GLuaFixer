@@ -1,0 +1,2 @@
+file : "src/GLua/AG/AST.ag"
+options : catas, haskellsyntax, data, semfuns, wrappers, signatures
