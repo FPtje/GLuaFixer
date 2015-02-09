@@ -4,6 +4,7 @@
             Rank2Types, FlexibleContexts, NoMonomorphismRestriction,
             CPP #-}
 
+-- | Lex GLua into MTokens
 module GLua.Lexer where
 
 import GLua.TokenTypes
@@ -15,22 +16,26 @@ import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.BasicInstances
 import Text.ParserCombinators.UU.Derived
 
+-- | String parser that maintains positions.
 type LParser a = P (Str Char String LineColPos) a
 
+-- | Whitespace parser.
 parseWhitespace :: LParser String
 parseWhitespace = pMany (pSym ' ' <<|> pSym '\n' <<|> pSym '\t' <<|> pSym '\r')
 
+-- | Blanco parser. Parses anything. Used in parsing comments.
 parseAnyChar :: LParser Char
 parseAnyChar = pSatisfy (const True) (Insertion "Any character" 'y' 5)
 
+-- | Parses a C-style block comment.
 parseCBlockComment :: LParser String
 parseCBlockComment = const "" <$> pToken "*/" <<|>
             (:) <$> parseAnyChar <*> parseCBlockComment
 
--- Try to parse a block comment
+-- | Try to parse a block comment.
 -- Might actually return a single line Dash comment, because for example
 -- the following line is a line comment, rather than a block comment
---[===== <- missing the last '[' bracket
+--[===== <- missing the last '[' bracket.
 parseBlockComment :: LParser Token
 parseBlockComment = pToken "[" *> nested 0
     where
@@ -50,13 +55,15 @@ parseBlockComment = pToken "[" *> nested 0
         restString n = const "" <$> pToken ("]" ++ replicate n '=' ++ "]") <<|>
                        (:) <$> parseAnyChar <*> restString n
 
+-- | Parse the string until the end. Used in parseLineComment among others.
 pUntilEnd :: LParser String
 pUntilEnd = pMunch (\c -> c /= '\n' && c /= '\r')
 
+-- | A comment that spans until the end of the line.
 parseLineComment :: String -> LParser String
 parseLineComment prefix = flip const <$> pToken prefix <*> pUntilEnd
 
--- Parses a multiline string except for its first character (e.g. =[ string ]=])
+-- | Parses a multiline string except for its first character (e.g. =[ string ]=])
 -- This is because the first [ could also just be parsed as a square bracket.
 nestedString :: LParser String
 nestedString = nested 0
@@ -71,6 +78,7 @@ nestedString = nested 0
         restString n = pToken ("]" ++ replicate n '=' ++ "]") <<|>
                        (:) <$> parseAnyChar <*> restString n
 
+-- | Parse any kind of comment.
 parseComment :: LParser Token
 parseComment =  pToken "--" <**> -- Dash block comment and dash comment both start with "--"
                     (const <$> (parseBlockComment <<|> DashComment <$> pUntilEnd)) <<|>
@@ -81,7 +89,7 @@ parseComment =  pToken "--" <**> -- Dash block comment and dash comment both sta
                         pReturn Divide -- The /-sign is here because it also starts with '/'
                         ))
 
--- Parse single line strings e.g. "sdf", 'werf'
+-- | Parse single line strings e.g. "sdf", 'werf'.
 parseLineString :: Char -> LParser String
 parseLineString c = pSym c *> innerString
     where
@@ -95,6 +103,7 @@ parseLineString c = pSym c *> innerString
         pNoNewline = pSatisfy (/= '\n') (Insertion "Anything but a newline" c 5)
 
 
+-- | Single and multiline strings.
 parseString :: LParser Token
 parseString = DQString <$> parseLineString '"' <<|>
               SQString <$> parseLineString '\'' <<|>
@@ -103,6 +112,7 @@ parseString = DQString <$> parseLineString '"' <<|>
               pSym '[' <**> ((\_ -> MLString . (:) '[') <$$> nestedString <<|>
                         const <$> pReturn LSquare)
 
+-- | Parse any kind of number.
 parseNumber :: LParser Token
 parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber) <*> opt pSuffix "")
 
@@ -122,22 +132,25 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber) <*> opt pSuffix 
                     <*> opt (pToken "+" <<|> pToken "-") ""
                     <*> pSome pDigit
 
--- Parse a keyword. Note: It must really a key/word/! This parser makes sure to return an identifier when
--- it's actually an identifier that starts with that keyword
+-- | Parse a keyword. Note: It must really a key/word/! This parser makes sure to return an identifier when
+-- it's actually an identifier that starts with that keyword.
 parseKeyword :: Token -> String -> LParser Token
 parseKeyword tok word = pToken word <**>
                             ((\k -> Identifier . (++) k) <$$> pSome allowed <<|> const <$> pReturn tok)
     where
         allowed = pSym '_' <<|> pLetter <<|> pDigit
 
+-- | Parse just an identifier.
 parseIdentifier :: LParser String
 parseIdentifier = (:)  <$> (pSym '_' <<|> pLetter) <*> pMany allowed
     where
         allowed = pSym '_' <<|> pLetter <<|> pDigit
 
+-- | Parse a label.
 parseLabel :: LParser String
 parseLabel = pToken "::" *> parseIdentifier
 
+-- | Parse anything to do with dots. Indexaction (.), concatenation (..) or varargs (...)
 parseDots :: LParser Token
 parseDots = pToken "." <**> ( -- A dot means it's either a VarArg (...), concatenation (..) or just a dot (.)
                 const <$> (pToken "." <**> (
@@ -147,6 +160,7 @@ parseDots = pToken "." <**> ( -- A dot means it's either a VarArg (...), concate
                 const <$> pReturn Dot
                 )
 
+-- | Parse any kind of token.
 parseToken :: LParser Token
 parseToken =    parseComment                                 <<|>
 
@@ -210,9 +224,11 @@ parseToken =    parseComment                                 <<|>
                 RCurly <$ pToken "}"                         <<|>
                 RSquare <$ pToken "]" -- Other square bracket is parsed in parseString
 
+-- | Parse a list of tokens and turn them into MTokens.
 parseTokens :: LParser [MToken]
 parseTokens = pMany (MToken <$> pPos <*> parseToken <* parseWhitespace)
 
+-- | Parse a string into MTokens. Also returns parse errors.
 execParseTokens :: String -> ([MToken], [Error LineColPos])
 execParseTokens = parse ((,) <$ parseWhitespace <*> parseTokens <*> pErrors <* pEnd) . createStr (LineColPos 0 0 0)
 
