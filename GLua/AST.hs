@@ -2,6 +2,9 @@ module GLua.AST where
 
 import GLua.TokenTypes
 
+-- Root of the Abstract Syntax Tree
+data AST = AST {comments :: [MToken], chunk :: Block} deriving (Show)
+
 -- Block of code
 data Block = Block [Stat] AReturn deriving (Show)
 

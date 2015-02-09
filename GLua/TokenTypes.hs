@@ -317,13 +317,13 @@ instance Show Token where
         )
         )
 
--- Whether a token is whitespace
-isWhitespace :: MToken -> Bool
-isWhitespace = mFold ((const True,\d s -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+-- Whether a token is a comment
+isComment :: MToken -> Bool
+isComment = mFold ((const True,\d s -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
--- Remove redundant tokens, such as whitespace
-removeRedundant :: [MToken] -> [MToken]
-removeRedundant = filter (not . isWhitespace)
+-- Split the tokens by comments and other tokens
+splitComments :: [MToken] -> ([MToken], [MToken])
+splitComments = partition isComment
 
 -- the size of a token in characters
 tokenSize = foldToken ((

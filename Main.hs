@@ -49,8 +49,7 @@ main = do
 
         exitWith (ExitFailure 1)
 
-    let parseInp = removeRedundant $ tokens
-    let ast = parseGLua parseInp
+    let ast = parseGLua tokens
 
     putStrLn . show $ ast
 

@@ -29,7 +29,7 @@ instance IsLocationUpdatedBy LineColPos MToken where
 
 -- parse a string directly
 parseFromString :: AParser a -> String -> (a, [Error LineColPos])
-parseFromString p = execAParser p . removeRedundant . fst . Lex.execParseTokens
+parseFromString p = execAParser p . fst . Lex.execParseTokens
 
 -- Text.ParserCombinators.UU.Utils.execParser modified to parse MTokens
 execAParser :: AParser a -> [MToken] -> (a, [Error LineColPos])
@@ -295,5 +295,12 @@ parseUnOp = UnMinus <$ pMTok Minus <<|>
             ANot    <$ pMTok CNot  <<|>
             AHash   <$ pMTok Hash
 
-parseGLua :: [MToken] -> (Block, [Error LineColPos])
-parseGLua = execAParser parseBlock
+-- Parses the full AST
+-- Its first parameter contains all comments
+-- Assumes the mtokens fed to the AParser have no comments
+parseChunk :: [MToken] -> AParser AST
+parseChunk cms = AST cms <$> parseBlock
+
+parseGLua :: [MToken] -> (AST, [Error LineColPos])
+parseGLua mts = let (cms, ts) = splitComments mts in
+                 execAParser (parseChunk cms) ts
