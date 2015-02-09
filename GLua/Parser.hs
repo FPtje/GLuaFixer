@@ -288,28 +288,6 @@ parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* 
 parseFieldSep :: AParser MToken
 parseFieldSep = pMTok Comma <<|> pMTok Semicolon
 
--- Parse binary operator
-parseBinOp :: AParser BinOp
-parseBinOp =
-    APlus          <$ pMTok Plus           <<|>
-    BinMinus       <$ pMTok Minus          <<|>
-    AMultiply      <$ pMTok Multiply       <<|>
-    ADivide        <$ pMTok Divide         <<|>
-    AModulus       <$ pMTok Modulus        <<|>
-    APower         <$ pMTok Power          <<|>
-    AConcatenate   <$ pMTok Concatenate    <<|>
-    ALT            <$ pMTok TLT            <<|>
-    ALEQ           <$ pMTok TLEQ           <<|>
-    AGT            <$ pMTok TGT            <<|>
-    AGEQ           <$ pMTok TGEQ           <<|>
-    AEq            <$ pMTok TEq            <<|>
-    ANEq           <$ pMTok TNEq           <<|>
-    ANEq           <$ pMTok TCNEq          <<|>
-    AAnd           <$ pMTok And            <<|>
-    AAnd           <$ pMTok CAnd           <<|>
-    AOr            <$ pMTok Or             <<|>
-    AOr            <$ pMTok COr
-
 -- Parse unary operator (-, not, #)
 parseUnOp :: AParser UnOp
 parseUnOp = UnMinus <$ pMTok Minus <<|>
