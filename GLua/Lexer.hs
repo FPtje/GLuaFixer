@@ -18,7 +18,7 @@ import Text.ParserCombinators.UU.Derived
 type LParser a = P (Str Char String LineColPos) a
 
 parseWhitespace :: LParser String
-parseWhitespace = pSome (pSym ' ' <<|> pSym '\n' <<|> pSym '\t' <<|> pSym '\r')
+parseWhitespace = pMany (pSym ' ' <<|> pSym '\n' <<|> pSym '\t' <<|> pSym '\r')
 
 parseAnyChar :: LParser Char
 parseAnyChar = pSatisfy (const True) (Insertion "Any character" 'y' 5)
@@ -138,12 +138,6 @@ parseIdentifier = (:)  <$> (pSym '_' <<|> pLetter) <*> pMany allowed
 parseLabel :: LParser String
 parseLabel = pToken "::" *> parseIdentifier
 
-lexToken :: Token -> String -> LParser [Token]
-lexToken tok t = (tok :) . (: []) <$ pToken t <*> (Whitespace <$> parseWhitespace)
-
-lexeme2 :: LParser Token -> LParser [Token]
-lexeme2 p = (\a b -> [a, Whitespace b]) <$> p <*> parseWhitespace
-
 parseDots :: LParser Token
 parseDots = pToken "." <**> ( -- A dot means it's either a VarArg (...), concatenation (..) or just a dot (.)
                 const <$> (pToken "." <**> (
@@ -154,8 +148,7 @@ parseDots = pToken "." <**> ( -- A dot means it's either a VarArg (...), concate
                 )
 
 parseToken :: LParser Token
-parseToken =    Whitespace <$> parseWhitespace               <<|>
-                parseComment                                 <<|>
+parseToken =    parseComment                                 <<|>
 
                 -- Constants
                 parseString                                  <<|>
@@ -218,8 +211,8 @@ parseToken =    Whitespace <$> parseWhitespace               <<|>
                 RSquare <$ pToken "]" -- Other square bracket is parsed in parseString
 
 parseTokens :: LParser [MToken]
-parseTokens = pMany (MToken <$> pPos <*> parseToken)
+parseTokens = pMany (MToken <$> pPos <*> parseToken <* parseWhitespace)
 
 execParseTokens :: String -> ([MToken], [Error LineColPos])
-execParseTokens = parse ((,) <$> parseTokens <*> pErrors <* pEnd) . createStr (LineColPos 0 0 0)
+execParseTokens = parse ((,) <$ parseWhitespace <*> parseTokens <*> pErrors <* pEnd) . createStr (LineColPos 0 0 0)
 

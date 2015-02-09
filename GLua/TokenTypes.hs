@@ -4,8 +4,7 @@ import Data.List
 import Text.ParserCombinators.UU.BasicInstances (LineColPos)
 
 data Token =
-    -- Comments and whitespace
-    Whitespace String           |
+    -- Comments
     DashComment String          |
     DashBlockComment Int String | -- where the Int is the depth of the comment delimiter
     SlashComment String         |
@@ -97,7 +96,6 @@ mFold alg mt = foldMToken f mt
 
 type TokenAlgebra token = (
     ( -- Comments and whitespace
-        String -> token,    -- Whitespace
         String -> token,    -- DashComment
         Int -> String -> token,    -- DashBlockComment
         String -> token,    -- SlashComment
@@ -175,9 +173,8 @@ type TokenAlgebra token = (
     )
 
 foldToken :: TokenAlgebra t -> Token -> t
-foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tSemicolon), (tTNumber, tDQString, tSQString, tMLString, tTTrue, tTFalse, tNil, tVarArg), (tPlus, tMinus, tMultiply, tDivide, tModulus, tPower, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tConcatenate, tColon, tDot, tComma, tHash, tNot, tCNot, tAnd, tCAnd, tOr, tCOr), (tFunction, tLocal, tIf, tThen, tElseif, tElse, tFor, tIn, tDo, tWhile, tUntil, tRepeat, tContinue, tBreak, tReturn, tEnd, tGoto), (tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare), (tLabel, tIdentifier)) = fold
+foldToken ((tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tSemicolon), (tTNumber, tDQString, tSQString, tMLString, tTTrue, tTFalse, tNil, tVarArg), (tPlus, tMinus, tMultiply, tDivide, tModulus, tPower, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tConcatenate, tColon, tDot, tComma, tHash, tNot, tCNot, tAnd, tCAnd, tOr, tCOr), (tFunction, tLocal, tIf, tThen, tElseif, tElse, tFor, tIn, tDo, tWhile, tUntil, tRepeat, tContinue, tBreak, tReturn, tEnd, tGoto), (tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare), (tLabel, tIdentifier)) = fold
     where
-        fold (Whitespace str) = tWhitespace str
         fold (DashComment str) = tDashComment str
         fold (DashBlockComment depth str) = tDashBlockComment depth str
         fold (SlashComment str) = tSlashComment str
@@ -244,7 +241,6 @@ foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashB
 
 instance Show Token where
     show = foldToken ((
-        id, -- Whitespace
         \s -> "--" ++ s, -- DashComment
         \d s -> let n = replicate d '=' in "--[" ++ n ++ '[' : s ++ ']' : n ++ "]", -- DashBlockComment
         \s -> "//" ++ s, -- SlashComment
@@ -323,7 +319,7 @@ instance Show Token where
 
 -- Whether a token is whitespace
 isWhitespace :: MToken -> Bool
-isWhitespace = mFold ((const True,const True,\d s -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+isWhitespace = mFold ((const True,\d s -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
 -- Remove redundant tokens, such as whitespace
 removeRedundant :: [MToken] -> [MToken]
@@ -331,7 +327,6 @@ removeRedundant = filter (not . isWhitespace)
 
 -- the size of a token in characters
 tokenSize = foldToken ((
-    length, -- Whitespace
     (+2) . length, -- DashComment
     \d s -> 6 + length s + 2 * d, -- DashBlockComment
     (+2) . length, -- SlashComment
