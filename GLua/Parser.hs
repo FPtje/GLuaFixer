@@ -66,14 +66,14 @@ parseParList = pName <**> (
 
 -- Parse a block with an optional return value
 parseBlock :: AParser Block
-parseBlock = Block <$> pMany parseStat <*> (parseReturn <<|> pReturn NoReturn)
+parseBlock = Block <$> pMany (MStat <$> pPos <*> parseStat) <*> (parseReturn <<|> pReturn NoReturn)
 
 -- Parse a single statement
 parseStat :: AParser Stat
 parseStat = ASemicolon <$ pMTok Semicolon <<|>
             (AFuncCall <$> pFunctionCall <|>
             -- Function calls and definitions both start with a var
-            (\v e -> Def (zip v $ e ++ repeat ANil)) <$> parseVarList <* pMTok Equals <*> parseExpressionList) <<|>
+            (\v p e -> Def (zip v $ e ++ repeat (MExpr p ANil))) <$> parseVarList <* pMTok Equals <*> pPos <*> parseExpressionList) <<|>
             ALabel <$> parseLabel <<|>
             ABreak <$ pMTok Break <<|>
             AContinue <$ pMTok Continue <<|>
@@ -94,7 +94,7 @@ parseStat = ASemicolon <$ pMTok Semicolon <<|>
                 pMTok Function <*> parseFuncName <*> pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
                 parseBlock <* pMTok End <<|>
               -- local variables
-              (\v e l -> LocDef (zip v $ e ++ repeat ANil)) <$> parseVarList <*> (pMTok Equals *> parseExpressionList <<|> pReturn [])
+              (\v (p,e) l -> LocDef (zip v $ e ++ repeat (MExpr p ANil))) <$> parseVarList <*> ((,) <$ pMTok Equals <*> pPos <*> parseExpressionList <<|> (,) <$> pPos <*> pReturn [])
             )
 
 
@@ -115,7 +115,7 @@ parseFor = ANFor <$ pMTok For <*>
             -- end value
             pMTok Comma <*> parseExpression <*>
             -- step (1 if not filled in)
-            (pMTok Comma *> parseExpression <<|> pReturn (ANumber "1")) <*
+            (pMTok Comma *> parseExpression <<|> MExpr <$> pPos <*> pReturn (ANumber "1")) <*
             pMTok Do <*> parseBlock <*
             pMTok End
             <|>
@@ -126,7 +126,7 @@ parseFor = ANFor <$ pMTok For <*>
 
 
 parseReturn :: AParser AReturn
-parseReturn = AReturn <$ pMTok Return <*> opt parseExpressionList []
+parseReturn = AReturn <$> pPos <* pMTok Return <*> opt parseExpressionList []
 
 -- Label
 parseLabel :: AParser MToken
@@ -173,7 +173,7 @@ parseVar = PFVar <$> pName <*> (reverse <$> opt suffixes []) <<|>
                    (flip (:) [] . DotIndex) <$ pMTok Dot <*> pName
 
 -- list of expressions
-parseExpressionList :: AParser [Expr]
+parseExpressionList :: AParser [MExpr]
 parseExpressionList = parseExpression <**> (
                           (\_ list exp -> exp : list) <$> pMTok Comma <*> parseExpressionList <<|>
                           flip (:) <$> pReturn []
@@ -200,12 +200,12 @@ parseAnonymFunc = AnonymousFunc <$
 
 
 -- Parse operators of the same precedence in a chain
-samePrio :: [(Token, BinOp)] -> AParser Expr -> AParser Expr
+samePrio :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
 samePrio ops p = pChainl (choice (map f ops)) p
   where
     choice = foldr (<<|>) pFail
-    f :: (Token, BinOp) -> AParser (Expr -> Expr -> Expr)
-    f (t, at) = BinOpExpr at <$ pMTok t
+    f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
+    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$ pMTok t <*> pPos
 
 -- Operators, sorted by priority
 -- Priority from: http://www.lua.org/manual/5.2/manual.html#3.4.7
@@ -220,15 +220,15 @@ lvl6 = [(Multiply, AMultiply), (Divide, ADivide), (Modulus, AModulus)]
 lvl8 = [(Power, APower)]
 
 -- Parse chains of binary and unary operators
-parseExpression :: AParser Expr
+parseExpression :: AParser MExpr
 parseExpression = samePrio lvl1 $
                   samePrio lvl2 $
                   samePrio lvl3 $
                   samePrio lvl4 $
                   samePrio lvl5 $
                   samePrio lvl6 $
-                  UnOpExpr <$> parseUnOp <*> parseExpression <<|> -- lvl7
-                  samePrio lvl8 parseSubExpression
+                  MExpr <$> pPos <*> (UnOpExpr <$> parseUnOp <*> parseExpression) <<|> -- lvl7
+                  samePrio lvl8 (MExpr <$$> parseSubExpression <*> pPos)
 
 -- Prefix expressions
 -- can have any arbitrary list of expression suffixes
