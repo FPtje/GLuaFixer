@@ -32,13 +32,13 @@ data Stat         -- ;
                   -- goto label
                   | AGoto     lbl :: MToken
                   -- do block end
-                  | ADo Block
+                  | ADo body :: Block
                   -- while expr do block end
                   | AWhile   cond :: MExpr      body :: Block
                   -- repeat block until expr
                   | ARepeat  body :: Block      cond :: MExpr
                   -- if exp r then block [elseif expr then block] [else block] end
-                  | AIf      cond :: MExpr      body :: Block     elifs :: {[(MExpr, Block)]} els :: {[Block]}
+                  | AIf      cond :: MExpr      body :: Block     elifs :: {[(MExpr, Block)]} els :: {Maybe Block}
                   -- for varname = expr, expr, expr? do block end, numeric for
                   | ANFor    var  :: MToken      val :: MExpr        to :: MExpr step :: MExpr body :: Block
                   -- for namelist in expr do block end

@@ -2,3 +2,4 @@
 *.hi
 dist/
 *.lua
+src/GLua/AG/PrettyPrint.hs

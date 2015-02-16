@@ -3,6 +3,7 @@ module Main where
 import GLua.Lexer
 import GLua.TokenTypes
 import GLua.Parser
+import GLua.AG.PrettyPrint
 
 import Data.Char
 
@@ -51,6 +52,10 @@ main = do
 
     let ast = parseGLua tokens
 
-    putStrLn . show $ ast
+    putStrLn "Errors:"
+    putStrLn . show . snd $ ast
+
+    putStrLn "Pretty printed code:"
+    putStrLn . prettyprint . fst $ ast
 
     exitSuccess

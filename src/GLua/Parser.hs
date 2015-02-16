@@ -8,7 +8,7 @@
 module GLua.Parser where
 
 import GLua.TokenTypes
-import GLua.AG.AST
+import GLua.AG.PrettyPrint
 import qualified GLua.Lexer as Lex
 
 import Text.ParserCombinators.UU
@@ -115,7 +115,7 @@ parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
             -- elseif
             (pMany ((,) <$ pMTok Elseif <*> parseExpression <* pMTok Then <*> parseBlock)) <*>
             -- else
-            (pMany (pMTok Else *> parseBlock)) <*
+            (optional (pMTok Else *> parseBlock)) <*
             pMTok End
 
 -- | Parse numeric and generic for loops

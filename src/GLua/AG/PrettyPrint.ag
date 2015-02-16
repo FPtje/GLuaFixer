@@ -1,0 +1,173 @@
+module {GLua.AG.PrettyPrint}{}{}
+
+imports
+{
+import Text.PrettyPrint
+import GLua.TokenTypes
+}
+
+include "AST.ag"
+
+{
+tok :: MToken -> Doc
+tok (MToken _ t) = text . show $ t
+
+printList :: (a -> Doc) -> String -> [a] -> Doc
+printList f sep []       = empty
+printList f sep (e : es) = (f e) <> g es
+    where
+        g []       = empty
+        g (e : es) = text sep <> (f e) <> g es
+
+metaDoc :: Maybe MToken -> Doc
+metaDoc (Just m) = tok m
+metaDoc Nothing  = empty
+
+printVarList :: [(PrefixExp, MExpr)] -> Doc
+printVarList vars = printList pp_prefixexp ", " (map fst vars) <+> char '=' <+> printList pp_mexpr ", " (map snd vars)
+
+printStats :: [MStat] -> Int -> Doc
+printStats [] i = empty
+printStats (x : xs) i = nest (i * 4) (pp_mstat x i) $+$ printStats xs i
+
+printElIfs :: [(MExpr, Block)] -> Int -> Doc
+printElIfs [] i = empty
+printElIfs ((e, b) : es) i = text "elseif" <+> pp_mexpr e <+> text "then" $+$ pp_block b i $+$ printElIfs es i
+
+printEls :: Maybe Block -> Int -> Doc
+printEls Nothing i = empty
+printEls (Just b) i = text "else" $+$ pp_block b i
+}
+
+attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp
+    syn pretty :: Doc
+    inh indent :: Int
+
+sem AST
+    | AST       lhs.pretty = @chunk.pretty
+
+sem Block
+    | Block      lhs.pretty = printStats @stats @lhs.indent $+$ nest (@lhs.indent * 4) @ret.pretty
+
+sem Stat
+    -- ;
+    | ASemicolon lhs.pretty = char ';'
+    | Def        lhs.pretty = printVarList @vars
+    | LocDef     lhs.pretty = text "local" <+> printVarList @vars
+    | AFuncCall  lhs.pretty = @fn.pretty
+    | ALabel     lhs.pretty = tok @lbl
+    | ABreak     lhs.pretty = text "break"
+    | AContinue  lhs.pretty = text "continue"
+    | AGoto      lhs.pretty = text "goto" <+> tok @lbl
+    | ADo        lhs.pretty = text "do" $+$ @body.pretty $+$ text "end"
+                 body.indent = 1
+    | AWhile     lhs.pretty = text "while" <+> @cond.pretty <+> text "do" $+$ @body.pretty $+$ text "end"
+                 body.indent = 1
+    | ARepeat    lhs.pretty = text "repeat" $+$ @body.pretty $+$ text "until" <+> @cond.pretty
+                 body.indent = 1
+    | AIf        lhs.pretty = text "if" <+> @cond.pretty <+> text "then" $+$ @body.pretty $+$ printElIfs @elifs @loc.bodyIndent $+$ printEls @els @loc.bodyIndent $+$ text "end"
+                 loc.bodyIndent = 1
+                 body.indent = 1
+    | ANFor      lhs.pretty = text "for" <+> tok @var <+> char '=' <+> @val.pretty <> char ',' <+> @to.pretty <> char ',' <+> @step.pretty <+> text "do" $+$ @body.pretty $+$ text "end"
+                 body.indent = 1
+    | AGFor      lhs.pretty = text "for" <+> printList tok ", " @vars <+> text "in" <+> printList pp_mexpr ", " @vals <+> text "do" $+$ @body.pretty $+$ text "end"
+                 body.indent = 1
+    | AFunc      lhs.pretty = text "function" <+> @name.pretty <> char '(' <> printList tok ", " @args <> char ')' $+$ @body.pretty $+$ text "end\n"
+                 body.indent = 1
+    | ALocFunc   lhs.pretty = text "local function" <+> @name.pretty <> char '(' <> printList tok ", " @args <> char ')' $+$ @body.pretty $+$ text "end\n"
+                 body.indent = 1
+
+sem AReturn
+    | AReturn    lhs.pretty = text "return" <+> printList pp_mexpr ", " @values
+    | NoReturn   lhs.pretty = empty
+
+sem FuncName
+    | FuncName   lhs.pretty = printList tok "." @names <> metaDoc @meta
+
+sem PrefixExp
+    | PFVar      lhs.pretty = tok @name <> printList pp_pfexprsuffix "" (reverse @suffixes)
+    | ExprVar    lhs.pretty = char '(' <> @expr.pretty <> char ')' <> printList pp_pfexprsuffix "" (reverse @suffixes)
+
+sem PFExprSuffix
+    | Call       lhs.pretty = @args.pretty
+    | MetaCall   lhs.pretty = char ':' <> tok @fn <> @args.pretty
+    | ExprIndex  lhs.pretty = char '[' <> @index.pretty <> char ']'
+    | DotIndex   lhs.pretty = char '.' <> tok @index
+
+sem Expr
+    | ANil              lhs.pretty = text "nil"
+    | AFalse            lhs.pretty = text "false"
+    | ATrue             lhs.pretty = text "true"
+    | ANumber           lhs.pretty = text @num
+    | AString           lhs.pretty = tok @str
+    | AVarArg           lhs.pretty = text "..."
+    | AnonymousFunc     lhs.pretty = text "function (" <> printList tok ", " @pars <> text ")" $+$ @body.pretty $+$ text "end"
+                        body.indent = 1
+    | APrefixExpr       lhs.pretty = @pexpr.pretty
+                        pexpr.indent = 0
+    | ATableConstructor lhs.pretty = char '{' <> printList pp_field ", " @fields <> char '}'
+    | BinOpExpr         lhs.pretty = @left.pretty <+> @op.pretty <+> @right.pretty
+                        left.indent = 0
+                        right.indent = 0
+    | UnOpExpr          lhs.pretty = @op.pretty <> @right.pretty
+                        right.indent = 0
+
+sem Args
+    | ListArgs  lhs.pretty = char '(' <> printList pp_mexpr ", " @args <> char ')'
+    | TableArg  lhs.pretty = char '{' <> printList pp_field ", " @arg <> char '}'
+    | StringArg lhs.pretty = text "[[" <> tok @arg <> text "]]"
+
+sem Field
+    | ExprField     lhs.pretty = char '[' <> @key.pretty <> char ']' <+> char '=' <+> @value.pretty
+                    value.indent = 0
+                    key.indent = 0
+    | NamedField    lhs.pretty = tok @key <+> char '=' <+> @value.pretty
+                    value.indent = 0
+    | UnnamedField  lhs.pretty = @value.pretty
+                    value.indent = 0
+
+sem BinOp
+    | APlus         lhs.pretty = text "+"
+    | BinMinus      lhs.pretty = text "-"
+    | AMultiply     lhs.pretty = text "*"
+    | ADivide       lhs.pretty = text "/"
+    | AModulus      lhs.pretty = text "%"
+    | APower        lhs.pretty = text "^"
+    | AConcatenate  lhs.pretty = text ".."
+    | ALT           lhs.pretty = text "<"
+    | ALEQ          lhs.pretty = text "<="
+    | AGT           lhs.pretty = text ">"
+    | AGEQ          lhs.pretty = text ">="
+    | AEq           lhs.pretty = text "=="
+    | ANEq          lhs.pretty = text "~="
+    | AAnd          lhs.pretty = text "and"
+    | AOr           lhs.pretty = text "or"
+
+sem UnOp
+    | UnMinus  lhs.pretty = text "-"
+    | ANot     lhs.pretty = text "not"
+    | AHash    lhs.pretty = text "#"
+
+{
+
+pp_block :: Block -> Int -> Doc
+pp_block p i = pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block i))
+
+pp_mstat :: MStat -> Int -> Doc
+pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat i))
+
+pp_prefixexp :: PrefixExp -> Doc
+pp_prefixexp p = pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp 0))
+
+pp_pfexprsuffix :: PFExprSuffix -> Doc
+pp_pfexprsuffix p = pretty_Syn_PFExprSuffix (wrap_PFExprSuffix (sem_PFExprSuffix p) (Inh_PFExprSuffix 0))
+
+pp_field :: Field -> Doc
+pp_field p = pretty_Syn_Field (wrap_Field (sem_Field p) (Inh_Field 0))
+
+pp_mexpr :: MExpr -> Doc
+pp_mexpr p = pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr 0))
+
+prettyprint :: AST -> String
+prettyprint p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0))
+}
