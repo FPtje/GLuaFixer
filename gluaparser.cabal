@@ -13,7 +13,7 @@ maintainer:          fpeijnenburg@gmail.com
 -- copyright:
 category:            Language
 build-type:          Custom
-extra-source-files:  README.md
+extra-source-files:  README.md, src/GLua/AG/PrettyPrint.ag
 cabal-version:       >=1.10
 
 executable gluaparser
