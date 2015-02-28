@@ -1,5 +1,5 @@
 file : "src/GLua/AG/AST.ag"
-options : catas, haskellsyntax, data, semfuns, wrappers, signatures
+options : haskellsyntax, data
 
 file : "src/GLua/AG/PrettyPrint.ag"
-options : catas, haskellsyntax, data, semfuns, wrappers, signatures
+options : catas, haskellsyntax, semfuns, wrappers, signatures
