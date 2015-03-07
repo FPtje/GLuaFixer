@@ -21,7 +21,7 @@ printList f sep (e : es) = (f e) <> g es
         g (e : es) = text sep <> (f e) <> g es
 
 metaDoc :: Maybe MToken -> Doc
-metaDoc (Just m) = tok m
+metaDoc (Just m) = char ':' <> tok m
 metaDoc Nothing  = empty
 
 printVarList :: [(PrefixExp, MExpr)] -> Doc
