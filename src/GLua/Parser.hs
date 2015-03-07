@@ -179,8 +179,8 @@ parseVar = PFVar <$> pName <*> (reverse <$> opt suffixes []) <<|>
            ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound <*> (reverse <$> suffixes)
     where
         suffixes = (:) <$> pPFExprSuffix <*> suffixes <|>
-                   (flip (:) [] . ExprIndex) <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <|>
-                   (flip (:) [] . DotIndex) <$ pMTok Dot <*> pName
+                   ((flip (:) [] . ExprIndex) <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <<|>
+                   (flip (:) [] . DotIndex) <$ pMTok Dot <*> pName)
 
 -- | Parse variable list (var1, var2, var3)
 parseVarList :: AParser [PrefixExp]
@@ -280,8 +280,8 @@ pFunctionCall :: AParser PrefixExp
 pFunctionCall = pPrefixExp suffixes
     where
         suffixes = (:) <$> pPFExprSuffix <*> suffixes <|>
-                   (flip (:) [] . Call) <$> parseArgs <|>
-                   (\n a -> [MetaCall n a]) <$ pMTok Colon <*> pName <*> parseArgs
+                   ((flip (:) [] . Call) <$> parseArgs <<|>
+                   (\n a -> [MetaCall n a]) <$ pMTok Colon <*> pName <*> parseArgs)
 
 
 -- | Arguments of a function call (including brackets)
