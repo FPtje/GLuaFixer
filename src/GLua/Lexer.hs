@@ -21,7 +21,7 @@ type LParser a = P (Str Char String LineColPos) a
 
 -- | Whitespace parser.
 parseWhitespace :: LParser String
-parseWhitespace = pMany (pSym ' ' <<|> pSym '\n' <<|> pSym '\t' <<|> pSym '\r')
+parseWhitespace = pMunch (`elem` " \r\n\t")
 
 -- | Blanco parser. Parses anything. Used in parsing comments.
 parseAnyChar :: LParser Char

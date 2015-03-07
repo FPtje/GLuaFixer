@@ -84,7 +84,7 @@ parseStat :: AParser Stat
 parseStat = ASemicolon <$ pMTok Semicolon <<|>
             (AFuncCall <$> pFunctionCall <|>
             -- Function calls and definitions both start with a var
-            (\v p e -> Def (zip v $ e ++ repeat (MExpr p ANil))) <$> parseVarList <* pMTok Equals <*> pPos <*> parseExpressionList) <<|>
+             (\v p e -> Def (zip v $ e ++ repeat (MExpr p ANil))) <$> parseVarList <* pMTok Equals <*> pPos <*> parseExpressionList) <<|>
             ALabel <$> parseLabel <<|>
             ABreak <$ pMTok Break <<|>
             AContinue <$ pMTok Continue <<|>
@@ -195,10 +195,7 @@ parseVarList = pList1Sep (pMTok Comma) parseVar
 
 -- | list of expressions
 parseExpressionList :: AParser [MExpr]
-parseExpressionList = parseExpression <**> (
-                          (\_ list exp -> exp : list) <$> pMTok Comma <*> parseExpressionList <<|>
-                          flip (:) <$> pReturn []
-                      )
+parseExpressionList = pList1Sep (pMTok Comma) parseExpression
 
 -- | Subexpressions, i.e. without operators
 parseSubExpression :: AParser Expr
@@ -295,18 +292,12 @@ parseArgs = ListArgs <$ pMTok LRound <*> opt parseExpressionList [] <* pMTok RRo
 
 -- | Table constructor
 parseTableConstructor :: AParser [Field]
-parseTableConstructor = pMTok LCurly *> (parseFieldList <<|> pReturn []) <* pMTok RCurly
+parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly
 
 -- | A list of table entries
 -- Grammar: field {separator field} [separator]
 parseFieldList :: AParser [Field]
-parseFieldList = parseField <**> (
-                    parseFieldSep <**> (
-                        (\flist _ field -> field : flist) <$> parseFieldList <<|>
-                        pReturn (\_ f -> [f])
-                    ) <<|>
-                    pReturn (: [])
-                )
+parseFieldList = pListSep parseFieldSep parseField <* opt parseFieldSep undefined
 
 -- | A field in a table
 parseField :: AParser Field
