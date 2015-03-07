@@ -3,3 +3,4 @@
 dist/
 *.lua
 src/GLua/AG/PrettyPrint.hs
+src/GLua/AG/AST.hs
