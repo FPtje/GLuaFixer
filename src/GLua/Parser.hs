@@ -60,13 +60,7 @@ parseNameList = (:) <$> pName <*> pMany (pMTok Comma *> pName)
 
 -- | Parse list of function parameters
 parseParList :: AParser [MToken]
-parseParList = pName <**> (
-                    pMTok Comma <**> (
-                        (\a _ c -> [c, a]) <$> pMTok VarArg <<|>
-                        (\a _ c -> c : a)  <$> parseParList
-                    ) <<|>
-                    pReturn (: [])
-               ) <<|> pReturn []
+parseParList = (flip (++)) <$> pListSep (pMTok Comma) pName <*> pAtMost 1 (pMTok VarArg)
 
 -- | Parses the full AST
 -- Its first parameter contains all comments
