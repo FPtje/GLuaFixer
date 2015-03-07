@@ -64,9 +64,8 @@ parseParList = pName <**> (
                     pMTok Comma <**> (
                         (\a _ c -> [c, a]) <$> pMTok VarArg <<|>
                         (\a _ c -> c : a)  <$> parseParList
-                    ) <<|>
-                    pReturn (: [])
-               ) <<|> pReturn []
+                    ) `opt` (: [])
+               ) `opt` []
 
 -- | Parses the full AST
 -- Its first parameter contains all comments
