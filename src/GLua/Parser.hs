@@ -254,8 +254,8 @@ parsePrefixExp = pPrefixExp (pMany pPFExprSuffix)
 -- | Prefix expressions
 -- The suffixes define rules on the allowed suffixes
 pPrefixExp :: AParser [PFExprSuffix] -> AParser PrefixExp
-pPrefixExp suffixes = PFVar <$> pName <*> (reverse <$> suffixes) <<|>
-                      ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound <*> (reverse <$> suffixes)
+pPrefixExp suffixes = PFVar <$> pName <*> suffixes <<|>
+                      ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound <*> suffixes
 
 -- | Parse any expression suffix
 pPFExprSuffix :: AParser PFExprSuffix

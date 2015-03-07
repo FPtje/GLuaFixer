@@ -86,8 +86,8 @@ sem FuncName
     | FuncName   lhs.pretty = printList tok "." @names <> metaDoc @meta
 
 sem PrefixExp
-    | PFVar      lhs.pretty = tok @name <> printList pp_pfexprsuffix "" (reverse @suffixes)
-    | ExprVar    lhs.pretty = char '(' <> @expr.pretty <> char ')' <> printList pp_pfexprsuffix "" (reverse @suffixes)
+    | PFVar      lhs.pretty = tok @name <> printList pp_pfexprsuffix "" @suffixes
+    | ExprVar    lhs.pretty = char '(' <> @expr.pretty <> char ')' <> printList pp_pfexprsuffix "" @suffixes
 
 sem PFExprSuffix
     | Call       lhs.pretty = @args.pretty
