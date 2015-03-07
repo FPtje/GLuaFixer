@@ -114,19 +114,21 @@ parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
 
 -- | Parse numeric and generic for loops
 parseFor :: AParser Stat
-parseFor = ANFor <$ pMTok For <*>
-            pName <* pMTok Equals <*> parseExpression <*
-            -- end value
-            pMTok Comma <*> parseExpression <*>
-            -- step (1 if not filled in)
-            (pMTok Comma *> parseExpression <<|> MExpr <$> pPos <*> pReturn (ANumber "1")) <*
-            pMTok Do <*> parseBlock <*
-            pMTok End
+parseFor = pPacked (pMTok For) (pMTok End) (
+            ANFor <$>
+              pName <* pMTok Equals <*> parseExpression <*
+              -- end value
+              pMTok Comma <*> parseExpression <*>
+              -- step (1 if not filled in)
+              (pMTok Comma *> parseExpression <<|> MExpr <$> pPos <*> pReturn (ANumber "1")) <*
+              pMTok Do <*> parseBlock <*
+              pMTok End
             <|>
-           AGFor <$ pMTok For <*> parseNameList <*
-            pMTok In <*> parseExpressionList <*
-            pMTok Do <*> parseBlock <*
-            pMTok End
+            AGFor <$> parseNameList <*
+              pMTok In <*> parseExpressionList <*
+              pMTok Do <*> parseBlock
+            )
+
 
 -- | Parse a return value
 parseReturn :: AParser AReturn
