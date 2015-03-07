@@ -9,7 +9,6 @@ module GLua.Parser where
 
 import GLua.TokenTypes
 import GLua.AG.AST
-import GLua.AG.PrettyPrint
 import qualified GLua.Lexer as Lex
 
 import Text.ParserCombinators.UU
@@ -219,8 +218,15 @@ parseAnonymFunc = AnonymousFunc <$
 
 
 -- | Parse operators of the same precedence in a chain
-samePrio :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
-samePrio ops p = pChainl (choice (map f ops)) p
+samePrioL :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
+samePrioL ops p = pChainl (choice (map f ops)) p
+  where
+    choice = foldr (<<|>) pFail
+    f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
+    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$ pMTok t <*> pPos
+
+samePrioR :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
+samePrioR ops p = pChainr (choice (map f ops)) p
   where
     choice = foldr (<<|>) pFail
     f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
@@ -248,14 +254,14 @@ lvl8 = [(Power, APower)]
 
 -- | Parse chains of binary and unary operators
 parseExpression :: AParser MExpr
-parseExpression = samePrio lvl1 $
-                  samePrio lvl2 $
-                  samePrio lvl3 $
-                  samePrio lvl4 $
-                  samePrio lvl5 $
-                  samePrio lvl6 $
+parseExpression = samePrioL lvl1 $
+                  samePrioL lvl2 $
+                  samePrioL lvl3 $
+                  samePrioR lvl4 $
+                  samePrioL lvl5 $
+                  samePrioL lvl6 $
                   MExpr <$> pPos <*> (UnOpExpr <$> parseUnOp <*> parseExpression) <<|> -- lvl7
-                  samePrio lvl8 (MExpr <$$> parseSubExpression <*> pPos)
+                  samePrioR lvl8 (MExpr <$$> parseSubExpression <*> pPos)
 
 -- | Prefix expressions
 -- can have any arbitrary list of expression suffixes
