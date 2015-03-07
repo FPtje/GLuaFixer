@@ -102,7 +102,7 @@ sem Expr
     | ANumber           lhs.pretty = text @num
     | AString           lhs.pretty = tok @str
     | AVarArg           lhs.pretty = text "..."
-    | AnonymousFunc     lhs.pretty = text "function (" <> printList tok ", " @pars <> text ")" $+$ @body.pretty $+$ text "end"
+    | AnonymousFunc     lhs.pretty = text "function(" <> printList tok ", " @pars <> text ")" $+$ @body.pretty $+$ text "end"
                         body.indent = 1
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         pexpr.indent = 0
