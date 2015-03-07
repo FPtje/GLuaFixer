@@ -171,17 +171,6 @@ pName = pSatisfy isName (Insertion "Identifier" (MToken (LineColPos 0 0 0) (Iden
         isName (MToken _ (Identifier _)) = True
         isName _ = False
 
--- | single variable. Note: definition differs from reference to circumvent the left recursion
--- var ::= Name [{PFExprSuffix}* indexation] | '(' exp ')' {PFExprSuffix}* indexation
--- where "{PFExprSuffix}* indexation" is any arbitrary sequence of prefix expression suffixes that end with an indexation
-parseVar :: AParser PrefixExp
-parseVar = PFVar <$> pName <*> (reverse <$> opt suffixes []) <<|>
-           ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound <*> (reverse <$> suffixes)
-    where
-        suffixes = (:) <$> pPFExprSuffix <*> suffixes <|>
-                   ((flip (:) [] . ExprIndex) <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <<|>
-                   (flip (:) [] . DotIndex) <$ pMTok Dot <*> pName)
-
 -- | Parse variable list (var1, var2, var3)
 parseVarList :: AParser [PrefixExp]
 parseVarList = pList1Sep (pMTok Comma) parseVar
@@ -270,19 +259,33 @@ pPrefixExp suffixes = PFVar <$> pName <*> (reverse <$> suffixes) <<|>
 
 -- | Parse any expression suffix
 pPFExprSuffix :: AParser PFExprSuffix
-pPFExprSuffix = Call <$> parseArgs <<|>
-                MetaCall <$ pMTok Colon <*> pName <*> parseArgs <<|>
-                ExprIndex <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <<|>
-                DotIndex <$ pMTok Dot <*> pName
+pPFExprSuffix = pPFExprCallSuffix <<|> pPFExprIndexSuffix
+
+-- | Parse an indexing expression suffix
+pPFExprCallSuffix :: AParser PFExprSuffix
+pPFExprCallSuffix = Call <$> parseArgs <<|>
+                    MetaCall <$ pMTok Colon <*> pName <*> parseArgs
+
+-- | Parse an indexing expression suffix
+pPFExprIndexSuffix :: AParser PFExprSuffix
+pPFExprIndexSuffix = ExprIndex <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <<|>
+                     DotIndex <$ pMTok Dot <*> pName
 
 -- | Function calls are prefix expressions, but the last suffix MUST be either a function call or a metafunction call
 pFunctionCall :: AParser PrefixExp
 pFunctionCall = pPrefixExp suffixes
     where
-        suffixes = (:) <$> pPFExprSuffix <*> suffixes <|>
-                   ((flip (:) [] . Call) <$> parseArgs <<|>
-                   (\n a -> [MetaCall n a]) <$ pMTok Colon <*> pName <*> parseArgs)
+        suffixes = concat <$> pSome ((\ix c -> ix ++ [c]) <$> pSome pPFExprIndexSuffix <*> pPFExprCallSuffix <<|>
+                                     (\c -> [c])        <$> pPFExprCallSuffix)
 
+-- | single variable. Note: definition differs from reference to circumvent the left recursion
+-- var ::= Name [{PFExprSuffix}* indexation] | '(' exp ')' {PFExprSuffix}* indexation
+-- where "{PFExprSuffix}* indexation" is any arbitrary sequence of prefix expression suffixes that end with an indexation
+parseVar :: AParser PrefixExp
+parseVar = pPrefixExp suffixes
+    where
+        suffixes = concat <$> pMany ((\c ix -> c ++ [ix]) <$> pSome pPFExprCallSuffix <*> pPFExprIndexSuffix <<|>
+                                     (\ix -> [ix])      <$> pPFExprIndexSuffix)
 
 -- | Arguments of a function call (including brackets)
 parseArgs :: AParser Args
