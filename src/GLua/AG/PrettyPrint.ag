@@ -40,9 +40,13 @@ printEls Nothing i = empty
 printEls (Just b) i = text "else" $+$ pp_block b i
 }
 
-attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp MStatList MExprList FieldList Declaration VarsList
+attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp MStatList MExprList FieldList Declaration VarsList ElseIf ElseIfList Else ExprSuffixList
     syn pretty :: Doc
     inh indent :: Int
+
+attr Declaration VarsList
+    syn varPretty  use {<>} {empty}  :: Doc
+    syn exprPretty use {<>} {empty}  :: Doc
 
 attr MStatList MExprList FieldList VarsList
     inh isHead :: Bool
@@ -63,11 +67,30 @@ sem FieldList
     | Nil        lhs.pretty = empty
 
 sem Declaration
-    | Tuple     lhs.pretty = text "test"
+    | Tuple     lhs.varPretty = @x1.pretty
+                lhs.exprPretty = @x2.pretty
 
 sem VarsList
-    | Cons      lhs.pretty = text "test"
-    | Nil       lhs.pretty = text "test"
+    | Cons      lhs.pretty = @loc.varPretty <+> char '=' <+> @loc.exprPretty
+                loc.varPretty = (if @lhs.isHead then empty else char ',') <+> @hd.varPretty <> @tl.varPretty
+                loc.exprPretty = (if @lhs.isHead then empty else char ',') <+> @hd.exprPretty <> @tl.exprPretty
+                tl.isHead  = False
+    | Nil       lhs.pretty = empty
+
+sem ElseIf
+    | Tuple     lhs.pretty = text "elseif" <+> @x1.pretty <+> text "then" $+$ nest 4 @x2.pretty
+
+sem ElseIfList
+    | Cons      lhs.pretty = @hd.pretty $+$ @tl.pretty
+    | Nil       lhs.pretty = empty
+
+sem Else
+    | Just      lhs.pretty = text "else" $+$ nest 4 @just.pretty
+    | Nothing   lhs.pretty = empty
+
+sem ExprSuffixList
+    | Cons       lhs.pretty = @hd.pretty <> @tl.pretty
+    | Nil        lhs.pretty = empty
 
 sem AST
     | AST       lhs.pretty = @chunk.pretty
@@ -94,7 +117,7 @@ sem Stat
                  body.indent = 1
     | ARepeat    lhs.pretty = text "repeat" $+$ @body.pretty $+$ text "until" <+> @cond.pretty
                  body.indent = 1
-    | AIf        lhs.pretty = text "if" <+> @cond.pretty <+> text "then" $+$ @body.pretty $+$ printElIfs @elifs @loc.bodyIndent $+$ printEls @els @loc.bodyIndent $+$ text "end"
+    | AIf        lhs.pretty = text "if" <+> @cond.pretty <+> text "then" $+$ @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ text "end"
                  loc.bodyIndent = 1
                  body.indent = 1
     | ANFor      lhs.pretty = text "for" <+> tok @var <+> char '=' <+> @val.pretty <> char ',' <+> @to.pretty <> char ',' <+> @step.pretty <+> text "do" $+$ @body.pretty $+$ text "end"
@@ -116,8 +139,8 @@ sem FuncName
     | FuncName   lhs.pretty = printList tok "." @names <> metaDoc @meta
 
 sem PrefixExp
-    | PFVar      lhs.pretty = tok @name <> printList pp_pfexprsuffix "" @suffixes
-    | ExprVar    lhs.pretty = char '(' <> @expr.pretty <> char ')' <> printList pp_pfexprsuffix "" @suffixes
+    | PFVar      lhs.pretty = tok @name <> @suffixes.pretty
+    | ExprVar    lhs.pretty = char '(' <> @expr.pretty <> char ')' <> @suffixes.pretty
 
 sem PFExprSuffix
     | Call       lhs.pretty = @args.pretty

@@ -11,6 +11,11 @@ type MExprList = [MExpr]
 type FieldList = [Field]
 type Declaration = (PrefixExp, MExpr)
 type VarsList  = [Declaration]
+type ExprSuffixList = [PFExprSuffix]
+type ElseIf    = (MExpr, Block)
+type ElseIfList = [ElseIf]
+type Else      = maybe Block
+
 
 -- Root of the Abstract Syntax Tree
 data AST          | AST comments :: {[MToken]} chunk :: Block
@@ -44,7 +49,7 @@ data Stat         -- ;
                   -- repeat block until expr
                   | ARepeat  body :: Block      cond :: MExpr
                   -- if exp r then block [elseif expr then block] [else block] end
-                  | AIf      cond :: MExpr      body :: Block     elifs :: {[(MExpr, Block)]} els :: {Maybe Block}
+                  | AIf      cond :: MExpr      body :: Block     elifs :: ElseIfList els :: Else
                   -- for varname = expr, expr, expr? do block end, numeric for
                   | ANFor    var  :: MToken      val :: MExpr        to :: MExpr step :: MExpr body :: Block
                   -- for namelist in expr do block end
@@ -62,8 +67,8 @@ data AReturn      | AReturn             pos    :: LineColPos values :: MExprList
 data FuncName     | FuncName            names  :: {[MToken]}    meta  :: (Maybe MToken) -- name(.name)*(:name)?
 
 -- Prefix expressions (vars or function calls)
-data PrefixExp    | PFVar               name   :: MToken  suffixes  :: {[PFExprSuffix]}
-                  | ExprVar             expr   :: MExpr   suffixes  :: {[PFExprSuffix]} -- (some .. expression)["with suffix"]
+data PrefixExp    | PFVar               name   :: MToken  suffixes  :: ExprSuffixList
+                  | ExprVar             expr   :: MExpr   suffixes  :: ExprSuffixList -- (some .. expression)["with suffix"]
 
 -- Suffix of expression: Call(), :MetaCall(), [indexation] or .indexation
 data PFExprSuffix | Call                args   :: Args
