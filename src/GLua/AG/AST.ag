@@ -6,11 +6,16 @@ import Text.ParserCombinators.UU.BasicInstances
 import GLua.TokenTypes
 }
 
+type MStatList = [MStat]
+type MExprList = [MExpr]
+type FieldList = [Field]
+type VarsList  = (PrefixExp, MExpr)
+
 -- Root of the Abstract Syntax Tree
 data AST          | AST comments :: {[MToken]} chunk :: Block
 
 -- Block of code
-data Block        | Block  stats :: {[MStat]}    ret :: AReturn
+data Block        | Block  stats :: MStatList    ret :: AReturn
 
 data MStat        | MStat    pos :: LineColPos  stat :: Stat
 
@@ -42,14 +47,14 @@ data Stat         -- ;
                   -- for varname = expr, expr, expr? do block end, numeric for
                   | ANFor    var  :: MToken      val :: MExpr        to :: MExpr step :: MExpr body :: Block
                   -- for namelist in expr do block end
-                  | AGFor    vars :: {[MToken]} vals :: {[MExpr]}  body :: Block
+                  | AGFor    vars :: {[MToken]} vals :: MExprList  body :: Block
                   -- function funcname(parameters) block end
                   | AFunc    name :: FuncName   args :: {[MToken]} body :: Block
                   -- local function funcname(parameters) block end
                   | ALocFunc name :: FuncName   args :: {[MToken]} body :: Block
 
 -- Return [values]
-data AReturn      | AReturn             pos    :: LineColPos values :: {[MExpr]}
+data AReturn      | AReturn             pos    :: LineColPos values :: MExprList
                   | NoReturn
 
 -- Function names
@@ -76,13 +81,13 @@ data Expr         | ANil
                   | AVarArg
                   | AnonymousFunc       pars   :: {[MToken]} body   :: Block
                   | APrefixExpr         pexpr  :: PrefixExp
-                  | ATableConstructor   fields :: {[Field]}
+                  | ATableConstructor   fields :: FieldList
                   | BinOpExpr           op     :: BinOp      left   :: MExpr right :: MExpr
                   | UnOpExpr            op     :: UnOp       right  :: MExpr
 
 -- arguments of function call: fn(list, args), fn{table, args}, fn"string args"
-data Args         | ListArgs            args   :: {[MExpr]}
-                  | TableArg            arg    :: {[Field]}
+data Args         | ListArgs            args   :: MExprList
+                  | TableArg            arg    :: FieldList
                   | StringArg           arg    :: MToken
 
 

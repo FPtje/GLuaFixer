@@ -40,15 +40,34 @@ printEls Nothing i = empty
 printEls (Just b) i = text "else" $+$ pp_block b i
 }
 
-attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp
+attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp MStatList MExprList FieldList VarsList
     syn pretty :: Doc
     inh indent :: Int
+
+attr MStatList MExprList FieldList VarsList
+    inh isHead :: Bool
+
+sem MStatList
+    | Cons       lhs.pretty = @hd.pretty $+$ @tl.pretty
+                 tl.isHead  = False
+    | Nil        lhs.pretty = empty
+sem MExprList
+    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <+> @hd.pretty <> @tl.pretty
+                 tl.isHead  = False
+    | Nil        lhs.pretty = empty
+sem FieldList
+    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <+> @hd.pretty <> @tl.pretty
+                 tl.isHead  = False
+    | Nil        lhs.pretty = empty
+sem VarsList
+    | Tuple      lhs.pretty = text "test"
 
 sem AST
     | AST       lhs.pretty = @chunk.pretty
 
 sem Block
-    | Block      lhs.pretty = printStats @stats @lhs.indent $+$ nest (@lhs.indent * 4) @ret.pretty
+    | Block      lhs.pretty = nest (@lhs.indent * 4) (@stats.pretty $+$ @ret.pretty)
+                 stats.isHead = True
 
 sem Stat
     -- ;
@@ -71,15 +90,17 @@ sem Stat
                  body.indent = 1
     | ANFor      lhs.pretty = text "for" <+> tok @var <+> char '=' <+> @val.pretty <> char ',' <+> @to.pretty <> char ',' <+> @step.pretty <+> text "do" $+$ @body.pretty $+$ text "end"
                  body.indent = 1
-    | AGFor      lhs.pretty = text "for" <+> printList tok ", " @vars <+> text "in" <+> printList pp_mexpr ", " @vals <+> text "do" $+$ @body.pretty $+$ text "end"
+    | AGFor      lhs.pretty = text "for" <+> printList tok ", " @vars <+> text "in" <+> @vals.pretty <+> text "do" $+$ @body.pretty $+$ text "end"
                  body.indent = 1
+                 vals.isHead = True
     | AFunc      lhs.pretty = text "function" <+> @name.pretty <> char '(' <> printList tok ", " @args <> char ')' $+$ @body.pretty $+$ text "end\n"
                  body.indent = 1
     | ALocFunc   lhs.pretty = text "local function" <+> @name.pretty <> char '(' <> printList tok ", " @args <> char ')' $+$ @body.pretty $+$ text "end\n"
                  body.indent = 1
 
 sem AReturn
-    | AReturn    lhs.pretty = text "return" <+> printList pp_mexpr ", " @values
+    | AReturn    lhs.pretty = text "return" <+> @values.pretty
+                 values.isHead = True
     | NoReturn   lhs.pretty = empty
 
 sem FuncName
@@ -106,7 +127,8 @@ sem Expr
                         body.indent = 1
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         pexpr.indent = 0
-    | ATableConstructor lhs.pretty = char '{' <> printList pp_field ", " @fields <> char '}'
+    | ATableConstructor lhs.pretty = char '{' <> @fields.pretty <> char '}'
+                        fields.isHead = True
     | BinOpExpr         lhs.pretty = @left.pretty <+> @op.pretty <+> @right.pretty
                         left.indent = 0
                         right.indent = 0
@@ -114,8 +136,10 @@ sem Expr
                         right.indent = 0
 
 sem Args
-    | ListArgs  lhs.pretty = char '(' <> printList pp_mexpr ", " @args <> char ')'
-    | TableArg  lhs.pretty = char '{' <> printList pp_field ", " @arg <> char '}'
+    | ListArgs  lhs.pretty = char '(' <> @args.pretty <> char ')'
+                args.isHead = True
+    | TableArg  lhs.pretty = char '{' <> @arg.pretty <> char '}'
+                arg.isHead = True
     | StringArg lhs.pretty = text "[[" <> tok @arg <> text "]]"
 
 sem Field
