@@ -246,6 +246,9 @@ renderPrefixExp p  = render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixEx
 renderExpr         :: Expr -> String
 renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) (Inh_Expr 0))
 
+renderMExpr         :: MExpr -> String
+renderMExpr p       = render $ pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr 0))
+
 renderArgs         :: Args -> String
 renderArgs p       = render $ pretty_Syn_Args (wrap_Args (sem_Args p) (Inh_Args 0))
 
