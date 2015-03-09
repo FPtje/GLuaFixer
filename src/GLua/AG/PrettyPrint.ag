@@ -227,4 +227,29 @@ pp_mexpr p = pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr 0))
 
 prettyprint :: AST -> String
 prettyprint p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0))
+
+renderBlock        :: Block -> String
+renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block 0))
+
+renderStat         :: Stat -> String
+renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat 0))
+
+renderAReturn      :: AReturn -> String
+renderAReturn p    = render $ pretty_Syn_AReturn (wrap_AReturn (sem_AReturn p) (Inh_AReturn 0))
+
+renderFuncName     :: FuncName -> String
+renderFuncName p   = render $ pretty_Syn_FuncName (wrap_FuncName (sem_FuncName p) (Inh_FuncName 0))
+
+renderPrefixExp    :: PrefixExp -> String
+renderPrefixExp p  = render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp 0))
+
+renderExpr         :: Expr -> String
+renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) (Inh_Expr 0))
+
+renderArgs         :: Args -> String
+renderArgs p       = render $ pretty_Syn_Args (wrap_Args (sem_Args p) (Inh_Args 0))
+
+renderField        :: Field -> String
+renderField p      = render $ pretty_Syn_Field (wrap_Field (sem_Field p) (Inh_Field 0))
+
 }
