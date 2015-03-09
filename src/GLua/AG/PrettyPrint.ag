@@ -40,7 +40,7 @@ printEls Nothing i = empty
 printEls (Just b) i = text "else" $+$ pp_block b i
 }
 
-attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp MStatList MExprList FieldList VarsList
+attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp MStatList MExprList FieldList Declaration VarsList
     syn pretty :: Doc
     inh indent :: Int
 
@@ -51,16 +51,23 @@ sem MStatList
     | Cons       lhs.pretty = @hd.pretty $+$ @tl.pretty
                  tl.isHead  = False
     | Nil        lhs.pretty = empty
+
 sem MExprList
     | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <+> @hd.pretty <> @tl.pretty
                  tl.isHead  = False
     | Nil        lhs.pretty = empty
+
 sem FieldList
     | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <+> @hd.pretty <> @tl.pretty
                  tl.isHead  = False
     | Nil        lhs.pretty = empty
+
+sem Declaration
+    | Tuple     lhs.pretty = text "test"
+
 sem VarsList
-    | Tuple      lhs.pretty = text "test"
+    | Cons      lhs.pretty = text "test"
+    | Nil       lhs.pretty = text "test"
 
 sem AST
     | AST       lhs.pretty = @chunk.pretty
@@ -72,8 +79,10 @@ sem Block
 sem Stat
     -- ;
     | ASemicolon lhs.pretty = char ';'
-    | Def        lhs.pretty = printVarList @vars
-    | LocDef     lhs.pretty = text "local" <+> printVarList @vars
+    | Def        lhs.pretty = @vars.pretty
+                 vars.isHead = True
+    | LocDef     lhs.pretty = text "local" <+> @vars.pretty
+                 vars.isHead = True
     | AFuncCall  lhs.pretty = @fn.pretty
     | ALabel     lhs.pretty = tok @lbl
     | ABreak     lhs.pretty = text "break"

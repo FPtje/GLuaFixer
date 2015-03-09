@@ -9,7 +9,8 @@ import GLua.TokenTypes
 type MStatList = [MStat]
 type MExprList = [MExpr]
 type FieldList = [Field]
-type VarsList  = (PrefixExp, MExpr)
+type Declaration = (PrefixExp, MExpr)
+type VarsList  = [Declaration]
 
 -- Root of the Abstract Syntax Tree
 data AST          | AST comments :: {[MToken]} chunk :: Block
@@ -23,9 +24,9 @@ data MStat        | MStat    pos :: LineColPos  stat :: Stat
 data Stat         -- ;
                   | ASemicolon
                   -- a, b, c = ...
-                  | Def      vars :: {[(PrefixExp, MExpr)]}
+                  | Def      vars :: VarsList
                   -- local a,b,c, ... = ...
-                  | LocDef   vars :: {[(PrefixExp, MExpr)]}
+                  | LocDef   vars :: VarsList
                   -- Function call
                   | AFuncCall  fn :: PrefixExp
                   -- label
