@@ -148,7 +148,7 @@ parseIdentifier = (:)  <$> (pSym '_' <<|> pLetter) <*> pMany allowed
 
 -- | Parse a label.
 parseLabel :: LParser String
-parseLabel = pToken "::" *> parseIdentifier
+parseLabel = pToken "::" *> parseIdentifier <* pToken "::"
 
 -- | Parse anything to do with dots. Indexaction (.), concatenation (..) or varargs (...)
 parseDots :: LParser Token

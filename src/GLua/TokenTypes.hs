@@ -98,7 +98,7 @@ foldMToken alg (MToken pos t) = alg pos t
 mFold :: TokenAlgebra a -> MToken -> a
 mFold alg mt = foldMToken f mt
   where
-    f p t = foldToken alg t
+    f _ t = foldToken alg t
 
 -- | Huge token algebra
 type TokenAlgebra token = (
@@ -321,20 +321,21 @@ instance Show Token where
         "]" -- RSquare
         ),
         (
-        \s -> "::" ++ s, -- Label
+        \s -> "::" ++ s ++ "::", -- Label
         id -- Identifier
         )
         )
 
 -- | Whether an mtoken is a comment
 isComment :: MToken -> Bool
-isComment = mFold ((const True,\d s -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+isComment = mFold ((const True,\_ _ -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
 -- | Split the tokens by comments and other tokens
 splitComments :: [MToken] -> ([MToken], [MToken])
 splitComments = partition isComment
 
 -- | The size of a token in characters
+tokenSize :: Token -> Int
 tokenSize = foldToken ((
     (+2) . length, -- DashComment
     \d s -> 6 + length s + 2 * d, -- DashBlockComment
