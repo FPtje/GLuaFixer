@@ -83,9 +83,12 @@ data Token =
 data MToken = MToken {mpos :: LineColPos, mtok :: Token} deriving (Show)
 
 -- | Simple EQ instance. TODO: check for position equality
--- TODO: Ord
 instance Eq MToken where
     (MToken _ t1) == (MToken _ t2) = t1 == t2
+
+-- | Simple Ord instance. TODO: check for position Ord
+instance Ord MToken where
+    compare (MToken _ t1) (MToken _ t2) = compare t1 t2
 
 -- | Metatoken algebra
 type MTokenAlgebra mtok = LineColPos -> Token -> mtok
