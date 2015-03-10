@@ -77,7 +77,7 @@ data Token =
     RSquare                     |   -- ^ ]
     Label String                |   -- ^ ::label
     Identifier String
-    deriving (Eq)
+    deriving (Eq, Ord)
 
 -- | Metatoken, stores line and column position of token
 data MToken = MToken {mpos :: LineColPos, mtok :: Token} deriving (Show)
@@ -333,6 +333,9 @@ isComment = mFold ((const True,\_ _ -> True,const True,const True,False),(const 
 -- | Split the tokens by comments and other tokens
 splitComments :: [MToken] -> ([MToken], [MToken])
 splitComments = partition isComment
+
+tokenLabel :: MToken -> String
+tokenLabel = mFold ((const "",\_ _ -> "",const "",const "",""),(const "",const "",const "",const "","","","",""),("","","","","","","","","","","","","","","","","","","","","","","","",""),("","","","","","","","","","","","","","","","",""),("","","","","",""),(id, id))
 
 -- | The size of a token in characters
 tokenSize :: Token -> Int
