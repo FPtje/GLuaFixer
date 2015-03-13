@@ -146,6 +146,41 @@ deriving UnOp : Show
 sem AST
     | AST                   lhs.something       =
 
+sem MStatList
+    | Cons                  lhs.something       =
+    | Nil                   lhs.something       =
+
+sem MExprList
+    | Cons                  lhs.something       =
+    | Nil                   lhs.something       =
+
+sem FieldList
+    | Cons                  lhs.something       =
+    | Nil                   lhs.something       =
+
+sem Declaration
+    | Tuple                 lhs.something       =
+
+sem VarsList
+    | Cons                  lhs.something       =
+    | Nil                   lhs.something       =
+
+sem ExprSuffixList
+    | Cons                  lhs.something       =
+    | Nil                   lhs.something       =
+
+sem ElseIf
+    | Tuple                 lhs.something       =
+
+sem ElseIfList
+    | Cons                  lhs.something       =
+    | Nil                   lhs.something       =
+
+sem Else
+    | Just                  lhs.something       =
+    | Nothing               lhs.something       =
+
+
 sem Block
     | Block                 lhs.something       =
 
