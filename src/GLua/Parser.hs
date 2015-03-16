@@ -17,14 +17,16 @@ import Text.ParserCombinators.UU.BasicInstances
 import Text.ParserCombinators.UU.Derived
 import qualified Data.ListLike as LL
 
+-- | MTokens with the positions of the next MToken (used in the advance of parser)
+type MTokenPos = (MToken, LineColPos)
 -- | Custom parser that parses MTokens
-type AParser a = (IsLocationUpdatedBy LineColPos MToken, LL.ListLike state MToken) => P (Str MToken state LineColPos) a
+type AParser a = (IsLocationUpdatedBy LineColPos MTokenPos, LL.ListLike state MTokenPos) => P (Str MTokenPos state LineColPos) a
 
 -- | LineColPos is a location that can be updated by MTokens
-instance IsLocationUpdatedBy LineColPos MToken where
+instance IsLocationUpdatedBy LineColPos MTokenPos where
     -- advance :: LineColPos -> MToken -> LineColPos
     -- Assume the position of the next MToken
-    advance pos (MToken p t) = p
+    advance pos (_, p) = p
 
 
 -- | Parse Garry's mod Lua tokens to an abstract syntax tree.
@@ -41,15 +43,31 @@ parseGLuaFromString = parseGLua . fst . Lex.execParseTokens
 parseFromString :: AParser a -> String -> (a, [Error LineColPos])
 parseFromString p = execAParser p . fst . Lex.execParseTokens
 
+-- | Create a parsable string from MTokens
+createString :: [MToken] -> Str MTokenPos [MTokenPos] LineColPos
+createString [] = createStr (LineColPos 0 0 0) []
+createString mts@(MToken p _ : xs) = createStr p mtpos where
+    mts' = xs ++ [last xs] -- Repeat last element of mts
+    mkMtPos mt (MToken p' _) = (mt, p')
+    mtpos = zipWith mkMtPos mts mts'
+
 -- | Text.ParserCombinators.UU.Utils.execParser modified to parse MTokens
 -- The first MToken might not be on the first line, so use the first MToken's position to start
 execAParser :: AParser a -> [MToken] -> (a, [Error LineColPos])
-execAParser p mts@[] = parse_h ((,) <$> p <*> pEnd) . createStr (LineColPos 0 0 0) $ mts
-execAParser p mts@(m : ms) = parse_h ((,) <$> p <*> pEnd) . createStr (mpos m) $ mts
+execAParser p mts@[] = parse_h ((,) <$> p <*> pEnd) . createString $ mts
+execAParser p mts@(m : ms) = parse_h ((,) <$> p <*> pEnd) . createString $ mts -- createStr (mpos m) $ mts
+
+
+pMSatisfy :: (MToken -> Bool) -> Token -> String -> AParser MToken
+pMSatisfy f t ins = fst <$> pSatisfy f' (Insertion ins (MToken ep t, ep) 5) where
+    f' :: MTokenPos -> Bool
+    f' (mtok, _) = f mtok
+
+    ep = LineColPos 0 0 0
 
 -- | Parse a single Metatoken, based on a positionless token (much like pSym)
 pMTok :: Token -> AParser MToken
-pMTok t = pSatisfy isToken (Insertion ("Token " ++ show t) (MToken (LineColPos 0 0 0) t) 5)
+pMTok t = pMSatisfy isToken t $ "Token " ++ show t
     where
         isToken :: MToken -> Bool
         isToken (MToken _ tok) = t == tok
@@ -141,7 +159,7 @@ parseReturn = AReturn <$> pPos <* pMTok Return <*> opt parseExpressionList []
 
 -- | Label
 parseLabel :: AParser MToken
-parseLabel = pSatisfy isLabel (Insertion "Label" (MToken (LineColPos 0 0 0) (Label "someLabel")) 5)
+parseLabel = pMSatisfy isLabel (Label "someLabel") "Some label"
     where
         isLabel :: MToken -> Bool
         isLabel (MToken _ (Label _)) = True
@@ -154,7 +172,7 @@ parseFuncName = (\a b c -> FuncName (a:b) c) <$> pName <*> pMany (pMTok Dot *> p
 
 -- | Parse a number into an expression
 parseNumber :: AParser Expr
-parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pSatisfy isNumber (Insertion "Number" (MToken (LineColPos 0 0 0) (TNumber "0")) 5)
+parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pMSatisfy isNumber (TNumber "0") "Number"
     where
         isNumber :: MToken -> Bool
         isNumber (MToken _ (TNumber str)) = True
@@ -162,7 +180,7 @@ parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pSatisfy isNumber (
 
 -- | Parse any kind of string
 parseString :: AParser MToken
-parseString = pSatisfy isString (Insertion "String" (MToken (LineColPos 0 0 0) (DQString "someString")) 5)
+parseString = pMSatisfy isString (DQString "someString") "String"
     where
         isString :: MToken -> Bool
         isString (MToken _ (DQString str)) = True
@@ -172,7 +190,7 @@ parseString = pSatisfy isString (Insertion "String" (MToken (LineColPos 0 0 0) (
 
 -- | Parse an identifier
 pName :: AParser MToken
-pName = pSatisfy isName (Insertion "Identifier" (MToken (LineColPos 0 0 0) (Identifier "someVariable")) 5)
+pName = pMSatisfy isName (Identifier "someVariable") "Variable"
     where
         isName :: MToken -> Bool
         isName (MToken _ (Identifier _)) = True
@@ -212,14 +230,14 @@ samePrioL ops p = pChainl (choice (map f ops)) p
   where
     choice = foldr (<<|>) pFail
     f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
-    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$ pMTok t <*> pPos
+    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos <* pMTok t
 
 samePrioR :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
 samePrioR ops p = pChainr (choice (map f ops)) p
   where
     choice = foldr (<<|>) pFail
     f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
-    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$ pMTok t <*> pPos
+    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos <* pMTok t
 
 -- | Parse unary operator (-, not, #)
 parseUnOp :: AParser UnOp
@@ -250,7 +268,7 @@ parseExpression = samePrioL lvl1 $
                   samePrioL lvl5 $
                   samePrioL lvl6 $
                   MExpr <$> pPos <*> (UnOpExpr <$> parseUnOp <*> parseExpression) <<|> -- lvl7
-                  samePrioR lvl8 (MExpr <$$> parseSubExpression <*> pPos)
+                  samePrioR lvl8 (MExpr <$> pPos <*> parseSubExpression)
 
 -- | Prefix expressions
 -- can have any arbitrary list of expression suffixes
