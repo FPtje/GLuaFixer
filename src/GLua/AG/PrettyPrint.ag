@@ -38,6 +38,19 @@ printElIfs ((e, b) : es) i = text "elseif" <+> pp_mexpr e <+> text "then" $+$ pp
 printEls :: Maybe Block -> Int -> Doc
 printEls Nothing i = empty
 printEls (Just b) i = text "else" $+$ pp_block b i
+
+
+renderPos :: LineColPos -> String
+renderPos (LineColPos l c _) = "line " ++ show l ++ ", column " ++ show c
+
+getMStatPos :: MStat -> String
+getMStatPos (MStat p _) = renderPos p
+
+getAReturnPos :: AReturn -> String
+getAReturnPos (AReturn p _) = renderPos p
+
+getMExprPos :: MExpr -> String
+getMExprPos (MExpr p _) = renderPos p
 }
 
 attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp MStatList MExprList FieldList Declaration VarsList ElseIf ElseIfList Else ExprSuffixList
