@@ -234,6 +234,9 @@ renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Bl
 renderStat         :: Stat -> String
 renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat 0))
 
+renderMStat         :: MStat -> String
+renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat 0))
+
 renderAReturn      :: AReturn -> String
 renderAReturn p    = render $ pretty_Syn_AReturn (wrap_AReturn (sem_AReturn p) (Inh_AReturn 0))
 
