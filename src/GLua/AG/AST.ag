@@ -140,133 +140,221 @@ deriving Field : Show
 deriving BinOp : Show
 deriving UnOp : Show
 
+
+set StatementStuff  = Block MStatList MStat Stat AReturn
+set IfStuff         = ElseIf ElseIfList Else
+set ExprStuff       = PrefixExp PFExprSuffix MExpr Expr MExprList ExprSuffixList
+set VarStuff        = Args Field FieldList Declaration VarsList
+set AllStuff        = MStatList MExprList FieldList Declaration VarsList ExprSuffixList ElseIf ElseIfList Else AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
 -- Semantics
 {-
 
+attr MStatList MExprList FieldList Declaration VarsList ExprSuffixList ElseIf ElseIfList Else AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
+
 sem AST
-    | AST                   lhs.something       =
+    | AST
+        lhs.something           =
 
 sem MStatList
-    | Cons                  lhs.something       =
-    | Nil                   lhs.something       =
+    | Cons
+        lhs.something           =
+    | Nil
+        lhs.something           =
 
 sem MExprList
-    | Cons                  lhs.something       =
-    | Nil                   lhs.something       =
+    | Cons
+        lhs.something           =
+    | Nil
+        lhs.something           =
 
 sem FieldList
-    | Cons                  lhs.something       =
-    | Nil                   lhs.something       =
+    | Cons
+        lhs.something           =
+    | Nil
+        lhs.something           =
 
 sem Declaration
-    | Tuple                 lhs.something       =
+    | Tuple
+        lhs.something           =
 
 sem VarsList
-    | Cons                  lhs.something       =
-    | Nil                   lhs.something       =
+    | Cons
+        lhs.something           =
+    | Nil
+        lhs.something           =
 
 sem ExprSuffixList
-    | Cons                  lhs.something       =
-    | Nil                   lhs.something       =
+    | Cons
+        lhs.something           =
+    | Nil
+        lhs.something           =
 
 sem ElseIf
-    | Tuple                 lhs.something       =
+    | Tuple
+        lhs.something           =
 
 sem ElseIfList
-    | Cons                  lhs.something       =
-    | Nil                   lhs.something       =
+    | Cons
+        lhs.something           =
+    | Nil
+        lhs.something           =
 
 sem Else
-    | Just                  lhs.something       =
-    | Nothing               lhs.something       =
+    | Just
+        lhs.something           =
+    | Nothing
+        lhs.something           =
 
 
 sem Block
-    | Block                 lhs.something       =
+    | Block
+        lhs.something           =
 
 sem MStat
-    | MStat                 lhs.something       =
+    | MStat
+        lhs.something           =
 
 sem Stat
-    | ASemicolon            lhs.something       =
-    | Def                   lhs.something       =
-    | LocDef                lhs.something       =
-    | AFuncCall             lhs.something       =
-    | ALabel                lhs.something       =
-    | ABreak                lhs.something       =
-    | AContinue             lhs.something       =
-    | AGoto                 lhs.something       =
-    | ADo                   lhs.something       =
-    | AWhile                lhs.something       =
-    | ARepeat               lhs.something       =
-    | AIf                   lhs.something       =
-    | ANFor                 lhs.something       =
-    | AGFor                 lhs.something       =
-    | AFunc                 lhs.something       =
-    | ALocFunc              lhs.something       =
+    | ASemicolon
+        lhs.something           =
+    | Def
+        lhs.something           =
+    | LocDef
+        lhs.something           =
+    | AFuncCall
+        lhs.something           =
+    | ALabel
+        lhs.something           =
+    | ABreak
+        lhs.something           =
+    | AContinue
+        lhs.something           =
+    | AGoto
+        lhs.something           =
+    | ADo
+        lhs.something           =
+    | AWhile
+        lhs.something           =
+    | ARepeat
+        lhs.something           =
+    | AIf
+        lhs.something           =
+    | ANFor
+        lhs.something           =
+    | AGFor
+        lhs.something           =
+    | AFunc
+        lhs.something           =
+    | ALocFunc
+        lhs.something           =
 
 sem AReturn
-    | AReturn               lhs.something       =
-    | NoReturn              lhs.something       =
+    | AReturn
+        lhs.something           =
+    | NoReturn
+        lhs.something           =
 
 sem FuncName
-    | FuncName              lhs.something       =
+    | FuncName
+        lhs.something           =
 
 sem PrefixExp
-    | PFVar                 lhs.something       =
-    | ExprVar               lhs.something       =
+    | PFVar
+        lhs.something           =
+    | ExprVar
+        lhs.something           =
 
 sem PFExprSuffix
-    | Call                  lhs.something       =
-    | MetaCall              lhs.something       =
-    | ExprIndex             lhs.something       =
-    | DotIndex              lhs.something       =
+    | Call
+        lhs.something           =
+    | MetaCall
+        lhs.something           =
+    | ExprIndex
+        lhs.something           =
+    | DotIndex
+        lhs.something           =
 
 sem MExpr
-    | MExpr                 lhs.something       =
+    | MExpr
+        lhs.something           =
 
 sem Expr
-    | ANil                  lhs.something       =
-    | AFalse                lhs.something       =
-    | ATrue                 lhs.something       =
-    | ANumber               lhs.something       =
-    | AString               lhs.something       =
-    | AVarArg               lhs.something       =
-    | AnonymousFunc         lhs.something       =
-    | APrefixExpr           lhs.something       =
-    | ATableConstructor     lhs.something       =
-    | BinOpExpr             lhs.something       =
-    | UnOpExpr              lhs.something       =
+    | ANil
+        lhs.something           =
+    | AFalse
+        lhs.something           =
+    | ATrue
+        lhs.something           =
+    | ANumber
+        lhs.something           =
+    | AString
+        lhs.something           =
+    | AVarArg
+        lhs.something           =
+    | AnonymousFunc
+        lhs.something           =
+    | APrefixExpr
+        lhs.something           =
+    | ATableConstructor
+        lhs.something           =
+    | BinOpExpr
+        lhs.something           =
+    | UnOpExpr
+        lhs.something           =
 
 sem Args
-    | ListArgs              lhs.something       =
-    | TableArg              lhs.something       =
-    | StringArg             lhs.something       =
+    | ListArgs
+        lhs.something           =
+    | TableArg
+        lhs.something           =
+    | StringArg
+        lhs.something           =
 
 sem Field
-    | ExprField             lhs.something       =
-    | NamedField            lhs.something       =
-    | UnnamedField          lhs.something       =
+    | ExprField
+        lhs.something           =
+    | NamedField
+        lhs.something           =
+    | UnnamedField
+        lhs.something           =
 
 sem BinOp
-    | APlus                 lhs.something       =
-    | BinMinus              lhs.something       =
-    | AMultiply             lhs.something       =
-    | ADivide               lhs.something       =
-    | AModulus              lhs.something       =
-    | APower                lhs.something       =
-    | AConcatenate          lhs.something       =
-    | ALT                   lhs.something       =
-    | ALEQ                  lhs.something       =
-    | AGT                   lhs.something       =
-    | AGEQ                  lhs.something       =
-    | AEq                   lhs.something       =
-    | ANEq                  lhs.something       =
-    | AAnd                  lhs.something       =
-    | AOr                   lhs.something       =
+    | APlus
+        lhs.something           =
+    | BinMinus
+        lhs.something           =
+    | AMultiply
+        lhs.something           =
+    | ADivide
+        lhs.something           =
+    | AModulus
+        lhs.something           =
+    | APower
+        lhs.something           =
+    | AConcatenate
+        lhs.something           =
+    | ALT
+        lhs.something           =
+    | ALEQ
+        lhs.something           =
+    | AGT
+        lhs.something           =
+    | AGEQ
+        lhs.something           =
+    | AEq
+        lhs.something           =
+    | ANEq
+        lhs.something           =
+    | AAnd
+        lhs.something           =
+    | AOr
+        lhs.something           =
 
 sem UnOp
-    | UnMinus               lhs.something       =
-    | ANot                  lhs.something       =
-    | AHash                 lhs.something       =
+    | UnMinus
+        lhs.something           =
+    | ANot
+        lhs.something           =
+    | AHash
+        lhs.something           =
 -}
