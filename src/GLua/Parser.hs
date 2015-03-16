@@ -112,9 +112,9 @@ parseIf :: AParser Stat
 parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
             parseBlock <*>
             -- elseif
-            (pMany ((,) <$ pMTok Elseif <*> parseExpression <* pMTok Then <*> parseBlock)) <*>
+            pMany ((,) <$ pMTok Elseif <*> parseExpression <* pMTok Then <*> parseBlock) <*>
             -- else
-            (optional (pMTok Else *> parseBlock)) <*
+            optional (pMTok Else *> parseBlock) <*
             pMTok End
 
 -- | Parse numeric and generic for loops
@@ -206,7 +206,6 @@ parseAnonymFunc = AnonymousFunc <$
                    parseBlock <*
                    pMTok End
 
-
 -- | Parse operators of the same precedence in a chain
 samePrioL :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
 samePrioL ops p = pChainl (choice (map f ops)) p
@@ -283,7 +282,7 @@ pFunctionCall :: AParser PrefixExp
 pFunctionCall = pPrefixExp suffixes
     where
         suffixes = concat <$> pSome ((\ix c -> ix ++ [c]) <$> pSome pPFExprIndexSuffix <*> pPFExprCallSuffix <<|>
-                                     (\c -> [c])        <$> pPFExprCallSuffix)
+                                     (:[])                <$> pPFExprCallSuffix)
 
 -- | single variable. Note: definition differs from reference to circumvent the left recursion
 -- var ::= Name [{PFExprSuffix}* indexation] | '(' exp ')' {PFExprSuffix}* indexation
@@ -292,7 +291,7 @@ parseVar :: AParser PrefixExp
 parseVar = pPrefixExp suffixes
     where
         suffixes = concat <$> pMany ((\c ix -> c ++ [ix]) <$> pSome pPFExprCallSuffix <*> pPFExprIndexSuffix <<|>
-                                     (\ix -> [ix])      <$> pPFExprIndexSuffix)
+                                     (:[])                <$> pPFExprIndexSuffix)
 
 -- | Arguments of a function call (including brackets)
 parseArgs :: AParser Args
