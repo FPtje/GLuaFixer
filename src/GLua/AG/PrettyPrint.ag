@@ -41,13 +41,14 @@ printEls (Just b) i = text "else" $+$ pp_block b i
 
 
 renderPos :: LineColPos -> String
-renderPos (LineColPos l c _) = "line " ++ show l ++ ", column " ++ show c
+renderPos (LineColPos l c _) = "line " ++ show (succ l) ++ ", column " ++ show (succ c)
 
 getMStatPos :: MStat -> String
 getMStatPos (MStat p _) = renderPos p
 
 getAReturnPos :: AReturn -> String
 getAReturnPos (AReturn p _) = renderPos p
+getAReturnPos NoReturn = "<unknown>"
 
 getMExprPos :: MExpr -> String
 getMExprPos (MExpr p _) = renderPos p
