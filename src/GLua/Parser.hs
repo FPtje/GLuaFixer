@@ -95,12 +95,34 @@ parseChunk cms = AST cms <$> parseBlock
 parseBlock :: AParser Block
 parseBlock = Block <$> pMany (MStat <$> pPos <*> parseStat) <*> (parseReturn <<|> pReturn NoReturn)
 
+-- | Parses both function call statements and definition statements
+-- This is to solve an ambiguity in which they both start with a prefix expression
+-- TODO: currently sound, but incomplete: both "a() = 1" and "a[3]" just parse. Check for the right suffixes.
+parseCallDef :: AParser Stat
+parseCallDef = parsePrefixExp <**> ( -- function calls and definitions have a first prefixexpression in common
+       (
+            makeDef <$>
+            opt (pMTok Comma *> parseVarList) [] <*
+            pMTok Equals <*>
+            pPos <*>
+            parseExpressionList
+       ) <<|>
+            AFuncCall <$ pReturn ()
+       ) where
+
+    -- Make a definition out of the data gathered
+    makeDef :: [PrefixExp] -> LineColPos -> [MExpr] -> PrefixExp -> Stat
+    makeDef es pos exprs fstExpr = let pfes = fstExpr : es in Def (zip pfes $ exprs ++ nils pos)
+
+    -- Pad with nils
+    nils :: LineColPos -> [MExpr]
+    nils p = repeat (MExpr p ANil)
+
+
 -- | Parse a single statement
 parseStat :: AParser Stat
 parseStat = ASemicolon <$ pMTok Semicolon <<|>
-            (AFuncCall <$> pFunctionCall <|>
-            -- Function calls and definitions both start with a var
-             (\v p e -> Def (zip v $ e ++ repeat (MExpr p ANil))) <$> parseVarList <* pMTok Equals <*> pPos <*> parseExpressionList) <<|>
+            parseCallDef <<|>
             ALabel <$> parseLabel <<|>
             ABreak <$ pMTok Break <<|>
             AContinue <$ pMTok Continue <<|>
