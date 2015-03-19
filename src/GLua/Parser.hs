@@ -166,8 +166,7 @@ parseFor = pPacked (pMTok For) (pMTok End) (
               pMTok Comma <*> parseExpression <*>
               -- step (1 if not filled in)
               (pMTok Comma *> parseExpression <<|> MExpr <$> pPos <*> pReturn (ANumber "1")) <*
-              pMTok Do <*> parseBlock <*
-              pMTok End
+              pMTok Do <*> parseBlock
             <|>
             AGFor <$> parseNameList <*
               pMTok In <*> parseExpressionList <*
