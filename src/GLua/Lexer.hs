@@ -214,7 +214,7 @@ parseToken =    parseComment                                 <<|>
                 Label <$> parseLabel                         <<|>
                 Colon <$ pToken ":"                          <<|>
                 Comma <$ pToken ","                          <<|>
-                Hash <$ pToken "#"                           <<|>
+                Hash <$ pToken "#"  `micro` 10               <<|> -- Add micro cost to prevent conflict with parseHashBang
                 CAnd <$ pToken "&&"                          <<|>
                 COr <$ pToken "||"                           <<|>
 
@@ -228,7 +228,12 @@ parseToken =    parseComment                                 <<|>
 parseTokens :: LParser [MToken]
 parseTokens = pMany (MToken <$> pPos <*> parseToken <* parseWhitespace)
 
+-- | Parse the potential #!comment on the first line
+-- Lua ignores the first line if it starts with #
+parseHashBang :: LParser String
+parseHashBang = opt (pToken "#" <* pUntilEnd) ""
+
 -- | Parse a string into MTokens. Also returns parse errors.
 execParseTokens :: String -> ([MToken], [Error LineColPos])
-execParseTokens = parse ((,) <$ parseWhitespace <*> parseTokens <*> pErrors <* pEnd) . createStr (LineColPos 0 0 0)
+execParseTokens = parse ((,) <$ parseHashBang <* parseWhitespace <*> parseTokens <*> pErrors <* pEnd) . createStr (LineColPos 0 0 0)
 
