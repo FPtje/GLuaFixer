@@ -114,8 +114,6 @@ sem Block
                  stats.isHead = True
 
 sem Stat
-    -- ;
-    | ASemicolon lhs.pretty = char ';'
     | Def        lhs.pretty = @vars.pretty
                  vars.isHead = True
     | LocDef     lhs.pretty = text "local" <+> @vars.pretty

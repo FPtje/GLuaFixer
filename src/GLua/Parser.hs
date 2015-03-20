@@ -93,7 +93,13 @@ parseChunk cms = AST cms <$> parseBlock
 
 -- | Parse a block with an optional return value
 parseBlock :: AParser Block
-parseBlock = Block <$> pMany (MStat <$> pPos <*> parseStat) <*> (parseReturn <<|> pReturn NoReturn)
+parseBlock = Block <$> pInterleaved (pMTok Semicolon) parseMStat <*> (parseReturn <<|> pReturn NoReturn)
+
+parseMStat :: AParser MStat
+parseMStat = MStat <$> pPos <*> parseStat
+-- | Parser that is interleaved with 0 or more of the other parser
+pInterleaved :: AParser a -> AParser b -> AParser [b]
+pInterleaved sep q = pMany sep *> pMany (q <* pMany sep)
 
 -- | Parses both function call statements and definition statements
 -- This is to solve an ambiguity in which they both start with a prefix expression
@@ -121,8 +127,7 @@ parseCallDef = parsePrefixExp <**> ( -- function calls and definitions have a fi
 
 -- | Parse a single statement
 parseStat :: AParser Stat
-parseStat = ASemicolon <$ pMTok Semicolon <<|>
-            parseCallDef <<|>
+parseStat = parseCallDef <<|>
             ALabel <$> parseLabel <<|>
             ABreak <$ pMTok Break <<|>
             AContinue <$ pMTok Continue <<|>

@@ -26,9 +26,7 @@ data Block        | Block  stats :: MStatList    ret :: AReturn
 data MStat        | MStat    pos :: LineColPos  stat :: Stat
 
 -- Statement
-data Stat         -- ;
-                  | ASemicolon
-                  -- a, b, c = ...
+data Stat         -- a, b, c = ...
                   | Def      vars :: VarsList
                   -- local a,b,c, ... = ...
                   | LocDef   vars :: VarsList
