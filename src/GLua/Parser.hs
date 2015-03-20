@@ -47,7 +47,7 @@ parseFromString p = execAParser p . fst . Lex.execParseTokens
 createString :: [MToken] -> Str MTokenPos [MTokenPos] LineColPos
 createString [] = createStr (LineColPos 0 0 0) []
 createString mts@(MToken p _ : xs) = createStr p mtpos where
-    mts' = xs ++ [last xs] -- Repeat last element of mts
+    mts' = xs ++ [last mts] -- Repeat last element of mts
     mkMtPos mt (MToken p' _) = (mt, p')
     mtpos = zipWith mkMtPos mts mts'
 
