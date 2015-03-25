@@ -181,7 +181,7 @@ parseFor = pPacked (pMTok For) (pMTok End) (
 
 -- | Parse a return value
 parseReturn :: AParser AReturn
-parseReturn = AReturn <$> pPos <* pMTok Return <*> opt parseExpressionList []
+parseReturn = AReturn <$> pPos <* pMTok Return <*> opt parseExpressionList [] <* pMany (pMTok Semicolon)
 
 -- | Label
 parseLabel :: AParser MToken
