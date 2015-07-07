@@ -78,7 +78,7 @@ parseNameList = (:) <$> pName <*> pMany (pMTok Comma *> pName)
 
 -- | Parse list of function parameters
 parseParList :: AParser [MToken]
-parseParList = pName <**> (
+parseParList = (pMTok VarArg <<|> pName) <**> (
                     pMTok Comma <**> (
                         (\a _ c -> [c, a]) <$> pMTok VarArg <<|>
                         (\a _ c -> c : a)  <$> parseParList
