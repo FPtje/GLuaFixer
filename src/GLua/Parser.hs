@@ -20,7 +20,7 @@ import qualified Data.ListLike as LL
 -- | MTokens with the positions of the next MToken (used in the advance of parser)
 type MTokenPos = (MToken, LineColPos)
 -- | Custom parser that parses MTokens
-type AParser a = (IsLocationUpdatedBy LineColPos MTokenPos, LL.ListLike state MTokenPos) => P (Str MTokenPos state LineColPos) a
+type AParser a = forall state. (IsLocationUpdatedBy LineColPos MTokenPos, LL.ListLike state MTokenPos) => P (Str MTokenPos state LineColPos) a
 
 -- | LineColPos is a location that can be updated by MTokens
 instance IsLocationUpdatedBy LineColPos MTokenPos where
