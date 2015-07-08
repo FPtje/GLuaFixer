@@ -101,28 +101,67 @@ parseMStat = MStat <$> pPos <*> parseStat
 pInterleaved :: AParser a -> AParser b -> AParser [b]
 pInterleaved sep q = pMany sep *> pMany (q <* pMany sep)
 
--- | Parses both function call statements and definition statements
--- This is to solve an ambiguity in which they both start with a prefix expression
--- TODO: currently sound, but incomplete: both "a() = 1" and "a[3]" just parse. Check for the right suffixes.
+-- | Behemoth parser that parses either function call statements or global declaration statements
+-- Big in size and complexity because prefix expressions are BITCHES
+-- The problem lies in the complexity of prefix expressions:
+-- hotten.totten["tenten"](tentoonstelling) -- This is a function call
+-- hotten.totten["tenten"] = tentoonstelling -- This is a declaration.
+-- hotten.totten["tenten"], tentoonstelling = 1, 2 -- This is also a declaration.
+-- One may find an arbitrary amount of expression suffixes (indexations/calls) before 
+-- finding a comma or equals sign that proves that it is a declaration.
 parseCallDef :: AParser Stat
-parseCallDef = parsePrefixExp <**> ( -- function calls and definitions have a first prefixexpression in common
-       (
-            makeDef <$>
-            opt (pMTok Comma *> parseVarList) [] <*
-            pMTok Equals <*>
-            pPos <*>
-            parseExpressionList
-       ) <<|>
-            AFuncCall <$ pReturn ()
-       ) where
+parseCallDef = (PFVar <$> pName <<|> -- Statemens begin with either a simple name or parenthesised expression
+                ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound) <**> (
+                  -- We either find a call suffix, an indexation suffix or proof of a declaration (comma or equals sign)
+                  -- When it's a function call, try searching for more suffixes, if that doesn't work, it's a function call.
+                  -- When it's an indexation suffix, search for more suffixes or know that it's a declaration.
+                  -- When it's neither, it's a declaration.
+                  (pPFExprCallSuffix <**> (contSearch <<|> pReturn namedFuncCall)) <<|>
+                  (pPFExprIndexSuffix <**> (contSearch <<|> varDecl indexedVarDecl)) <<|>
+                  (varDecl namedVarDecl)
+                )
+  where
+    -- Simple direct function call (funcName(...))
+    namedFuncCall :: PFExprSuffix -> (ExprSuffixList -> PrefixExp) -> Stat
+    namedFuncCall s pfe = AFuncCall (pfe [s])
 
-    -- Make a definition out of the data gathered
-    makeDef :: [PrefixExp] -> LineColPos -> [MExpr] -> PrefixExp -> Stat
-    makeDef es pos exprs fstExpr = let pfes = fstExpr : es in Def (zip pfes $ exprs ++ nils pos)
+    -- Simple direct declaration: varName, ... = 1, ...
+    namedVarDecl :: [PrefixExp] -> LineColPos -> [MExpr] -> (ExprSuffixList -> PrefixExp) -> Stat
+    namedVarDecl vars pos exprs pfe = let pfes = (pfe []) : vars in Def (zip pfes $ exprs ++ nils pos)
 
-    -- Pad with nils
+    -- Indexed variable declaration: varname[someIndex], ... = 1, ...
+    -- Takes the one index it found, puts it in the suffixes and builds a declaration from that.
+    indexedVarDecl :: [PrefixExp] -> LineColPos -> [MExpr] -> PFExprSuffix -> (ExprSuffixList -> PrefixExp) -> Stat
+    indexedVarDecl vars pos exprs ix pfe = let pfes = (pfe [ix]) : vars in Def (zip pfes $ exprs ++ nils pos)
+
+    -- Pad with nils (e.g "a, b = 1" => "a, b = 1, nil")
     nils :: LineColPos -> [MExpr]
     nils p = repeat (MExpr p ANil)
+
+    -- This is where we know it's a variable declaration
+    -- Takes a function that turns it into a proper Def Stat
+    varDecl :: ([PrefixExp] -> LineColPos -> [MExpr] -> b) -> AParser b
+    varDecl f = f <$> opt (pMTok Comma *> parseVarList) [] <*
+              pMTok Equals <*>
+              pPos <*>
+              parseExpressionList
+
+    -- We know that there is at least one suffix (indexation or call).
+    -- Search for more suffixes and make either a call or declaration from it
+    contSearch :: AParser (PFExprSuffix -> (ExprSuffixList -> PrefixExp) -> Stat)
+    contSearch = (\(ss, mkStat) s pfe -> mkStat $ pfe (s : ss)) <$> searchDeeper
+
+    searchDeeper :: AParser ([PFExprSuffix], PrefixExp -> Stat)
+    searchDeeper = (pPFExprCallSuffix <**> (mergeDeeperSearch <$> searchDeeper <<|> pReturn (\s -> ([s], AFuncCall)))) <<|>
+                   (pPFExprIndexSuffix <**> (mergeDeeperSearch <$> searchDeeper <<|> varDecl complexDecl))
+
+    mergeDeeperSearch :: ([PFExprSuffix], PrefixExp -> Stat) -> PFExprSuffix -> ([PFExprSuffix], PrefixExp -> Stat)
+    mergeDeeperSearch (ss, f) s = (s : ss, f)
+
+    -- Multiple suffixes have been found, and proof has been found that this must be a declaration.
+    -- Now to give all the collected suffixes and a function that creates the declaration
+    complexDecl :: [PrefixExp] -> LineColPos -> [MExpr] -> PFExprSuffix -> ([PFExprSuffix], PrefixExp -> Stat)
+    complexDecl vars pos exprs s = ([s], \pf -> Def (zip (pf : vars) $ exprs ++ nils pos))
 
 
 -- | Parse a single statement
