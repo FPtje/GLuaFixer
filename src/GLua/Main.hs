@@ -53,7 +53,7 @@ main = do
     let ast = parseGLua tokens
 
     putStrLn "Errors:"
-    putStrLn . show . snd $ ast
+    mapM_ print . snd $ ast
 
     putStrLn "Pretty printed code:"
     putStrLn . prettyprint . fst $ ast
