@@ -184,7 +184,7 @@ sem Args
                 args.isHead = True
     | TableArg  lhs.pretty = char '{' <> @arg.pretty <> char '}'
                 arg.isHead = True
-    | StringArg lhs.pretty = text "[[" <> tok @arg <> text "]]"
+    | StringArg lhs.pretty = tok @arg
 
 sem Field
     | ExprField     lhs.pretty = char '[' <> @key.pretty <> char ']' <+> char '=' <+> @value.pretty
