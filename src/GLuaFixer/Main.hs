@@ -1,26 +1,22 @@
 module Main where
 
 import GLua.Lexer
-import GLua.TokenTypes
 import GLua.Parser
 import GLua.AG.PrettyPrint
 
 import Data.Char
 
-import System.FilePath
 import System.Environment
-import System.IO
 import System.Exit
 import Control.Monad
 
+help :: String
 help = unlines ["",
- "Usage: GLuaParser <ACTION> <FILE>",
- "",
- "Possible actions:",
- "    fix       - attempt to fix syntax errors in the Lua script"
+ "Usage: gluafixer <FILE>"
  ]
 
 
+main :: IO ()
 main = do
     args <- getArgs
 
@@ -35,9 +31,9 @@ main = do
     contents <- readFile file
 
     -- Lex the file
-    let lex = execParseTokens contents
-    let tokens = fst lex
-    let errors = snd lex
+    let lexed = execParseTokens contents
+    let tokens = fst lexed
+    let errors = snd lexed
 
     -- Print any lexing errors
     unless (null errors) $ do
