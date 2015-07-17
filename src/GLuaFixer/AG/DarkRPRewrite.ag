@@ -1,0 +1,10 @@
+module {GLuaFixer.AG.DarkRPRewrite}{}{}
+
+
+imports
+{
+import GLua.AG.AST
+import GLua.TokenTypes
+}
+include "../../GLua/AG/AST.ag"
+
