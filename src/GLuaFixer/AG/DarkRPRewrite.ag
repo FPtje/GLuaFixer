@@ -1,10 +1,88 @@
+{-# LANGUAGE ParallelListComp #-}
 module {GLuaFixer.AG.DarkRPRewrite}{}{}
+
 
 
 imports
 {
 import GLua.AG.AST
 import GLua.TokenTypes
+import Data.Maybe
+import Data.List
 }
 include "../../GLua/AG/AST.ag"
 
+{
+
+identToStr :: MToken -> String
+identToStr (MToken _ (Identifier s)) = s
+
+-- All rewrites
+rewriteNames = [
+    "AddExtraTeam",
+    "AddCustomShipment",
+    "AddCustomVehicle",
+    "AddEntity"
+    ]
+
+rewriteNameTo = [
+    "createJob",
+    "createShipment",
+    "createVehicle",
+    "createEntity"
+    ]
+
+rewriteFuncName i sfs = PFVar (MToken (LineColPos 0 0 0) (Identifier "DarkRP")) (funcName : sfs)
+    where
+        fn = rewriteNameTo !! i
+        funcName = DotIndex $ MToken (LineColPos 0 0 0) (Identifier fn)
+
+rewriteParams = [
+    ["name", "color", "model", "description", "weapons", "command", "max", "salary", "admin", "vote", "hasLicense", "NeedToChangeFrom", "customCheck"],
+    ["name", "model", "entity", "price", "amount", "separate", "pricesep", "noship", "allowed", "shipmodel", "customCheck"],
+    ["name", "model", "price", "allowed", "customCheck"],
+    ["name", "entity", "model", "price", "max", "command", "allowed", "customCheck"]
+    ]
+
+isOldSyntax :: MToken -> Maybe Int
+isOldSyntax (MToken _ (Identifier s)) = elemIndex s rewriteNames
+isOldSyntax _ = Nothing
+}
+
+attr AllStuff
+    syn repl :: self
+
+attr PrefixExp PFExprSuffix Args ExprSuffixList
+    syn args use {++} {[]} :: {[MExpr]}
+    inh shouldReplace :: {Maybe Int}
+
+sem PrefixExp
+    | PFVar
+        loc.isOld = isOldSyntax @name
+        lhs.repl = case @loc.isOld of
+                        Nothing -> PFVar @name @suffixes.repl
+                        Just i -> rewriteFuncName i @suffixes.repl
+
+        suffixes.shouldReplace = @loc.isOld
+    | ExprVar
+
+
+sem PFExprSuffix
+    | Call
+    | MetaCall
+    | ExprIndex
+    | DotIndex
+
+
+sem Args
+    | ListArgs
+        lhs.repl = case @lhs.shouldReplace of
+                        Nothing -> ListArgs @args.repl
+                        Just i  -> TableArg [NamedField (MToken (LineColPos 0 0 0) (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) @args.repl ]
+    | TableArg
+    | StringArg
+
+{
+fixOldDarkRPSyntax :: AST -> AST
+fixOldDarkRPSyntax p = repl_Syn_AST (wrap_AST (sem_AST p) Inh_AST)
+}

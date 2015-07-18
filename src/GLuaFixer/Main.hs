@@ -6,6 +6,8 @@ import GLua.AG.PrettyPrint
 import System.Exit
 import Control.Monad
 
+import GLuaFixer.AG.DarkRPRewrite
+
 main :: IO ()
 main = do
     contents <- getContents
@@ -27,6 +29,6 @@ main = do
     mapM_ print . snd $ ast
 
     putStrLn "Pretty printed code:"
-    putStrLn . prettyprint . fst $ ast
+    putStrLn . prettyprint . fixOldDarkRPSyntax . fst $ ast
 
     exitSuccess
