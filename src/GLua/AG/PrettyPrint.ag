@@ -76,7 +76,7 @@ sem MExprList
     | Nil        lhs.pretty = empty
 
 sem FieldList
-    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <+> @hd.pretty <> @tl.pretty
+    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <> (if @lhs.indent > 0 then char '\n' else empty) <> text (replicate @lhs.indent ' ') <> @hd.pretty <> @tl.pretty
                  tl.isHead  = False
     | Nil        lhs.pretty = empty
 
@@ -182,8 +182,9 @@ sem Expr
 sem Args
     | ListArgs  lhs.pretty = char '(' <> @args.pretty <> char ')'
                 args.isHead = True
-    | TableArg  lhs.pretty = char '{' <> @arg.pretty <> char '}'
+    | TableArg  lhs.pretty = char '{' <> @arg.pretty <> char '\n' <> char '}'
                 arg.isHead = True
+                arg.indent = 4
     | StringArg lhs.pretty = tok @arg
 
 sem Field
