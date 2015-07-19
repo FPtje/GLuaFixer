@@ -38,15 +38,28 @@ rewriteFuncName i sfs = PFVar (MToken (LineColPos 0 0 0) (Identifier "DarkRP")) 
         funcName = DotIndex $ MToken (LineColPos 0 0 0) (Identifier fn)
 
 rewriteParams = [
-    ["name", "color", "model", "description", "weapons", "command", "max", "salary", "admin", "vote", "hasLicense", "NeedToChangeFrom", "customCheck"],
-    ["name", "model", "entity", "price", "amount", "separate", "pricesep", "noship", "allowed", "shipmodel", "customCheck"],
+    ["color", "model", "description", "weapons", "command", "max", "salary", "admin", "vote", "hasLicense", "NeedToChangeFrom", "customCheck"],
+    ["model", "entity", "price", "amount", "separate", "pricesep", "noship", "allowed", "shipmodel", "customCheck"],
     ["name", "model", "price", "allowed", "customCheck"],
-    ["name", "entity", "model", "price", "max", "command", "allowed", "customCheck"]
+    ["entity", "model", "price", "max", "command", "allowed", "customCheck"]
     ]
 
+-- Decides whether old syntax is used. TODO: check based on parameters.
 isOldSyntax :: MToken -> Maybe Int
 isOldSyntax (MToken _ (Identifier s)) = elemIndex s rewriteNames
 isOldSyntax _ = Nothing
+
+-- Extract the name of an identifier MToken
+identifierName :: MToken -> String
+identifierName (MToken _ (Identifier s)) = s
+
+-- Converts syntax of jobs, shipments and entities.
+-- Vehicles don't have the name as first parameter, so they're handled separately
+convertSyntax :: Int -> [MExpr] -> Args
+convertSyntax i (name : args) = ListArgs (name : [MExpr (LineColPos 0 0 0 ) tbl])
+    where
+        tbl :: Expr
+        tbl = ATableConstructor [NamedField (MToken (LineColPos 0 0 0) (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) args]
 }
 
 attr AllStuff
@@ -55,6 +68,7 @@ attr AllStuff
 attr PrefixExp PFExprSuffix Args ExprSuffixList
     syn args use {++} {[]} :: {[MExpr]}
     inh shouldReplace :: {Maybe Int}
+    inh customItemKind :: String
 
 sem PrefixExp
     | PFVar
@@ -62,7 +76,7 @@ sem PrefixExp
         lhs.repl = case @loc.isOld of
                         Nothing -> PFVar @name @suffixes.repl
                         Just i -> rewriteFuncName i @suffixes.repl
-
+        suffixes.customItemKind = identifierName @name
         suffixes.shouldReplace = @loc.isOld
     | ExprVar
 
@@ -78,7 +92,10 @@ sem Args
     | ListArgs
         lhs.repl = case @lhs.shouldReplace of
                         Nothing -> ListArgs @args.repl
-                        Just i  -> TableArg [NamedField (MToken (LineColPos 0 0 0) (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) @args.repl ]
+                        Just i  -> if @lhs.customItemKind == "AddCustomVehicle" then
+                                    TableArg [NamedField (MToken (LineColPos 0 0 0) (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) @args.repl]
+                                   else
+                                    convertSyntax i @args.repl
     | TableArg
     | StringArg
 
