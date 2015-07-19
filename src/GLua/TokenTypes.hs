@@ -2,7 +2,7 @@
 module GLua.TokenTypes where
 
 import Data.List
-import Text.ParserCombinators.UU.BasicInstances (LineColPos)
+import Text.ParserCombinators.UU.BasicInstances
 
 -- | Simple token types
 data Token =
@@ -80,7 +80,10 @@ data Token =
     deriving (Eq, Ord)
 
 -- | Metatoken, stores line and column position of token
-data MToken = MToken {mpos :: LineColPos, mtok :: Token} deriving (Show)
+data MToken = MToken {mpos :: LineColPos, mtok :: Token}
+
+instance Show MToken where
+    show (MToken p@(LineColPos _ c _) tok) = show tok ++ (if c == 0 then "" else " at " ++ show p)
 
 -- | Simple EQ instance. TODO: check for position equality
 instance Eq MToken where
