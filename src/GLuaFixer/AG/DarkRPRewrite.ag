@@ -81,11 +81,9 @@ sem PrefixExp
     | ExprVar
 
 
-sem PFExprSuffix
-    | Call
-    | MetaCall
-    | ExprIndex
-    | DotIndex
+sem Expr
+    | APrefixExpr
+        pexpr.shouldReplace = Nothing
 
 
 sem Args
@@ -96,8 +94,7 @@ sem Args
                                     TableArg [NamedField (MToken (LineColPos 0 0 0) (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) @args.repl]
                                    else
                                     convertSyntax i @args.repl
-    | TableArg
-    | StringArg
+        args.shouldReplace = Nothing
 
 {
 fixOldDarkRPSyntax :: AST -> AST
