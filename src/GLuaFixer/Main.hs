@@ -4,15 +4,49 @@ import GLua.Lexer
 import GLua.Parser
 import GLua.AG.PrettyPrint
 import System.Exit
+import System.Environment
 import Control.Monad
 import System.IO
-
+import Graphics.UI.Gtk
 import GLuaFixer.AG.DarkRPRewrite
 
-main :: IO ()
-main = do
-    contents <- getContents
 
+filePicker :: IO ()
+filePicker = do
+    initGUI
+    window <- windowNew
+    set window [windowTitle := "Select Lua file",
+               windowDefaultWidth := 800,
+               windowDefaultHeight := 600 ]
+
+    fch <- fileChooserWidgetNew FileChooserActionOpen
+    containerAdd window fch
+
+    hsfilt <- fileFilterNew
+    fileFilterAddPattern hsfilt "*.lua"
+    fileFilterSetName hsfilt "Lua file"
+    fileChooserAddFilter fch hsfilt
+
+    nofilt <- fileFilterNew
+    fileFilterAddPattern nofilt "*.*"
+    fileFilterSetName nofilt "All Files"
+    fileChooserAddFilter fch nofilt
+
+    onFileActivated fch $
+        do dir <- fileChooserGetFilename fch
+           case dir of
+                Just fpath -> do mainQuit
+                                 print fpath
+                                 contents <- readFile fpath
+                                 fixLua contents
+                Nothing -> putStrLn "Nothing"
+
+    widgetShowAll window
+    onDestroy window mainQuit
+    mainGUI
+
+fixLua :: String -> IO ()
+fixLua contents = do
     -- Lex the file
     let lexed = execParseTokens contents
     let tokens = fst lexed
@@ -32,4 +66,11 @@ main = do
 
     putStrLn . prettyprint . fixOldDarkRPSyntax . fst $ ast
 
-    exitSuccess
+main :: IO ()
+main = do
+    files <- getArgs
+    if (not . null $ files) then do
+        contents <- readFile . head $ files
+        fixLua contents
+    else filePicker
+
