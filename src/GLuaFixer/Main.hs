@@ -14,36 +14,47 @@ import GLuaFixer.AG.DarkRPRewrite
 filePicker :: IO ()
 filePicker = do
     initGUI
-    window <- windowNew
-    set window [windowTitle := "Select Lua file",
-               windowDefaultWidth := 800,
-               windowDefaultHeight := 600 ]
 
-    fch <- fileChooserWidgetNew FileChooserActionOpen
-    containerAdd window fch
+    dialog <- fileChooserDialogNew (Just "Open Lua File") Nothing FileChooserActionOpen [("Cancel", ResponseCancel), ("Open", ResponseAccept)]
 
-    hsfilt <- fileFilterNew
-    fileFilterAddPattern hsfilt "*.lua"
-    fileFilterSetName hsfilt "Lua file"
-    fileChooserAddFilter fch hsfilt
+    widgetShow dialog
+    response <- dialogRun dialog
 
-    nofilt <- fileFilterNew
-    fileFilterAddPattern nofilt "*.*"
-    fileFilterSetName nofilt "All Files"
-    fileChooserAddFilter fch nofilt
+    case response of
+          ResponseCancel -> widgetDestroy dialog
+          ResponseAccept -> do nwf <- fileChooserGetFilename dialog
+                               case nwf of
+                                    Nothing -> widgetDestroy dialog
+                                    Just path -> do
+                                        widgetDestroy dialog
+                                        contents <- readFile path
+                                        fixLua contents
+          ResponseDeleteEvent -> widgetDestroy dialog
 
-    onFileActivated fch $
-        do dir <- fileChooserGetFilename fch
-           case dir of
-                Just fpath -> do mainQuit
-                                 print fpath
-                                 contents <- readFile fpath
-                                 fixLua contents
-                Nothing -> putStrLn "Nothing"
+    widgetDestroy dialog
 
-    widgetShowAll window
-    onDestroy window mainQuit
-    mainGUI
+saveFixed :: String -> IO ()
+saveFixed s = do
+    initGUI
+    dialog <- fileChooserDialogNew (Just "Save Fixed Lua File") Nothing FileChooserActionSave [("Cancel", ResponseCancel), ("Save", ResponseAccept)]
+    fileChooserSetCurrentName dialog "Fixed.lua"
+    fileChooserSetDoOverwriteConfirmation dialog True
+    widgetShow dialog
+    response <- dialogRun dialog
+
+    case response of
+          ResponseCancel -> widgetDestroy dialog
+          ResponseAccept -> do nwf <- fileChooserGetFilename dialog
+                               case nwf of
+                                    Nothing -> widgetDestroy dialog
+                                    Just path -> do
+                                        writeFile path s
+                                        widgetDestroy dialog
+          ResponseDeleteEvent -> widgetDestroy dialog
+
+    widgetDestroy dialog
+
+
 
 fixLua :: String -> IO ()
 fixLua contents = do
@@ -64,7 +75,9 @@ fixLua contents = do
         hPutStrLn stderr "Errors:"
         mapM_ (hPrint stderr) . snd $ ast
 
-    putStrLn . prettyprint . fixOldDarkRPSyntax . fst $ ast
+    let fixed = prettyprint . fixOldDarkRPSyntax . fst $ ast
+
+    saveFixed fixed
 
 main :: IO ()
 main = do
