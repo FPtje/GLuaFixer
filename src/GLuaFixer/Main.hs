@@ -5,6 +5,7 @@ import GLua.Parser
 import GLua.AG.PrettyPrint
 import System.Exit
 import Control.Monad
+import System.IO
 
 import GLuaFixer.AG.DarkRPRewrite
 
@@ -25,10 +26,10 @@ main = do
 
     let ast = parseGLua tokens
 
-    putStrLn "Errors:"
-    mapM_ print . snd $ ast
+    when (not . null . snd $ ast) $ do
+        hPutStrLn stderr "Errors:"
+        mapM_ (hPrint stderr) . snd $ ast
 
-    putStrLn "Pretty printed code:"
     putStrLn . prettyprint . fixOldDarkRPSyntax . fst $ ast
 
     exitSuccess
