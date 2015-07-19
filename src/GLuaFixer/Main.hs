@@ -28,7 +28,7 @@ filePicker = do
                                     Just path -> do
                                         widgetDestroy dialog
                                         contents <- readFile path
-                                        fixLua contents
+                                        fixLua contents []
           ResponseDeleteEvent -> widgetDestroy dialog
 
     widgetDestroy dialog
@@ -56,8 +56,8 @@ saveFixed s = do
 
 
 
-fixLua :: String -> IO ()
-fixLua contents = do
+fixLua :: String -> [String] -> IO ()
+fixLua contents args = do
     -- Lex the file
     let lexed = execParseTokens contents
     let tokens = fst lexed
@@ -77,13 +77,16 @@ fixLua contents = do
 
     let fixed = prettyprint . fixOldDarkRPSyntax . fst $ ast
 
-    saveFixed fixed
+    if length args < 2 then
+        saveFixed fixed
+    else
+        putStrLn fixed
 
 main :: IO ()
 main = do
     files <- getArgs
     if (not . null $ files) then do
         contents <- readFile . head $ files
-        fixLua contents
+        fixLua contents files
     else filePicker
 
