@@ -55,6 +55,17 @@ getMExprPos (MExpr p _) = renderPos p
 
 comesBefore :: LineColPos -> LineColPos -> Bool
 comesBefore (LineColPos _ _ l) (LineColPos _ _ r) = l <= r
+
+renderError :: Error LineColPos -> String
+renderError (Inserted str pos strs)       = "Inserted " ++ str ++ " at " ++ renderPos pos ++ ". " ++ render_expecting strs
+renderError (Deleted str pos strs)        = "Removed "  ++ str ++ " at " ++ renderPos pos ++ ". " ++ render_expecting strs
+renderError (Replaced str1 str2 pos strs) = "Replaced " ++ str1 ++ " with " ++ str2 ++ " at " ++ renderPos pos ++ render_expecting strs
+renderError (DeletedAtEnd str)            = "Deleted "  ++ str ++ " at the end of the Lua file because the parser doesn't know what to do with it."
+
+render_expecting :: [String] -> String
+render_expecting [a]    = "Parser expected a " ++ a
+render_expecting (a:as) = "Parser expected one of [" ++ a ++ concat (map (", " ++) as) ++ "]"
+render_expecting []     = "Parser expected nothing"
 }
 
 attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp MStatList MExprList FieldList Declaration VarsList ElseIf ElseIfList Else ExprSuffixList

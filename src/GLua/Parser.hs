@@ -18,7 +18,11 @@ import Text.ParserCombinators.UU.Derived
 import qualified Data.ListLike as LL
 
 -- | MTokens with the positions of the next MToken (used in the advance of parser)
-type MTokenPos = (MToken, LineColPos)
+data MTokenPos = MTokenPos MToken LineColPos
+
+instance Show MTokenPos where
+  show (MTokenPos tok _) = show tok
+
 -- | Custom parser that parses MTokens
 type AParser a = forall state. (IsLocationUpdatedBy LineColPos MTokenPos, LL.ListLike state MTokenPos) => P (Str MTokenPos state LineColPos) a
 
@@ -26,7 +30,7 @@ type AParser a = forall state. (IsLocationUpdatedBy LineColPos MTokenPos, LL.Lis
 instance IsLocationUpdatedBy LineColPos MTokenPos where
     -- advance :: LineColPos -> MToken -> LineColPos
     -- Assume the position of the next MToken
-    advance pos (_, p) = p
+    advance pos (MTokenPos _ p) = p
 
 
 -- | Parse Garry's mod Lua tokens to an abstract syntax tree.
@@ -48,26 +52,29 @@ createString :: [MToken] -> Str MTokenPos [MTokenPos] LineColPos
 createString [] = createStr (LineColPos 0 0 0) []
 createString mts@(MToken p _ : xs) = createStr p mtpos where
     mts' = xs ++ [last mts] -- Repeat last element of mts
-    mkMtPos mt (MToken p' _) = (mt, p')
+    mkMtPos mt (MToken p' _) = MTokenPos mt p'
     mtpos = zipWith mkMtPos mts mts'
 
 -- | Text.ParserCombinators.UU.Utils.execParser modified to parse MTokens
 -- The first MToken might not be on the first line, so use the first MToken's position to start
 execAParser :: AParser a -> [MToken] -> (a, [Error LineColPos])
 execAParser p mts@[] = parse_h ((,) <$> p <*> pEnd) . createString $ mts
-execAParser p mts@(m : ms) = parse_h ((,) <$> p <*> pEnd) . createString $ mts -- createStr (mpos m) $ mts
+execAParser p mts@(_ : _) = parse_h ((,) <$> p <*> pEnd) . createString $ mts -- createStr (mpos m) $ mts
 
 
 pMSatisfy :: (MToken -> Bool) -> Token -> String -> AParser MToken
-pMSatisfy f t ins = fst <$> pSatisfy f' (Insertion ins (MToken ep t, ep) 5) where
+pMSatisfy f t ins = getToken <$> pSatisfy f' (Insertion ins (MTokenPos (MToken ep t) ep) 5) where
     f' :: MTokenPos -> Bool
-    f' (mtok, _) = f mtok
+    f' (MTokenPos tok _) = f tok
+
+    getToken :: MTokenPos -> MToken
+    getToken (MTokenPos t' _) = t'
 
     ep = LineColPos 0 0 0
 
 -- | Parse a single Metatoken, based on a positionless token (much like pSym)
 pMTok :: Token -> AParser MToken
-pMTok t = pMSatisfy isToken t $ "Token " ++ show t
+pMTok t = pMSatisfy isToken t $ "'" ++ show t ++ "'"
     where
         isToken :: MToken -> Bool
         isToken (MToken _ tok) = t == tok
