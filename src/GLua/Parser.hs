@@ -107,7 +107,7 @@ pInterleaved sep q = pMany sep *> pMany (q <* pMany sep)
 -- hotten.totten["tenten"](tentoonstelling) -- This is a function call
 -- hotten.totten["tenten"] = tentoonstelling -- This is a declaration.
 -- hotten.totten["tenten"], tentoonstelling = 1, 2 -- This is also a declaration.
--- One may find an arbitrary amount of expression suffixes (indexations/calls) before 
+-- One may find an arbitrary amount of expression suffixes (indexations/calls) before
 -- finding a comma or equals sign that proves that it is a declaration.
 parseCallDef :: AParser Stat
 parseCallDef = (PFVar <$> pName <<|> -- Statemens begin with either a simple name or parenthesised expression
@@ -381,7 +381,12 @@ parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly
 -- | A list of table entries
 -- Grammar: field {separator field} [separator]
 parseFieldList :: AParser [Field]
-parseFieldList = pListSep parseFieldSep parseField <* opt parseFieldSep undefined
+parseFieldList = (:) <$> parseField <*> otherFields <<|> pReturn []
+  where
+    otherFields :: AParser [Field]
+    otherFields = parseFieldSep <**>
+                    ((\f o _ -> f : o) <$> parseField <*> otherFields <<|> const <$> pReturn [])
+                  <<|> pReturn []
 
 -- | A field in a table
 parseField :: AParser Field
