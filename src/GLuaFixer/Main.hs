@@ -73,7 +73,8 @@ fixLua contents args = do
 
     when (not . null . snd $ ast) $ do
         hPutStrLn stderr "Errors:"
-        mapM_ (hPrint stderr) . snd $ ast
+        mapM_ (hPutStrLn stderr . renderError) . snd $ ast
+        writeFile "LuaErrors.txt" $ concatMap ((++ "\n") . renderError) (snd ast)
 
     let fixed = prettyprint . fixOldDarkRPSyntax . fst $ ast
 
