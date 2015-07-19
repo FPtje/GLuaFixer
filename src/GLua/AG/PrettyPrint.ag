@@ -65,6 +65,9 @@ attr Declaration VarsList
 attr MStatList MExprList FieldList VarsList
     inh isHead :: Bool
 
+attr FieldList Field MExprList Expr MExpr
+    syn multiline use {||} {False} :: Bool -- Whether a table should be printed as multiline
+
 sem MStatList
     | Cons       lhs.pretty = @hd.pretty $+$ @tl.pretty
                  tl.isHead  = False
@@ -76,8 +79,9 @@ sem MExprList
     | Nil        lhs.pretty = empty
 
 sem FieldList
-    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <+> @hd.pretty <> @tl.pretty
+    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <> (if @loc.multiline then text "\n\t" else empty) <+> @hd.pretty <> @tl.pretty
                  tl.isHead  = False
+                 loc.multiline = @hd.multiline || @tl.multiline
     | Nil        lhs.pretty = empty
 
 sem Declaration
@@ -171,7 +175,8 @@ sem Expr
                         body.indent = 1
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         pexpr.indent = 0
-    | ATableConstructor lhs.pretty = char '{' <> @fields.pretty <> char '}'
+    | ATableConstructor lhs.pretty = char '{' <> @fields.pretty <> @loc.sep <> char '}'
+                        loc.sep = if @fields.multiline then char '\n' else empty
                         fields.isHead = True
     | BinOpExpr         lhs.pretty = @left.pretty <+> @op.pretty <+> @right.pretty
                         left.indent = 0
@@ -180,9 +185,11 @@ sem Expr
                         right.indent = 0
 
 sem Args
-    | ListArgs  lhs.pretty = char '(' <> @args.pretty <> char ')'
+    | ListArgs  lhs.pretty = char '(' <> @loc.sep <> @args.pretty <> @loc.sep <> char ')'
+                loc.sep = if @args.multiline then empty else empty
                 args.isHead = True
-    | TableArg  lhs.pretty = char '{' <> @arg.pretty <> char '}'
+    | TableArg  lhs.pretty = char '{' <> @arg.pretty <> @loc.sep <> char '}'
+                loc.sep = if @arg.multiline then char '\n' else empty
                 arg.isHead = True
     | StringArg lhs.pretty = tok @arg
 
@@ -190,8 +197,10 @@ sem Field
     | ExprField     lhs.pretty = char '[' <> @key.pretty <> char ']' <+> char '=' <+> @value.pretty
                     value.indent = 0
                     key.indent = 0
+                    lhs.multiline = True
     | NamedField    lhs.pretty = tok @key <+> char '=' <+> @value.pretty
                     value.indent = 0
+                    lhs.multiline = True
     | UnnamedField  lhs.pretty = @value.pretty
                     value.indent = 0
 
