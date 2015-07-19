@@ -65,7 +65,7 @@ convertSyntax i (name : args) = ListArgs (name : [MExpr (LineColPos 0 0 0 ) tbl]
 attr AllStuff
     syn repl :: self
 
-attr PrefixExp PFExprSuffix Args ExprSuffixList
+attr PFExprSuffix Args ExprSuffixList
     syn args use {++} {[]} :: {[MExpr]}
     inh shouldReplace :: {Maybe Int}
     inh customItemKind :: String
