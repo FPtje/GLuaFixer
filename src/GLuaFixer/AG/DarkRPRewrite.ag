@@ -32,6 +32,7 @@ rewriteNameTo = [
     "createEntity"
     ]
 
+rewriteFuncName :: Int -> [PFExprSuffix] -> PrefixExp
 rewriteFuncName i sfs = PFVar (MToken (LineColPos 0 0 0) (Identifier "DarkRP")) (funcName : sfs)
     where
         fn = rewriteNameTo !! i
@@ -44,7 +45,7 @@ rewriteParams = [
     ["entity", "model", "price", "max", "command", "allowed", "customCheck"]
     ]
 
--- Decides whether old syntax is used. TODO: check based on parameters.
+-- Decides whether old syntax is used.
 isOldSyntax :: MToken -> Maybe Int
 isOldSyntax (MToken _ (Identifier s)) = elemIndex s rewriteNames
 isOldSyntax _ = Nothing
@@ -64,18 +65,32 @@ convertSyntax i (name : args) = ListArgs (name : [MExpr (LineColPos 0 0 0 ) tbl]
 
 attr AllStuff
     syn repl :: self
+    syn copy :: self
 
 attr PFExprSuffix Args ExprSuffixList
     syn args use {++} {[]} :: {[MExpr]}
     inh shouldReplace :: {Maybe Int}
     inh customItemKind :: String
 
+attr MExprList PFExprSuffix ExprSuffixList Args
+    syn count use {+} {0} :: Int
+
+sem MExprList
+    | Cons
+        lhs.count = @tl.count + 1
+    | Nil
+        lhs.count = 0
+
 sem PrefixExp
     | PFVar
         loc.isOld = isOldSyntax @name
+        loc.shouldReplace = @suffixes.count > 2
         lhs.repl = case @loc.isOld of
                         Nothing -> PFVar @name @suffixes.repl
-                        Just i -> rewriteFuncName i @suffixes.repl
+                        Just i -> if @loc.shouldReplace then
+                                     rewriteFuncName i @suffixes.repl
+                                   else
+                                     rewriteFuncName i @suffixes.copy
         suffixes.customItemKind = identifierName @name
         suffixes.shouldReplace = @loc.isOld
     | ExprVar
