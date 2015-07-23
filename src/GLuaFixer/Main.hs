@@ -18,9 +18,9 @@ filePicker = do
     dialog <- fileChooserDialogNew (Just "Open Lua File") Nothing FileChooserActionOpen [("Cancel", ResponseCancel), ("Open", ResponseAccept)]
 
     widgetShow dialog
-    response <- dialogRun dialog
+    resp <- dialogRun dialog
 
-    case response of
+    case resp of
           ResponseCancel -> widgetDestroy dialog
           ResponseAccept -> do nwf <- fileChooserGetFilename dialog
                                case nwf of
@@ -40,9 +40,9 @@ saveFixed s = do
     fileChooserSetCurrentName dialog "Fixed.lua"
     fileChooserSetDoOverwriteConfirmation dialog True
     widgetShow dialog
-    response <- dialogRun dialog
+    resp <- dialogRun dialog
 
-    case response of
+    case resp of
           ResponseCancel -> widgetDestroy dialog
           ResponseAccept -> do nwf <- fileChooserGetFilename dialog
                                case nwf of
