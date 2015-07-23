@@ -203,8 +203,11 @@ sem Expr
                         body.indent = 1
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         pexpr.indent = 0
-    | ATableConstructor lhs.pretty = char '{' <> @fields.pretty <> @loc.sep <> char '}'
-                        loc.sep = if @fields.multiline then char '\n' else empty
+    | ATableConstructor lhs.pretty = char '{' <> @fields.pretty <> @loc.closeBracket
+                        loc.closeBracket =  if @fields.multiline then
+                                                char '\n' <> text (replicate (@lhs.indent * 4) ' ') <> char '}' <> char '\n'
+                                            else
+                                                char '}'
                         fields.isHead = True
     | BinOpExpr         lhs.pretty = @left.pretty <+> @op.pretty <+> @right.pretty
                         left.indent = 0
@@ -216,8 +219,11 @@ sem Args
     | ListArgs  lhs.pretty = char '(' <> @loc.sep <> @args.pretty <> @loc.sep <> char ')'
                 loc.sep = if @args.multiline then empty else empty
                 args.isHead = True
-    | TableArg  lhs.pretty = char '{' <> @arg.pretty <> @loc.sep <> char '}'
-                loc.sep = if @arg.multiline then char '\n' else empty
+    | TableArg  lhs.pretty = char '{' <> @arg.pretty <> @loc.closeBracket
+                loc.closeBracket =  if @arg.multiline then
+                                        char '\n' <> text (replicate (@lhs.indent * 4) ' ') <> char '}' <> char '\n'
+                                    else
+                                        char '}'
                 arg.isHead = True
     | StringArg lhs.pretty = tok @arg
 
