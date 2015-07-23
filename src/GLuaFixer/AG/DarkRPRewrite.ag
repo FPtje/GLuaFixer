@@ -79,11 +79,8 @@ sem PrefixExp
         suffixes.customItemKind = identifierName @name
         suffixes.shouldReplace = @loc.isOld
     | ExprVar
-
-
-sem Expr
-    | APrefixExpr
-        pexpr.shouldReplace = Nothing
+        suffixes.shouldReplace = Nothing
+        suffixes.customItemKind = ""
 
 
 sem Args
@@ -94,7 +91,6 @@ sem Args
                                     TableArg [NamedField (MToken (LineColPos 0 0 0) (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) @args.repl]
                                    else
                                     convertSyntax i @args.repl
-        args.shouldReplace = Nothing
 
 {
 fixOldDarkRPSyntax :: AST -> AST
