@@ -83,7 +83,7 @@ data Token =
 data MToken = MToken {mpos :: LineColPos, mtok :: Token}
 
 instance Show MToken where
-    show (MToken p@(LineColPos _ c _) tok) = show tok ++ (if c == 0 then "" else " at " ++ show p)
+    show (MToken _ tok) = show tok
 
 -- | Simple EQ instance. TODO: check for position equality
 instance Eq MToken where
