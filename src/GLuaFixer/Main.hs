@@ -61,15 +61,7 @@ fixLua contents fileName args = do
     -- Lex the file
     let lexed = execParseTokens contents
     let tokens = fst lexed
-    let errors = snd lexed
-
-    -- Print any lexing errors
-    let lexErrors = map renderError errors
-    --when (not . null $ errors) $ do
-    --    mapM_ print errors
-
-    --    exitWith (ExitFailure 1)
-
+    let lexErrors = map renderError (snd lexed)
     let ast = parseGLua tokens
     let fixed = prettyprint . fixOldDarkRPSyntax . fst $ ast
 
