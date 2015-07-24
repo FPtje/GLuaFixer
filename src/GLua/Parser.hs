@@ -202,19 +202,28 @@ parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
 
 -- | Parse numeric and generic for loops
 parseFor :: AParser Stat
-parseFor = pPacked (pMTok For) (pMTok End) (
-            ANFor <$>
-              pName <* pMTok Equals <*> parseExpression <*
-              -- end value
-              pMTok Comma <*> parseExpression <*>
-              -- step (1 if not filled in)
-              (pMTok Comma *> parseExpression <<|> MExpr <$> pPos <*> pReturn (ANumber "1")) <*
-              pMTok Do <*> parseBlock
-            <|>
-            AGFor <$> parseNameList <*
-              pMTok In <*> parseExpressionList <*
-              pMTok Do <*> parseBlock
-            )
+parseFor = do
+  pMTok For
+  firstName <- pName
+  -- If you see an =-sign, it's a numeric for loop. It'll be a generic for loop otherwise
+  isNumericLoop <- (const True <$> pMTok Equals <<|> const False <$> pReturn ())
+  if isNumericLoop then do
+      startExp <- parseExpression
+      pMTok Comma
+      toExp <- parseExpression
+      step <- pMTok Comma *> parseExpression <<|> MExpr <$> pPos <*> pReturn (ANumber "1")
+      pMTok Do
+      block <- parseBlock
+      pMTok End
+      pReturn $ ANFor firstName startExp toExp step block
+  else do
+     vars <- (:) firstName <$ pMTok Comma <*> parseNameList <<|> pReturn [firstName]
+     pMTok In
+     exprs <- parseExpressionList
+     pMTok Do
+     block <- parseBlock
+     pMTok End
+     pReturn $ AGFor vars exprs block
 
 
 -- | Parse a return value
