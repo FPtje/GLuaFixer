@@ -102,21 +102,22 @@ data Field        | ExprField          key   :: MExpr  value        :: MExpr
 
 
 -- Binary operators
-data BinOp        | APlus
+data BinOp
+                  | AOr
+                  | AAnd
+                  | ALT
+                  | AGT
+                  | ALEQ
+                  | AGEQ
+                  | ANEq
+                  | AEq
+                  | AConcatenate
+                  | APlus
                   | BinMinus
                   | AMultiply
                   | ADivide
                   | AModulus
                   | APower
-                  | AConcatenate
-                  | ALT
-                  | ALEQ
-                  | AGT
-                  | AGEQ
-                  | AEq
-                  | ANEq
-                  | AAnd
-                  | AOr
 
 -- Unary operators
 data UnOp         | UnMinus
@@ -135,7 +136,7 @@ deriving MExpr : Show
 deriving Expr : Show
 deriving Args : Show
 deriving Field : Show
-deriving BinOp : Show
+deriving BinOp : Show, Eq, Ord
 deriving UnOp : Show
 
 

@@ -202,19 +202,28 @@ parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
 
 -- | Parse numeric and generic for loops
 parseFor :: AParser Stat
-parseFor = pPacked (pMTok For) (pMTok End) (
-            ANFor <$>
-              pName <* pMTok Equals <*> parseExpression <*
-              -- end value
-              pMTok Comma <*> parseExpression <*>
-              -- step (1 if not filled in)
-              (pMTok Comma *> parseExpression <<|> MExpr <$> pPos <*> pReturn (ANumber "1")) <*
-              pMTok Do <*> parseBlock
-            <|>
-            AGFor <$> parseNameList <*
-              pMTok In <*> parseExpressionList <*
-              pMTok Do <*> parseBlock
-            )
+parseFor = do
+  pMTok For
+  firstName <- pName
+  -- If you see an =-sign, it's a numeric for loop. It'll be a generic for loop otherwise
+  isNumericLoop <- (const True <$> pMTok Equals <<|> const False <$> pReturn ())
+  if isNumericLoop then do
+      startExp <- parseExpression
+      pMTok Comma
+      toExp <- parseExpression
+      step <- pMTok Comma *> parseExpression <<|> MExpr <$> pPos <*> pReturn (ANumber "1")
+      pMTok Do
+      block <- parseBlock
+      pMTok End
+      pReturn $ ANFor firstName startExp toExp step block
+  else do
+     vars <- (:) firstName <$ pMTok Comma <*> parseNameList <<|> pReturn [firstName]
+     pMTok In
+     exprs <- parseExpressionList
+     pMTok Do
+     block <- parseBlock
+     pMTok End
+     pReturn $ AGFor vars exprs block
 
 
 -- | Parse a return value
@@ -290,14 +299,14 @@ parseAnonymFunc = AnonymousFunc <$
 
 -- | Parse operators of the same precedence in a chain
 samePrioL :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
-samePrioL ops p = pChainl (choice (map f ops)) p
+samePrioL ops pr = pChainl (choice (map f ops)) pr
   where
     choice = foldr (<<|>) pFail
     f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
     f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos <* pMTok t
 
 samePrioR :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
-samePrioR ops p = pChainr (choice (map f ops)) p
+samePrioR ops pr = pChainr (choice (map f ops)) pr
   where
     choice = foldr (<<|>) pFail
     f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
@@ -333,6 +342,28 @@ parseExpression = samePrioL lvl1 $
                   samePrioL lvl6 $
                   MExpr <$> pPos <*> (UnOpExpr <$> parseUnOp <*> parseExpression) <<|> -- lvl7
                   samePrioR lvl8 (MExpr <$> pPos <*> parseSubExpression)
+
+-- | Parses a binary operator
+parseBinOp :: AParser BinOp
+parseBinOp = const AOr          <$> pMTok Or           <<|>
+             const AOr          <$> pMTok COr          <<|>
+             const AAnd         <$> pMTok And          <<|>
+             const AAnd         <$> pMTok CAnd         <<|>
+             const ALT          <$> pMTok TLT          <<|>
+             const AGT          <$> pMTok TGT          <<|>
+             const ALEQ         <$> pMTok TLEQ         <<|>
+             const AGEQ         <$> pMTok TGEQ         <<|>
+             const ANEq         <$> pMTok TNEq         <<|>
+             const ANEq         <$> pMTok TCNEq        <<|>
+             const AEq          <$> pMTok TEq          <<|>
+             const AConcatenate <$> pMTok Concatenate  <<|>
+             const APlus        <$> pMTok Plus         <<|>
+             const BinMinus     <$> pMTok Minus        <<|>
+             const AMultiply    <$> pMTok Multiply     <<|>
+             const ADivide      <$> pMTok Divide       <<|>
+             const AModulus     <$> pMTok Modulus      <<|>
+             const APower       <$> pMTok Power
+
 
 -- | Prefix expressions
 -- can have any arbitrary list of expression suffixes
@@ -395,11 +426,43 @@ parseFieldList = (:) <$> parseField <*> otherFields <<|> pReturn []
                     ((\f o _ -> f : o) <$> parseField <*> otherFields <<|> const <$> pReturn [])
                   <<|> pReturn []
 
+-- | Makes an unnamed field out of a list of suffixes, a position and a name.
+-- This function gets called when we know a field is unnamed and contains an expression that
+-- starts with a PrefixExp
+-- See the parseField parser where it is used
+makeUnNamedField :: Maybe (BinOp, MExpr) -> ExprSuffixList -> (LineColPos, MToken) -> Field
+makeUnNamedField Nothing sfs (p, nm) = UnnamedField $ MExpr p $ APrefixExpr $ PFVar nm sfs
+makeUnNamedField (Just (op, mexpr)) sfs (p, nm) = UnnamedField $ MExpr p $ (merge (APrefixExpr $ PFVar nm sfs) mexpr)
+  where
+    -- Merge the first prefixExpr into the expression tree
+    merge :: Expr -> MExpr -> Expr
+    merge pf e@(MExpr _ (BinOpExpr op' l r)) =  if op > op' then
+                                                  BinOpExpr op' (MExpr p $ (merge pf l)) r
+                                                else
+                                                  BinOpExpr op (MExpr p pf) e
+    merge pf e = BinOpExpr op (MExpr p pf) e
+
 -- | A field in a table
 parseField :: AParser Field
 parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <<|>
-             (NamedField <$> pName <* pMTok Equals <*> parseExpression <|>
-              UnnamedField <$> parseExpression)
+              ((,) <$> pPos <*> pName <**>
+                -- Named field has equals sign immediately after the name
+                (((\e (_, n) -> NamedField n e) <$ pMTok Equals <*> parseExpression) <<|>
+
+                -- The lack of equals sign means it's an unnamed field.
+                -- The expression of the unnamed field must be starting with a PFVar Prefix expression
+                pMany pPFExprSuffix <**>
+                  ( makeUnNamedField <$>
+                    (
+                      -- There are operators, so the expression goes on beyond the prefixExpression
+                      (\op expr -> Just (op, expr)) <$> parseBinOp <*> parseExpression <<|>
+                      -- There are no operators after the prefix expression
+                      pReturn Nothing
+                    )
+                  )
+                )
+              ) <<|>
+              UnnamedField <$> parseExpression
 
 -- | Field separator
 parseFieldSep :: AParser MToken
