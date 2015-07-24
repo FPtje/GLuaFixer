@@ -70,21 +70,35 @@ fixLua contents fileName args = do
         exitWith (ExitFailure 1)
 
     let ast = parseGLua tokens
-
-    when (not . null . snd $ ast) $ do
-        hPutStrLn stderr "Errors:"
-        mapM_ (hPutStrLn stderr . renderError) . snd $ ast
-        writeFile "LuaErrors.txt" $ "Errors in " ++ fileName ++ ":\n" ++ concatMap ((++ "\n") . renderError) (snd ast)
-
-    when (null . snd $ ast) $
-        writeFile "LuaErrors.txt" $ "No errors found in " ++ fileName
-
     let fixed = prettyprint . fixOldDarkRPSyntax . fst $ ast
 
     if length args < 2 then
         saveFixed fixed
     else
         putStrLn fixed
+
+    when (not . null . snd $ ast) $ do
+        hPutStrLn stderr "Errors:"
+        mapM_ (hPutStrLn stderr . renderError) . snd $ ast
+        writeFile "LuaErrors.txt" $ "Errors in " ++ fileName ++ ":\n" ++ concatMap ((++ "\n") . renderError) (snd ast)
+
+        when (length args < 2) $ do
+            initGUI
+            infoDialog <- messageDialogNew Nothing [] MessageWarning ButtonsClose (fileName ++ " contains some errors!\nPlease see LuaErrors.txt!")
+            widgetShow infoDialog
+            dialogRun infoDialog
+            widgetDestroy infoDialog
+
+
+    when (null . snd $ ast) $ do
+        writeFile "LuaErrors.txt" $ "No errors found in " ++ fileName
+
+        when (length args < 2) $ do
+            initGUI
+            infoDialog <- messageDialogNew Nothing [] MessageInfo ButtonsClose (fileName ++ " pretty printed correctly!")
+            widgetShow infoDialog
+            dialogRun infoDialog
+            widgetDestroy infoDialog
 
 main :: IO ()
 main = do
