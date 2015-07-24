@@ -76,7 +76,7 @@ attr Declaration VarsList
     syn varPretty  use {<>} {empty}  :: Doc
     syn exprPretty use {<>} {empty}  :: Doc
 
-attr MStatList MExprList FieldList VarsList
+attr MStatList MExprList VarsList
     inh isHead :: Bool
 
 attr FieldList Field MExprList Expr MExpr PrefixExp ExprSuffixList PFExprSuffix Args Declaration VarsList
@@ -87,6 +87,9 @@ attr MStat MExprList MExpr
 
 attr MStatList MExprList FieldList Declaration VarsList ExprSuffixList ElseIf ElseIfList Else Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
     chn comments :: {[MToken]}
+
+attr FieldList
+    syn isNil :: Bool
 
 sem MStatList
     | Cons       lhs.pretty = @loc.prettyComments $+$ @hd.pretty $+$ @tl.pretty
@@ -108,10 +111,13 @@ sem MExprList
                  lhs.pos    = LineColPos 0 0 0
 
 sem FieldList
-    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <> (if @loc.multiline then text "\n    " else empty) <+> @hd.pretty <> @tl.pretty
-                 tl.isHead  = False
+    | Cons       lhs.pretty = (@hd.pretty <> @loc.comma) `@loc.sep` @tl.pretty
+                 loc.comma = if @tl.isNil then empty else char ','
+                 loc.sep = if @loc.multiline then ($+$) else (<+>)
                  loc.multiline = @hd.multiline || @tl.multiline
+                 lhs.isNil  = False
     | Nil        lhs.pretty = empty
+                 lhs.isNil  = True
 
 sem Declaration
     | Tuple     lhs.varPretty = @x1.pretty
@@ -146,6 +152,7 @@ sem AST
 
 sem Block
     | Block      lhs.pretty = nest (@lhs.indent * 4) (@stats.pretty $+$ @ret.pretty)
+                 stats.indent = 0
                  stats.isHead = True
 
 sem Stat
@@ -168,7 +175,6 @@ sem Stat
     | ARepeat    lhs.pretty = text "repeat" $+$ @body.pretty $+$ text "until" <+> @cond.pretty
                  body.indent = 1
     | AIf        lhs.pretty = text "if" <+> @cond.pretty <+> text "then" $+$ @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ text "end\n"
-                 loc.bodyIndent = 1
                  body.indent = 1
     | ANFor      lhs.pretty = text "for" <+> tok @var <+> char '=' <+> @val.pretty <> char ',' <+> @to.pretty <> char ',' <+> @step.pretty <+> text "do" $+$ @body.pretty $+$ text "end\n"
                  body.indent = 1
@@ -212,16 +218,14 @@ sem Expr
     | ANumber           lhs.pretty = text @num
     | AString           lhs.pretty = tok @str
     | AVarArg           lhs.pretty = text "..."
-    | AnonymousFunc     lhs.pretty = text "function(" <> printList tok ", " @pars <> text ")" $+$ @body.pretty $+$ text "end"
-                        body.indent = 1
+    | AnonymousFunc     lhs.pretty = text "function(" <> printList tok ", " @pars <> text ")" $+$ (nest 4 @body.pretty) $+$ text "end"
+                        body.indent = 0
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         pexpr.indent = 0
-    | ATableConstructor lhs.pretty = char '{' <> @fields.pretty <> @loc.closeBracket
-                        loc.closeBracket =  if @fields.multiline then
-                                                char '\n' <> text (replicate (@lhs.indent * 4) ' ') <> char '}'
-                                            else
-                                                char '}'
-                        fields.isHead = True
+    | ATableConstructor
+                        lhs.pretty = if @fields.multiline then @loc.prettyMulti else @loc.prettySingle
+                        loc.prettyMulti = char '{' $+$ nest 4 @fields.pretty $+$ char '}'
+                        loc.prettySingle = char '{' <> @fields.pretty <> char '}'
     | BinOpExpr         lhs.pretty = @left.pretty <+> @op.pretty <+> @right.pretty
                         left.indent = 0
                         right.indent = 0
@@ -231,12 +235,9 @@ sem Expr
 sem Args
     | ListArgs  lhs.pretty = char '(' <> @args.pretty <> char ')'
                 args.isHead = True
-    | TableArg  lhs.pretty = char '{' <> @arg.pretty <> @loc.closeBracket
-                loc.closeBracket =  if @arg.multiline then
-                                        char '\n' <> text (replicate (@lhs.indent * 4) ' ') <> char '}'
-                                    else
-                                        char '}'
-                arg.isHead = True
+    | TableArg  lhs.pretty = if @arg.multiline then @loc.prettyMulti else @loc.prettySingle
+                loc.prettyMulti = char '{' $+$ nest 4 @arg.pretty $+$ char '}'
+                loc.prettySingle = char '{' <> @arg.pretty <> char '}'
     | StringArg lhs.pretty = tok @arg
 
 sem Field
