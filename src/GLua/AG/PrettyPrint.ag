@@ -108,7 +108,7 @@ sem MExprList
                  lhs.pos    = LineColPos 0 0 0
 
 sem FieldList
-    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <> (if @loc.multiline then text "\n\t" else empty) <+> @hd.pretty <> @tl.pretty
+    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <> (if @loc.multiline then text "\n    " else empty) <+> @hd.pretty <> @tl.pretty
                  tl.isHead  = False
                  loc.multiline = @hd.multiline || @tl.multiline
     | Nil        lhs.pretty = empty
