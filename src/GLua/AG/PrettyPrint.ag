@@ -54,13 +54,13 @@ getMExprPos :: MExpr -> String
 getMExprPos (MExpr p _) = renderPos p
 
 comesBefore :: LineColPos -> LineColPos -> Bool
-comesBefore (LineColPos _ _ l) (LineColPos _ _ r) = l <= r
+comesBefore (LineColPos _ _ l) (LineColPos a b r) = l <= r
 
 renderError :: Error LineColPos -> String
-renderError (Inserted str pos strs)       = "Inserted " ++ str ++ " at " ++ renderPos pos ++ ". " ++ render_expecting strs
-renderError (Deleted str pos strs)        = "Removed "  ++ str ++ " at " ++ renderPos pos ++ ". " ++ render_expecting strs
-renderError (Replaced str1 str2 pos strs) = "Replaced " ++ str1 ++ " with " ++ str2 ++ " at " ++ renderPos pos ++ render_expecting strs
-renderError (DeletedAtEnd str)            = "Deleted "  ++ str ++ " at the end of the Lua file because the parser doesn't know what to do with it."
+renderError (Inserted str pos strs)       = "Inserted '" ++ str ++ "' at " ++ renderPos pos ++ ". " ++ render_expecting strs
+renderError (Deleted str pos strs)        = "Removed '" ++ str ++ "' at " ++ renderPos pos ++ ". " ++ render_expecting strs
+renderError (Replaced str1 str2 pos strs) = "Replaced '" ++ str1 ++ "' with '" ++ str2 ++ "' at " ++ renderPos pos ++ render_expecting strs
+renderError (DeletedAtEnd str)            = "Deleted '"  ++ str ++ "' at the end of the Lua file because the parser doesn't know what to do with it."
 
 render_expecting :: [String] -> String
 render_expecting [a]    = "Parser expected a " ++ a
@@ -82,7 +82,7 @@ attr MStatList MExprList FieldList VarsList
 attr FieldList Field MExprList Expr MExpr PrefixExp ExprSuffixList PFExprSuffix Args Declaration VarsList
     syn multiline use {||} {False} :: Bool -- Whether a table should be printed as multiline
 
-attr MStat
+attr MStat MExprList MExpr
     syn pos :: LineColPos
 
 attr MStatList MExprList FieldList Declaration VarsList ExprSuffixList ElseIf ElseIfList Else Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
@@ -103,10 +103,12 @@ sem MStat
 sem MExprList
     | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <+> @hd.pretty <> @tl.pretty
                  tl.isHead  = False
+                 lhs.pos    = @hd.pos
     | Nil        lhs.pretty = empty
+                 lhs.pos    = LineColPos 0 0 0
 
 sem FieldList
-    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <> (if @loc.multiline then text "\n\t" else empty) <+> @hd.pretty <> @tl.pretty
+    | Cons       lhs.pretty = (if @lhs.isHead then empty else char ',') <> (if @loc.multiline then text "\n    " else empty) <+> @hd.pretty <> @tl.pretty
                  tl.isHead  = False
                  loc.multiline = @hd.multiline || @tl.multiline
     | Nil        lhs.pretty = empty
@@ -138,7 +140,8 @@ sem ExprSuffixList
     | Nil        lhs.pretty = empty
 
 sem AST
-    | AST       lhs.pretty = @chunk.pretty
+    | AST       lhs.pretty = @chunk.pretty $+$ @loc.prettyComments
+                loc.prettyComments = foldl ($+$) empty . map tok $ @chunk.comments
                 chunk.comments = @comments
 
 sem Block
@@ -178,7 +181,11 @@ sem Stat
                  body.indent = 1
 
 sem AReturn
-    | AReturn    lhs.pretty = text "return" <+> @values.pretty
+    | AReturn    lhs.pretty = @loc.prettyComments $+$ text "return" <+> @values.pretty
+                 loc.prettyComments = foldl ($+$) empty . map tok $ @loc.commentsHere
+                 loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `comesBefore` @values.pos]
+                 values.comments = drop (length @loc.commentsHere) @lhs.comments
+                 lhs.comments = @values.comments
                  values.isHead = True
     | NoReturn   lhs.pretty = empty
 
@@ -194,6 +201,9 @@ sem PFExprSuffix
     | MetaCall   lhs.pretty = char ':' <> tok @fn <> @args.pretty
     | ExprIndex  lhs.pretty = char '[' <> @index.pretty <> char ']'
     | DotIndex   lhs.pretty = char '.' <> tok @index
+
+sem MExpr
+    | MExpr             lhs.pos    = @pos
 
 sem Expr
     | ANil              lhs.pretty = text "nil"
