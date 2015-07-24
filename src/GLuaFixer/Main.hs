@@ -64,10 +64,11 @@ fixLua contents fileName args = do
     let errors = snd lexed
 
     -- Print any lexing errors
-    when (not . null $ errors) $ do
-        mapM_ print errors
+    let lexErrors = map renderError errors
+    --when (not . null $ errors) $ do
+    --    mapM_ print errors
 
-        exitWith (ExitFailure 1)
+    --    exitWith (ExitFailure 1)
 
     let ast = parseGLua tokens
     let fixed = prettyprint . fixOldDarkRPSyntax . fst $ ast
@@ -77,10 +78,11 @@ fixLua contents fileName args = do
     else
         putStrLn fixed
 
-    when (not . null . snd $ ast) $ do
+    let errors = lexErrors ++ (map renderError $ snd ast)
+    when (not . null $ errors) $ do
         hPutStrLn stderr "Errors:"
-        mapM_ (hPutStrLn stderr . renderError) . snd $ ast
-        writeFile "LuaErrors.txt" $ "Errors in " ++ fileName ++ ":\n" ++ concatMap ((++ "\n") . renderError) (snd ast)
+        mapM_ (hPutStrLn stderr) $ errors
+        writeFile "LuaErrors.txt" $ "Errors in " ++ fileName ++ ":\n" ++ concatMap (++ "\n") errors
 
         when (length args < 2) $ do
             initGUI
@@ -90,7 +92,7 @@ fixLua contents fileName args = do
             widgetDestroy infoDialog
 
 
-    when (null . snd $ ast) $ do
+    when (null errors) $ do
         writeFile "LuaErrors.txt" $ "No errors found in " ++ fileName
 
         when (length args < 2) $ do
