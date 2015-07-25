@@ -22,5 +22,8 @@ executable gluafixer
   other-extensions:    FlexibleInstances, TypeSynonymInstances, MultiParamTypeClasses, Rank2Types, FlexibleContexts, NoMonomorphismRestriction, CPP
   build-depends:       base, filepath >=1.3, uu-parsinglib >=2.8, ListLike >=4.1, uuagc >= 0.9.40.3, uuagc-cabal >= 1.0.3.0, pretty, gtk
   hs-source-dirs:      src
-  ghc-options:         -O3
+  if os(windows)
+    ghc-options:         -O3 -optl-mwindows
+  else
+    ghc-options:         -O3 -optl-mwindows
   default-language:    Haskell2010
