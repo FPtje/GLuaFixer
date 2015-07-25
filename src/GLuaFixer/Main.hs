@@ -10,6 +10,21 @@ import System.IO
 import Graphics.UI.Gtk
 import GLuaFixer.AG.DarkRPRewrite
 
+-- | Read file in utf8_bom because that seems to work better
+doReadFile :: FilePath -> IO String
+doReadFile f = do
+    handle <- openFile f ReadMode
+    hSetEncoding handle utf8_bom
+    contents <- hGetContents handle
+    return contents
+
+-- | Write file in utf8_bom
+doWriteFile :: FilePath -> String -> IO ()
+doWriteFile f str = do
+    handle <- openFile f WriteMode
+    hSetEncoding handle utf8_bom
+    hPutStr handle str
+    hClose handle
 
 filePicker :: IO ()
 filePicker = do
@@ -27,7 +42,7 @@ filePicker = do
                                     Nothing -> widgetDestroy dialog
                                     Just path -> do
                                         widgetDestroy dialog
-                                        contents <- readFile path
+                                        contents <- doReadFile path
                                         fixLua contents path  []
           ResponseDeleteEvent -> widgetDestroy dialog
 
@@ -48,7 +63,7 @@ saveFixed s = do
                                case nwf of
                                     Nothing -> widgetDestroy dialog
                                     Just path -> do
-                                        writeFile path s
+                                        doWriteFile path s
                                         widgetDestroy dialog
           ResponseDeleteEvent -> widgetDestroy dialog
 
@@ -74,7 +89,7 @@ fixLua contents fileName args = do
     when (not . null $ errors) $ do
         hPutStrLn stderr "Errors:"
         mapM_ (hPutStrLn stderr) $ errors
-        writeFile "LuaErrors.txt" $ "Errors in " ++ fileName ++ ":\n" ++ concatMap (++ "\n") errors
+        doWriteFile "LuaErrors.txt" $ "Errors in " ++ fileName ++ ":\n" ++ concatMap (++ "\n") errors
 
         when (length args < 2) $ do
             initGUI
@@ -85,7 +100,7 @@ fixLua contents fileName args = do
 
 
     when (null errors) $ do
-        writeFile "LuaErrors.txt" $ "No errors found in " ++ fileName
+        doWriteFile "LuaErrors.txt" $ "No errors found in " ++ fileName
 
         when (length args < 2) $ do
             initGUI
@@ -99,7 +114,7 @@ main = do
     files <- getArgs
     if (not . null $ files) then do
         let f = head files
-        contents <- readFile $ f
+        contents <- doReadFile $ f
         fixLua contents f files
     else filePicker
 
