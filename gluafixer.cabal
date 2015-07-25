@@ -25,5 +25,5 @@ executable gluafixer
   if os(windows)
     ghc-options:         -O3 -optl-mwindows
   else
-    ghc-options:         -O3 -optl-mwindows
+    ghc-options:         -O3
   default-language:    Haskell2010
