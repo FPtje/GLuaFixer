@@ -6,3 +6,4 @@ rm src/GLua/AG/*.hs
 rm src/GLuaFixer/AG/*.hs
 cp dist/build/gluafixer/gluafixer-tmp/GLua/AG/*.hs src/GLua/AG/
 cp dist/build/gluafixer/gluafixer-tmp/GLuaFixer/AG/*.hs src/GLuaFixer/AG/
+cp dist/build/glualint/glualint-tmp/GLuaFixer/AG/LexLint.hs src/GLuaFixer/AG/
