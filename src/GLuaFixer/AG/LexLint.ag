@@ -4,13 +4,70 @@ imports
 {
 import GLua.TokenTypes
 import GLua.AG.Token
+import GLua.AG.PrettyPrint
 }
 include "../../GLua/AG/Token.ag"
 
-attr MTokenList
-	syn warnings use {++} {[]} :: {[String]}
 
 {
+-- For detecting the usage of Lua/C syntax inconsistently
+data SyntaxUsed = SyntaxUsed { luaUsed :: Bool, cUsed :: Bool }
+
+-- Monoid instance
+instance Monoid SyntaxUsed where
+    mempty = SyntaxUsed False False
+    mappend (SyntaxUsed l1 c1) (SyntaxUsed l2 c2) = SyntaxUsed (l1 || l2) (c1 || c2)
+
+-- Syntax inconsistency warning
+syntaxInconsistency :: String -> String -> String
+syntaxInconsistency l c = "Inconsistent use of '" ++ l ++ "' and '" ++ c ++ "'"
+
+mTokenWarning :: MToken -> String -> String
+mTokenWarning (MToken pos _) str = "[Warning] " ++ renderPos pos ++ ": " ++ str
+}
+----------------------------------------
+--  Attributes
+----------------------------------------
+attr MTokenList MToken Token TokenList
+    syn copy :: self
+
+    syn warnings use {++} {[]} :: {[String]}
+
+    chn andSyntax :: SyntaxUsed
+
+---------------------------------------
+--  Semantics
+---------------------------------------
+sem MTokenList
+    | Cons
+
+    | Nil
+
+
+sem MToken
+    | MToken
+        lhs.warnings = map (mTokenWarning @loc.copy) @mtok.warnings
+
+sem Token
+    | And
+        loc.consistent = not . cUsed $ @lhs.andSyntax
+        loc.andSyntax = SyntaxUsed @loc.consistent False -- When inconsistent, reset consistency check
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "and" "&&"
+
+    | CAnd
+        loc.consistent = not . luaUsed $ @lhs.andSyntax
+        loc.andSyntax = SyntaxUsed False @loc.consistent
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "&&" "and"
+
+
+
+{
+inh_MTokenList :: Inh_MTokenList
+inh_MTokenList = Inh_MTokenList
+                    mempty
+
 lintWarnings        :: [MToken] -> [String]
-lintWarnings p      = warnings_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) Inh_MTokenList)
+lintWarnings p      = warnings_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) inh_MTokenList)
 }
