@@ -33,7 +33,11 @@ attr MTokenList MToken Token TokenList
 
     syn warnings use {++} {[]} :: {[String]}
 
+    chn lineCommentSyntax :: SyntaxUsed
+    chn notSyntax :: SyntaxUsed
     chn andSyntax :: SyntaxUsed
+    chn orSyntax  :: SyntaxUsed
+    chn neqSyntax :: SyntaxUsed
 
 ---------------------------------------
 --  Semantics
@@ -49,9 +53,33 @@ sem MToken
         lhs.warnings = map (mTokenWarning @loc.copy) @mtok.warnings
 
 sem Token
+    | DashComment
+        loc.consistent = not . cUsed $ @lhs.lineCommentSyntax
+        loc.lineCommentSyntax = SyntaxUsed @loc.consistent False -- When inconsistent, reset consistency check
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "--" "//"
+
+    | SlashComment
+        loc.consistent = not . luaUsed $ @lhs.lineCommentSyntax
+        loc.lineCommentSyntax = SyntaxUsed False @loc.consistent
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "//" "--"
+
+    | Not
+        loc.consistent = not . cUsed $ @lhs.notSyntax
+        loc.notSyntax = SyntaxUsed @loc.consistent False
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "not" "!"
+
+    | CNot
+        loc.consistent = not . luaUsed $ @lhs.notSyntax
+        loc.notSyntax = SyntaxUsed False @loc.consistent
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "!" "not"
+
     | And
         loc.consistent = not . cUsed $ @lhs.andSyntax
-        loc.andSyntax = SyntaxUsed @loc.consistent False -- When inconsistent, reset consistency check
+        loc.andSyntax = SyntaxUsed @loc.consistent False
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "and" "&&"
 
@@ -61,11 +89,39 @@ sem Token
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "&&" "and"
 
+    | Or
+        loc.consistent = not . cUsed $ @lhs.orSyntax
+        loc.orSyntax = SyntaxUsed @loc.consistent False
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "or" "||"
+
+    | COr
+        loc.consistent = not . luaUsed $ @lhs.orSyntax
+        loc.orSyntax = SyntaxUsed False @loc.consistent
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "||" "or"
+
+    | TNEq
+        loc.consistent = not . cUsed $ @lhs.neqSyntax
+        loc.neqSyntax = SyntaxUsed @loc.consistent False
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "~=" "!="
+
+    | TCNEq
+        loc.consistent = not . luaUsed $ @lhs.neqSyntax
+        loc.neqSyntax = SyntaxUsed False @loc.consistent
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "!=" "~="
+
 
 
 {
 inh_MTokenList :: Inh_MTokenList
 inh_MTokenList = Inh_MTokenList
+                    mempty
+                    mempty
+                    mempty
+                    mempty
                     mempty
 
 lintWarnings        :: [MToken] -> [String]
