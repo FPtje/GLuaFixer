@@ -1,0 +1,89 @@
+module {GLua.AG.Token}{}{}
+
+imports
+{
+import Text.ParserCombinators.UU.BasicInstances
+}
+
+type TokenList = [Token]
+type MTokenList = [MToken]
+
+-- | Simple token types
+data Token
+    -- Comments
+    | DashComment 					comment :: String             -- ^ dash comment
+    | DashBlockComment 	depth ::Int comment :: String    -- ^ where the Int is the depth of the comment delimiter, i.e. the amount of '='-signs in -[=[]=]
+    | SlashComment 					comment :: String            -- ^ C-style slash line comment
+    | SlashBlockComment 			comment :: String       -- ^ C-style slash block comment
+    | Semicolon                      -- ^ ;
+
+    -- Constants
+    | TNumber  			num :: String
+    | DQString 			str :: String                -- ^ Double quote string
+    | SQString 			str :: String                -- ^ Single quote string
+    | MLString 			str :: String                -- ^ Multiline string
+    | TTrue                          -- ^ true
+    | TFalse                         -- ^ false
+    | Nil                            -- ^ nil
+    | VarArg                         -- ^ ...
+
+    -- Operators
+    | Plus                           -- ^ +
+    | Minus                          -- ^ -
+    | Multiply                       -- ^ *
+    | Divide                         -- ^ /
+    | Modulus                        -- ^ %
+    | Power                          -- ^ ^
+    | TEq                            -- ^ ==
+    | TNEq                           -- ^ ~=
+    | TCNEq                          -- ^ !=
+    | TLEQ                           -- ^ <=
+    | TGEQ                           -- ^ >=
+    | TLT                            -- ^ <
+    | TGT                            -- ^ >
+    | Equals                         -- ^ =
+    | Concatenate                    -- ^ ..
+    | Colon                          -- ^ :
+    | Dot                            -- ^ .
+    | Comma                          -- ^ ,
+    | Hash                           -- ^ #
+    | Not                            -- ^ not
+    | CNot                           -- ^ !
+    | And                            -- ^ and
+    | CAnd                           -- ^ &&
+    | Or                             -- ^ or
+    | COr                            -- ^ ||
+
+    -- Keywords
+    | Function
+    | Local
+    | If
+    | Then
+    | Elseif
+    | Else
+    | For
+    | In
+    | Do
+    | While
+    | Until
+    | Repeat
+    | Continue
+    | Break
+    | Return
+    | End
+    | Goto
+
+    | LRound                         -- ^ (
+    | RRound                         -- ^ )
+    | LCurly                         -- ^ {
+    | RCurly                         -- ^ }
+    | LSquare                        -- ^ [
+    | RSquare                        -- ^ ]
+    | Label 		lbl :: String                   -- ^ ::label
+    | Identifier 	ident :: String
+
+-- | Metatoken, stores line and column position of token
+data MToken
+	| MToken mpos :: LineColPos mtok :: Token
+
+deriving Token : Eq, Ord

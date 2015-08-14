@@ -5,6 +5,7 @@ imports
 import GLua.AG.AST
 import Text.PrettyPrint
 import GLua.TokenTypes
+import GLua.AG.Token
 }
 
 include "AST.ag"
