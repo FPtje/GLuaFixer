@@ -1,86 +1,10 @@
--- | Definitions of GLua tokens and metatokens
+-- | Contains class instances and functions related to tokens
 module GLua.TokenTypes where
 
 import Data.List
 import Text.ParserCombinators.UU.BasicInstances
+import GLua.AG.Token
 
--- | Simple token types
-data Token =
-    -- Comments
-    DashComment String          |   -- ^ dash comment
-    DashBlockComment Int String |   -- ^ where the Int is the depth of the comment delimiter, i.e. the amount of '='-signs in -[=[]=]
-    SlashComment String         |   -- ^ C-style slash line comment
-    SlashBlockComment String    |   -- ^ C-style slash block comment
-    Semicolon                   |   -- ^ ;
-
-    -- Constants
-    TNumber String              |
-    DQString String             |   -- ^ Double quote string
-    SQString String             |   -- ^ Single quote string
-    MLString String             |   -- ^ Multiline string
-    TTrue                       |   -- ^ true
-    TFalse                      |   -- ^ false
-    Nil                         |   -- ^ nil
-    VarArg                      |   -- ^ ...
-
-    -- Operators
-    Plus                        |   -- ^ +
-    Minus                       |   -- ^ -
-    Multiply                    |   -- ^ *
-    Divide                      |   -- ^ /
-    Modulus                     |   -- ^ %
-    Power                       |   -- ^ ^
-    TEq                         |   -- ^ ==
-    TNEq                        |   -- ^ ~=
-    TCNEq                       |   -- ^ !=
-    TLEQ                        |   -- ^ <=
-    TGEQ                        |   -- ^ >=
-    TLT                         |   -- ^ <
-    TGT                         |   -- ^ >
-    Equals                      |   -- ^ =
-    Concatenate                 |   -- ^ ..
-    Colon                       |   -- ^ :
-    Dot                         |   -- ^ .
-    Comma                       |   -- ^ ,
-    Hash                        |   -- ^ #
-    Not                         |   -- ^ not
-    CNot                        |   -- ^ !
-    And                         |   -- ^ and
-    CAnd                        |   -- ^ &&
-    Or                          |   -- ^ or
-    COr                         |   -- ^ ||
-
-    -- Keywords
-    Function                    |
-    Local                       |
-    If                          |
-    Then                        |
-    Elseif                      |
-    Else                        |
-    For                         |
-    In                          |
-    Do                          |
-    While                       |
-    Until                       |
-    Repeat                      |
-    Continue                    |
-    Break                       |
-    Return                      |
-    End                         |
-    Goto                        |
-
-    LRound                      |   -- ^ (
-    RRound                      |   -- ^ )
-    LCurly                      |   -- ^ {
-    RCurly                      |   -- ^ }
-    LSquare                     |   -- ^ [
-    RSquare                     |   -- ^ ]
-    Label String                |   -- ^ ::label
-    Identifier String
-    deriving (Eq, Ord)
-
--- | Metatoken, stores line and column position of token
-data MToken = MToken {mpos :: LineColPos, mtok :: Token}
 
 instance Show MToken where
     show (MToken _ tok) = show tok

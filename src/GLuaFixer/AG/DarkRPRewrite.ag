@@ -9,6 +9,7 @@ import GLua.AG.AST
 import GLua.TokenTypes
 import Data.Maybe
 import Data.List
+import GLua.AG.Token
 }
 include "../../GLua/AG/AST.ag"
 

@@ -4,6 +4,7 @@ imports
 {
 import Text.ParserCombinators.UU.BasicInstances
 import GLua.TokenTypes
+import GLua.AG.Token
 }
 
 type MStatList = [MStat]

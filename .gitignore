@@ -4,4 +4,5 @@ dist/
 *.lua
 src/GLua/AG/PrettyPrint.hs
 src/GLua/AG/AST.hs
+src/GLua/AG/Token.hs
 src/GLuaFixer/AG/*.hs

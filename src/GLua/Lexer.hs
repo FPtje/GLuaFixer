@@ -8,6 +8,7 @@
 module GLua.Lexer where
 
 import GLua.TokenTypes
+import GLua.AG.Token
 
 import Data.List
 
