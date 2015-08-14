@@ -37,7 +37,14 @@ mTokenWarning (MToken pos _) str = "[Warning] " ++ renderPos pos ++ ": " ++ str
 deprecatedThings :: [([Token], String)]
 deprecatedThings = [
         ([Identifier "ai", Dot, Identifier "GetScheduleID"], "The function is broken"),
-        ([Identifier "ai", Dot, Identifier "GetTaskID"], "The function is broken")
+        ([Identifier "ai", Dot, Identifier "GetTaskID"], "The function is broken"),
+        ([Identifier "gcinfo"], "Use collectgarbage(\"count\") instead"),
+        ([Identifier "GetConVarNumber"], "Use ConVar objects instead"),
+        ([Identifier "GetConVarString"], "Use ConVar objects instead"),
+        ([Identifier "IncludeCS"], "Use AddCSLuaFile in the file itself instead"),
+        ([Identifier "SScale"], "Use ScreenScale instead"),
+        ([Identifier "UTIL_IsUselessModel"], "Use IsUselessModel instead"),
+        ([Identifier "ValidPanel"], "Use IsValid instead")
     ]
 
 progress :: [([Token], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
