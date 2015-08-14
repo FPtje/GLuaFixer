@@ -34,14 +34,15 @@ mTokenWarning (MToken pos _) str = "[Warning] " ++ renderPos pos ++ ": " ++ str
 ----------------------------------------
 --  Deprecated stuff
 ----------------------------------------
-deprecatedThings :: [[Token]]
+deprecatedThings :: [([Token], String)]
 deprecatedThings = [
-        [Identifier "ai", Dot, Identifier "GetScheduleID"]
+        ([Identifier "ai", Dot, Identifier "GetScheduleID"], "The function is broken"),
+        ([Identifier "ai", Dot, Identifier "GetTaskID"], "The function is broken")
     ]
 
-progress :: [[Token]] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
+progress :: [([Token], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
 progress [] _ scan _ = ([], scan)
-progress (x : xs) i scan tok = (newWarnings, scanned)
+progress ((x, reason) : xs) i scan tok = (newWarnings, scanned)
     where
         (warnings, scanned) = progress xs (succ i) nextScan tok
 
@@ -61,7 +62,7 @@ progress (x : xs) i scan tok = (newWarnings, scanned)
         -- Adds the warning to the warnings list
         newWarnings :: [String]
         newWarnings = if not isDeprecated then warnings else
-                        ("Deprecated: " ++ concatMap show x) : warnings
+                        ("Deprecated: " ++ concatMap show x ++ " (" ++ reason ++ ")") : warnings
 
 
 }
