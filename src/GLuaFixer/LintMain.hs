@@ -3,6 +3,7 @@ module Main where
 import System.Environment
 import System.IO
 import GLua.Lexer
+import GLuaFixer.AG.LexLint
 
 -- | Read file in utf8_bom because that seems to work better
 doReadFile :: FilePath -> IO String
@@ -19,9 +20,8 @@ lint [] = return ()
 lint (f : fs) = do
     contents <- doReadFile f
     let lexed = execParseTokens contents
-
-    -- TODO: lint lexed
-    let warnings = const [] lexed
+    let lexicon = fst lexed
+    let warnings = lintWarnings lexicon
 
     -- Print all warnings
     mapM_ putStrLn warnings

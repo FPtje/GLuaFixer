@@ -1,0 +1,16 @@
+module {GLuaFixer.AG.LexLint}{}{}
+
+imports
+{
+import GLua.TokenTypes
+import GLua.AG.Token
+}
+include "../../GLua/AG/Token.ag"
+
+attr MTokenList
+	syn warnings use {++} {[]} :: {[String]}
+
+{
+lintWarnings        :: [MToken] -> [String]
+lintWarnings p      = warnings_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) Inh_MTokenList)
+}
