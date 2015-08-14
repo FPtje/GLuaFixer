@@ -2,6 +2,8 @@ module {GLuaFixer.AG.LexLint}{}{}
 
 imports
 {
+import Data.Array.Unboxed
+
 import GLua.TokenTypes
 import GLua.AG.Token
 import GLua.AG.PrettyPrint
@@ -10,6 +12,10 @@ include "../../GLua/AG/Token.ag"
 
 
 {
+
+----------------------------------------
+--  C-style / Lua-style syntax inconsistencies
+----------------------------------------
 -- For detecting the usage of Lua/C syntax inconsistently
 data SyntaxUsed = SyntaxUsed { luaUsed :: Bool, cUsed :: Bool }
 
@@ -24,6 +30,40 @@ syntaxInconsistency l c = "Inconsistent use of '" ++ l ++ "' and '" ++ c ++ "'"
 
 mTokenWarning :: MToken -> String -> String
 mTokenWarning (MToken pos _) str = "[Warning] " ++ renderPos pos ++ ": " ++ str
+
+----------------------------------------
+--  Deprecated stuff
+----------------------------------------
+deprecatedThings :: [[Token]]
+deprecatedThings = [
+        [Identifier "ai", Dot, Identifier "GetScheduleID"]
+    ]
+
+progress :: [[Token]] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
+progress [] _ scan _ = ([], scan)
+progress (x : xs) i scan tok = (newWarnings, scanned)
+    where
+        (warnings, scanned) = progress xs (succ i) nextScan tok
+
+        -- Array that has the index of the scan for this deprecated
+        -- thing updated
+        nextScan :: UArray Int Int
+        nextScan = scan // [(i, if not isDeprecated && matches then succ (scan ! i) else 0)]
+
+        -- True when this single token of the sequence matches
+        matches :: Bool
+        matches = x !! (scan ! i) == tok
+
+        -- True when the sequence of tokens matches
+        isDeprecated :: Bool
+        isDeprecated = scan ! i >= length x
+
+        -- Adds the warning to the warnings list
+        newWarnings :: [String]
+        newWarnings = if not isDeprecated then warnings else
+                        ("Deprecated: " ++ concatMap show x) : warnings
+
+
 }
 ----------------------------------------
 --  Attributes
@@ -39,6 +79,12 @@ attr MTokenList MToken Token TokenList
     chn orSyntax  :: SyntaxUsed
     chn neqSyntax :: SyntaxUsed
 
+attr MTokenList MToken
+    -- How far each deprecation scan is going
+    -- The index of the array is the nth element in the deprecatedThings array
+    -- The value is the progress
+    chn deprScan :: {UArray Int Int}
+
 ---------------------------------------
 --  Semantics
 ---------------------------------------
@@ -50,7 +96,11 @@ sem MTokenList
 
 sem MToken
     | MToken
-        lhs.warnings = map (mTokenWarning @loc.copy) @mtok.warnings
+        loc.deprecation = progress deprecatedThings 0 @lhs.deprScan @mtok.copy
+        lhs.deprScan = snd @loc.deprecation
+
+        -- Warnings from tokens
+        lhs.warnings = map (mTokenWarning @loc.copy) (fst @loc.deprecation ++ @mtok.warnings)
 
 sem Token
     | DashComment
@@ -119,6 +169,7 @@ sem Token
 inh_MTokenList :: Inh_MTokenList
 inh_MTokenList = Inh_MTokenList
                     mempty
+                    (array (0, length deprecatedThings - 1) (zip [0..] (replicate (length deprecatedThings - 1) 0))) -- deprScan
                     mempty
                     mempty
                     mempty
