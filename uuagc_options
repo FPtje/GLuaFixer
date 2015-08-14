@@ -9,3 +9,6 @@ options : catas, haskellsyntax, semfuns, wrappers, signatures
 
 file : "src/GLuaFixer/AG/DarkRPRewrite.ag"
 options : catas, haskellsyntax, semfuns, wrappers, signatures
+
+file : "src/GLuaFixer/AG/LexLint.ag"
+options : catas, haskellsyntax, semfuns, wrappers, signatures
