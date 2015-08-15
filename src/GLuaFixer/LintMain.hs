@@ -2,6 +2,7 @@ module Main where
 
 import System.Environment
 import System.IO
+import Control.Monad
 import GLua.Lexer
 import GLuaFixer.AG.LexLint
 
@@ -24,7 +25,9 @@ lint (f : fs) = do
     let warnings = lintWarnings lexicon
 
     -- Print all warnings
-    mapM_ putStrLn warnings
+    when (null . snd $ lexed) $ do
+        mapM_ putStrLn warnings
+
 
     -- Lint the other files
     lint fs
