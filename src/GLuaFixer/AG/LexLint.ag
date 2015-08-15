@@ -76,6 +76,7 @@ deprecatedThings = [
         ("Deprecated", [Identifier "timer", Dot, Identifier "Destroy"], "Use timer.Remove instead"),
 
         ("Deprecated", [Identifier "umsg", Dot, Identifier "Start"], "Use net messages."),
+        ("Deprecated", [Identifier "SendUserMessage"], "Use net messages."),
 
         ("Deprecated", [Identifier "util", Dot, Identifier "tobool"], "Use tobool, without the util bit"),
         ("Deprecated", [Identifier "util", Dot, Identifier "TraceEntityHull"], "The function is broken"),
