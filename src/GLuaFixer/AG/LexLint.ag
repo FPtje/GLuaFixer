@@ -36,15 +36,97 @@ mTokenWarning (MToken pos _) str = "[Warning] " ++ renderPos pos ++ ": " ++ str
 ----------------------------------------
 deprecatedThings :: [([Token], String)]
 deprecatedThings = [
-        ([Identifier "ai", Dot, Identifier "GetScheduleID"], "The function is broken"),
-        ([Identifier "ai", Dot, Identifier "GetTaskID"], "The function is broken"),
+        -- Global/library functions
         ([Identifier "gcinfo"], "Use collectgarbage(\"count\") instead"),
         ([Identifier "GetConVarNumber"], "Use ConVar objects instead"),
         ([Identifier "GetConVarString"], "Use ConVar objects instead"),
         ([Identifier "IncludeCS"], "Use AddCSLuaFile in the file itself instead"),
         ([Identifier "SScale"], "Use ScreenScale instead"),
         ([Identifier "UTIL_IsUselessModel"], "Use IsUselessModel instead"),
-        ([Identifier "ValidPanel"], "Use IsValid instead")
+        ([Identifier "ValidPanel"], "Use IsValid instead"),
+
+        ([Identifier "ai", Dot, Identifier "GetScheduleID"], "The function is broken"),
+        ([Identifier "ai", Dot, Identifier "GetTaskID"], "The function is broken"),
+
+        ([Identifier "math", Dot, Identifier "Dist"], "Use math.Distance instead"),
+        ([Identifier "math", Dot, Identifier "mod"], "Use math.fmod instead"),
+
+        ([Identifier "spawnmenu", Dot, Identifier "DoSaveToTextFiles"], "Use spawnmenu.SaveToTextFiles instead"),
+        ([Identifier "spawnmenu", Dot, Identifier "PopulateFromEngineTextFiles"], "Use spawnmenu.PopulateFromTextFiles instead"),
+        ([Identifier "spawnmenu", Dot, Identifier "SwitchToolTab"], "The function is broken"),
+
+        ([Identifier "string", Dot, Identifier "GetChar"], "Use either string.sub(str, index, index) or str[index]"),
+        ([Identifier "string", Dot, Identifier "gfind"], "Use string.gmatch instead"),
+
+        ([Identifier "surface", Dot, Identifier "ScreenHeight"], "Use ScrH instead"),
+        ([Identifier "surface", Dot, Identifier "ScreenWidth"], "Use ScrW instead"),
+
+        ([Identifier "table", Dot, Identifier "FindNext"], "Use ipairs or something instead"),
+        ([Identifier "table", Dot, Identifier "FindPrev"], "Use ipairs or something instead"),
+        ([Identifier "table", Dot, Identifier "foreach"], "Use pairs instead"),
+        ([Identifier "table", Dot, Identifier "ForEach"], "Use pairs instead"),
+        ([Identifier "table", Dot, Identifier "foreachi"], "Use ipairs instead"),
+        ([Identifier "table", Dot, Identifier "GetFirstKey"], "Use next instead"),
+        ([Identifier "table", Dot, Identifier "GetFirstValue"], "Use next instead"),
+        ([Identifier "table", Dot, Identifier "GetLastKey"], "Use #tbl instead"),
+        ([Identifier "table", Dot, Identifier "GetLastValue"], "Use tbl[#tbl] instead"),
+        ([Identifier "table", Dot, Identifier "getn"], "Use #tbl instead"),
+
+        ([Identifier "timer", Dot, Identifier "Check"], "The function is broken"),
+        ([Identifier "timer", Dot, Identifier "Destroy"], "Use timer.Remove instead"),
+
+        ([Identifier "umsg", Dot, Identifier "Start"], "Use net messages."),
+
+        ([Identifier "util", Dot, Identifier "tobool"], "Use tobool, without the util bit"),
+        ([Identifier "util", Dot, Identifier "TraceEntityHull"], "The function is broken"),
+
+        -- CLuaLocomotion functions
+        ([Colon, Identifier "IsAscendingOrDescendingLadder"], "Use :IsUsingLadder instead"),
+
+        -- Panel functions
+        ([Colon, Identifier "GetDrawBackground"], "Use :GetPaintBackground instead"),
+        ([Colon, Identifier "SetDrawBackground"], "Use :SetPaintBackground instead"),
+        ([Colon, Identifier "AddText"], "The function is broken"),
+        ([Colon, Identifier "PostMessage"], "Only used by deprecated Derma controls"),
+        ([Colon, Identifier "Refresh"], "The function is broken"),
+        ([Colon, Identifier "SetActionFunction"], "Only used in deprecated Derma controls"),
+        ([Colon, Identifier "SetKeyBoardInputEnabled"], "Use :SetKeyboardInputEnabled instead"),
+        ([Colon, Identifier "SetPaintFunction"], "The function is broken"),
+        ([Colon, Identifier "SetToolTip"], "Use :SetTooltip instead, notice the lowercase fucking t"),
+        ([Colon, Identifier "SetToolTipPanel"], "use :SetTooltipPanel instead, notice the lowercase fucking t"),
+        ([Colon, Identifier "Valid"], "Use :IsValid instead"),
+
+        -- Entity functions
+        ([Colon, Identifier "GetHitboxBone"], "Use :GetHitBoxBone instead, note the capital fucking B"),
+        ([Colon, Identifier "GetNetworkedAngle"], "Use :GetNWAngle instead"),
+        ([Colon, Identifier "GetNetworkedBool"], "Use :GetNWBool instead"),
+        ([Colon, Identifier "GetNetworkedEntity"], "Use :GetNWEntity instead"),
+        ([Colon, Identifier "GetNetworkedFloat"], "Use :GetNWFloat instead"),
+        ([Colon, Identifier "GetNetworkedInt"], "Use :GetNWInt instead"),
+        ([Colon, Identifier "GetNetworkedString"], "Use :GetNWString instead"),
+        ([Colon, Identifier "GetNetworkedVarProxy"], "Use :GetNWVarProxy instead"),
+        ([Colon, Identifier "GetNetworkedVarTable"], "Use :GetNWVarTable instead"),
+        ([Colon, Identifier "GetNetworkedVector"], "Use :GetNWVector instead"),
+        ([Colon, Identifier "GetWorkshopID"], "The function is broken"),
+        ([Colon, Identifier "SetAttachment"], "Use :SetParent instead"),
+        ([Colon, Identifier "SetNetworkedAngle"], "Use :SetNWAngle instead"),
+        ([Colon, Identifier "SetNetworkedBool"], "Use :SetNWBool instead"),
+        ([Colon, Identifier "SetNetworkedEntity"], "Use :SetNWEntity instead"),
+        ([Colon, Identifier "SetNetworkedFloat"], "Use :SetNWFloat instead"),
+        ([Colon, Identifier "SetNetworkedInt"], "Use :SetNWInt instead"),
+        ([Colon, Identifier "SetNetworkedString"], "Use :SetNWString instead"),
+        ([Colon, Identifier "SetNetworkedVarProxy"], "Use :SetNWVarProxy instead"),
+        ([Colon, Identifier "SetNetworkedVector"], "Use :SetNWVector instead"),
+
+        -- Player functions
+        ([Colon, Identifier "GetPunchAngle"], "Use :GetViewPunchAngles instead"),
+
+        -- Material functions
+        ([Colon, Identifier "SetShader"], "The function is broken"),
+
+        -- Vector functions
+        ([Colon, Identifier "DotProduct"], "Use :Dot instead")
+
     ]
 
 progress :: [([Token], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
