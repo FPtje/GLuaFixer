@@ -3,24 +3,103 @@ module {GLuaFixer.AG.ASTLint}{}{}
 imports
 {
 import GLua.AG.AST
+import Text.ParserCombinators.UU.BasicInstances
+import GLua.AG.Token
 }
 include "../../GLua/AG/AST.ag"
+include "../../GLua/AG/Token.ag"
 
 ----------------------------------------
 --  Attributes
 ----------------------------------------
 
 attr AllStuff
-	syn warnings use {++} {[]} :: {[String]}
+    syn warnings use {++} {[]} :: {[String]}
+
+    inh scopeLevel :: Int
+
+attr AllStuff MToken MTokenList
+    chn mtokenPos :: {LineColPos} -- The location of the warning
 
 ---------------------------------------
 --  Semantics
 ---------------------------------------
+sem MToken
+    | MToken
+        lhs.mtokenPos           = @mpos
+
+sem MTokenList MStatList MExprList FieldList VarsList
+    | Cons
+        lhs.mtokenPos           = @hd.mtokenPos
+    | Nil
+
+sem Declaration
+    | Tuple
+        lhs.mtokenPos           = @x1.mtokenPos
+
+sem Block
+    | Block
+        stats.scopeLevel        = @lhs.scopeLevel + 1
+
+sem MStat
+    | MStat
+        lhs.mtokenPos           = @pos
+
+sem Stat
+    | Def
+    | LocDef
+    | AFuncCall
+    | ALabel
+    | ABreak
+    | AContinue
+    | AGoto
+    | ADo
+    | AWhile
+    | ARepeat
+    | AIf
+    | ANFor
+    | AGFor
+    | AFunc
+    | ALocFunc
+
+sem AReturn
+    | AReturn
+        lhs.mtokenPos           = @pos
+    | NoReturn
+
+
+sem FuncName
+    | FuncName
+        lhs.mtokenPos           = mpos (head @names)
+
+sem PrefixExp
+    | PFVar
+        lhs.mtokenPos           = @name.mtokenPos
+    | ExprVar
+        lhs.mtokenPos           = @expr.mtokenPos
+
+sem MExpr
+    | MExpr
+        lhs.mtokenPos           = @pos
+
+sem Field
+    | ExprField
+        lhs.mtokenPos           = @key.mtokenPos
+    | NamedField
+        lhs.mtokenPos           = @key.mtokenPos
+    | UnnamedField
 
 ---------------------------------------
 --  Individual functions
 ---------------------------------------
 {
+mpos :: MToken -> LineColPos
+mpos (MToken p _) = p
+
+inh_AST = Inh_AST
+            (LineColPos 0 0 0)
+            0
+
 astWarnings :: AST -> [String]
-astWarnings p = warnings_Syn_AST (wrap_AST (sem_AST p) Inh_AST)
+astWarnings p = warnings_Syn_AST (wrap_AST (sem_AST p) inh_AST)
 }
