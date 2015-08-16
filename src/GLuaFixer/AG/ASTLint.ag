@@ -6,7 +6,7 @@ import GLua.AG.AST
 import Text.ParserCombinators.UU.BasicInstances
 import GLua.AG.Token
 import qualified GLua.AG.PrettyPrint as PP
-import qualified Data.Map as M
+import qualified Data.Set as S
 }
 include "../../GLua/AG/AST.ag"
 include "../../GLua/AG/Token.ag"
@@ -32,8 +32,14 @@ attr AllStuff
 attr AllStuff MToken MTokenList
     chn mtokenPos :: {LineColPos} -- The location of the warning
 
-attr Field FieldList
+attr AllStuff MToken MTokenList Token TokenList
+    syn copy :: self
 
+attr MToken
+    syn mtok :: Token
+
+attr Field FieldList
+    chn fieldNames :: {S.Set Token}
 
 ---------------------------------------
 --  Semantics
@@ -41,6 +47,7 @@ attr Field FieldList
 sem MToken
     | MToken
         lhs.mtokenPos           = @mpos
+        lhs.mtok                = @mtok.copy
 
 sem MTokenList MStatList MExprList FieldList VarsList
     | Cons
@@ -103,11 +110,34 @@ sem MExpr
     | MExpr
         lhs.mtokenPos           = @pos
 
+sem Expr
+    | ANil
+    | AFalse
+    | ATrue
+    | ANumber
+    | AString
+    | AVarArg
+    | AnonymousFunc
+    | APrefixExpr
+    | ATableConstructor
+        fields.fieldNames        = S.empty
+    | BinOpExpr
+    | UnOpExpr
+
+sem Args
+    | ListArgs
+    | TableArg
+        arg.fieldNames          = S.empty
+    | StringArg
+
 sem Field
     | ExprField
         lhs.mtokenPos           = @key.mtokenPos
     | NamedField
-        lhs.mtokenPos           = @key.mtokenPos
+        loc.mtokenPos           = @key.mtokenPos
+        lhs.fieldNames          = S.insert @key.mtok @lhs.fieldNames
+        +warnings               = if not $ S.member @key.mtok @lhs.fieldNames then id else
+                                    (:) $ warn @key.mtokenPos "Duplicate key in table: '" ++ show @key.mtok ++ "'."
     | UnnamedField
 
 ---------------------------------------
