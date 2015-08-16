@@ -7,6 +7,7 @@ import Text.ParserCombinators.UU.BasicInstances
 import GLua.AG.Token
 import qualified GLua.AG.PrettyPrint as PP
 import qualified Data.Set as S
+import qualified Data.Map.Strict as M
 import Data.Maybe
 
 import Debug.Trace

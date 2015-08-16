@@ -133,7 +133,8 @@ deprecatedThings = [
         ("Stupid", [Comma, Comma], "Two commas in a row"),
 
         ("Stupid", [Identifier "net", Dot, Identifier "WriteEntity", LRound, Identifier "LocalPlayer", LRound, RRound], "The server already knows who sent the net message, use the first parameter of net.Receive"),
-        ("Stupid", [Identifier "self", Dot, Identifier "Weapon"], "That's the same as just 'self' in SWEPs")
+        ("Stupid", [Identifier "self", Dot, Identifier "Weapon"], "That's the same as just 'self' in SWEPs"),
+        ("Stupid", [Identifier "self", Dot, Identifier "Entity"], "That's the same as just 'self' in SENTs")
     ]
 
 progress :: [(String, [Token], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
