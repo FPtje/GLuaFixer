@@ -176,6 +176,7 @@ attr MTokenList MToken Token TokenList
     chn andSyntax :: SyntaxUsed
     chn orSyntax  :: SyntaxUsed
     chn neqSyntax :: SyntaxUsed
+    chn strSyntax :: SyntaxUsed
 
 attr MTokenList MToken
     -- How far each deprecation scan is going
@@ -225,6 +226,18 @@ sem Token
         loc.multilineCommentSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "/* */" "--[[ ]]"
+
+    | DQString
+        loc.consistent = not . cUsed $ @lhs.strSyntax
+        loc.strSyntax = SyntaxUsed @loc.consistent False
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "double quoted strings" "single quoted strings"
+
+    | SQString
+        loc.consistent = not . luaUsed $ @lhs.strSyntax
+        loc.strSyntax = SyntaxUsed False @loc.consistent
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "single quoted strings" "double quoted strings"
 
     | Not
         loc.consistent = not . cUsed $ @lhs.notSyntax
@@ -281,6 +294,7 @@ inh_MTokenList :: Inh_MTokenList
 inh_MTokenList = Inh_MTokenList
                     mempty
                     (array (0, length deprecatedThings - 1) (zip [0..] (replicate (length deprecatedThings - 1) 0))) -- deprScan
+                    mempty
                     mempty
                     mempty
                     mempty
