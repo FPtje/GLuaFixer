@@ -171,6 +171,7 @@ attr MTokenList MToken Token TokenList
     syn warnings use {++} {[]} :: {[String]}
 
     chn lineCommentSyntax :: SyntaxUsed
+    chn multilineCommentSyntax :: SyntaxUsed
     chn notSyntax :: SyntaxUsed
     chn andSyntax :: SyntaxUsed
     chn orSyntax  :: SyntaxUsed
@@ -211,6 +212,19 @@ sem Token
         loc.lineCommentSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "//" "--"
+
+
+    | DashBlockComment
+        loc.consistent = not . cUsed $ @lhs.multilineCommentSyntax
+        loc.multilineCommentSyntax = SyntaxUsed @loc.consistent False
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "--[[ ]]" "/* */"
+
+    | SlashBlockComment
+        loc.consistent = not . luaUsed $ @lhs.multilineCommentSyntax
+        loc.multilineCommentSyntax = SyntaxUsed False @loc.consistent
+        +warnings = if @loc.consistent then id else
+                        (:) $ syntaxInconsistency "/* */" "--[[ ]]"
 
     | Not
         loc.consistent = not . cUsed $ @lhs.notSyntax
@@ -267,6 +281,7 @@ inh_MTokenList :: Inh_MTokenList
 inh_MTokenList = Inh_MTokenList
                     mempty
                     (array (0, length deprecatedThings - 1) (zip [0..] (replicate (length deprecatedThings - 1) 0))) -- deprScan
+                    mempty
                     mempty
                     mempty
                     mempty
