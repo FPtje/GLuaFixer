@@ -132,7 +132,8 @@ deprecatedThings = [
         ("Stupid", [Semicolon, Semicolon], "There's little fucking reason to use ';' in the first place, don't use it twice in a row"),
         ("Stupid", [Comma, Comma], "Two commas in a row"),
 
-        ("Stupid", [Identifier "net", Dot, Identifier "WriteEntity", LRound, Identifier "LocalPlayer", LRound, RRound], "The server already knows who sent the net message. Don't be an idiot.")
+        ("Stupid", [Identifier "net", Dot, Identifier "WriteEntity", LRound, Identifier "LocalPlayer", LRound, RRound], "The server already knows who sent the net message."),
+        ("Stupid", [Identifier "self", Dot, Identifier "Weapon"], "That's the same as just 'self' in SWEPs")
     ]
 
 progress :: [(String, [Token], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
