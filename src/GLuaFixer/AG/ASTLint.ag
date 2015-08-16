@@ -1,1 +1,26 @@
 module {GLuaFixer.AG.ASTLint}{}{}
+
+imports
+{
+import GLua.AG.AST
+}
+include "../../GLua/AG/AST.ag"
+
+----------------------------------------
+--  Attributes
+----------------------------------------
+
+attr AllStuff
+	syn warnings use {++} {[]} :: {[String]}
+
+---------------------------------------
+--  Semantics
+---------------------------------------
+
+---------------------------------------
+--  Individual functions
+---------------------------------------
+{
+astWarnings :: AST -> [String]
+astWarnings p = warnings_Syn_AST (wrap_AST (sem_AST p) Inh_AST)
+}

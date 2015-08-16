@@ -27,13 +27,14 @@ lint (f : fs) = do
     let warnings = lintWarnings tokens
     let parsed = parseGLua tokens
     let ast = fst parsed
+    let parserWarnings = astWarnings ast
 
     -- Print all warnings
     when (null . snd $ lexed) $ do
         mapM_ putStrLn warnings
 
         when (null . snd $ parsed) $ do
-            putStrLn "yis"
+            mapM_ putStrLn parserWarnings
 
     -- Lint the other files
     lint fs
