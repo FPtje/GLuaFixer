@@ -6,6 +6,7 @@ import GLua.AG.AST
 import Text.ParserCombinators.UU.BasicInstances
 import GLua.AG.Token
 import qualified GLua.AG.PrettyPrint as PP
+import qualified Data.Map as M
 }
 include "../../GLua/AG/AST.ag"
 include "../../GLua/AG/Token.ag"
@@ -30,6 +31,9 @@ attr AllStuff
 
 attr AllStuff MToken MTokenList
     chn mtokenPos :: {LineColPos} -- The location of the warning
+
+attr Field FieldList
+
 
 ---------------------------------------
 --  Semantics
