@@ -5,6 +5,7 @@ import System.IO
 import Control.Monad
 import GLua.Lexer
 import GLuaFixer.AG.LexLint
+import GLua.Parser
 
 -- | Read file in utf8_bom because that seems to work better
 doReadFile :: FilePath -> IO String
@@ -21,13 +22,17 @@ lint [] = return ()
 lint (f : fs) = do
     contents <- doReadFile f
     let lexed = execParseTokens contents
-    let lexicon = fst lexed
-    let warnings = lintWarnings lexicon
+    let tokens = fst lexed
+    let warnings = lintWarnings tokens
+    let parsed = parseGLua tokens
+    let ast = fst parsed
 
     -- Print all warnings
     when (null . snd $ lexed) $ do
         mapM_ putStrLn warnings
 
+        when (null . snd $ parsed) $ do
+            putStrLn "yis"
 
     -- Lint the other files
     lint fs
