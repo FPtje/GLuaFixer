@@ -7,15 +7,11 @@
 -- | Lex GLua into MTokens
 module GLua.Lexer where
 
-import GLua.TokenTypes
 import GLua.AG.Token
-
-import Data.List
 
 import Text.ParserCombinators.UU
 import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.BasicInstances
-import Text.ParserCombinators.UU.Derived
 
 -- | String parser that maintains positions.
 type LParser a = P (Str Char String LineColPos) a
@@ -96,7 +92,7 @@ parseLineString c = pSym c *> innerString
     where
         innerString :: LParser String
         innerString = pSym '\\' <**> -- Escaped character in string always starts with backslash
-                         ((\c str esc -> esc : c : str) <$> parseAnyChar <*> innerString) <<|>
+                         ((\c' str esc -> esc : c' : str) <$> parseAnyChar <*> innerString) <<|>
                       const "" <$> pSym c <<|> -- the end of the string
                       (:) <$> pNoNewline <*> innerString -- the next character in the string
 
