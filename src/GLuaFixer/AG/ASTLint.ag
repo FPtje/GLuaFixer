@@ -5,9 +5,18 @@ imports
 import GLua.AG.AST
 import Text.ParserCombinators.UU.BasicInstances
 import GLua.AG.Token
+import qualified GLua.AG.PrettyPrint as PP
 }
 include "../../GLua/AG/AST.ag"
 include "../../GLua/AG/Token.ag"
+
+----------------------------------------
+--  Helper functions
+----------------------------------------
+{
+warn :: LineColPos -> String -> String
+warn pos str = "[Warning] " ++ PP.renderPos pos ++ ": " ++ str
+}
 
 ----------------------------------------
 --  Attributes
@@ -40,6 +49,8 @@ sem Declaration
 sem Block
     | Block
         stats.scopeLevel        = @lhs.scopeLevel + 1
+        +warnings               = if @lhs.scopeLevel /= 5 then id else
+                                    (:) $ warn @stats.mtokenPos "Are you Egyptian? What's with these fucking scope pyramids!?"
 
 sem MStat
     | MStat
