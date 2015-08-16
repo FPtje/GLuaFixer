@@ -20,6 +20,12 @@ instance Ord MToken where
 -- | Metatoken algebra
 type MTokenAlgebra mtok = LineColPos -> Token -> mtok
 
+mpos :: MToken -> LineColPos
+mpos (MToken p _) = p
+
+mtok :: MToken -> Token
+mtok (MToken _ t) = t
+
 -- | Fold over metatoken
 foldMToken :: MTokenAlgebra t -> MToken -> t
 foldMToken alg (MToken pos t) = alg pos t

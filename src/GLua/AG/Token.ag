@@ -87,11 +87,3 @@ data MToken
 	| MToken mpos :: LineColPos mtok :: Token
 
 deriving Token : Eq, Ord
-
-{
-mpos :: MToken -> LineColPos
-mpos (MToken p _) = p
-
-mtok :: MToken -> Token
-mtok (MToken _ t) = t
-}
