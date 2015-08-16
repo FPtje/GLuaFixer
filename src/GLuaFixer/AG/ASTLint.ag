@@ -7,6 +7,9 @@ import Text.ParserCombinators.UU.BasicInstances
 import GLua.AG.Token
 import qualified GLua.AG.PrettyPrint as PP
 import qualified Data.Set as S
+import Data.Maybe
+
+import Debug.Trace
 }
 include "../../GLua/AG/AST.ag"
 include "../../GLua/AG/Token.ag"
@@ -17,6 +20,16 @@ include "../../GLua/AG/Token.ag"
 {
 warn :: LineColPos -> String -> String
 warn pos str = "[Warning] " ++ PP.renderPos pos ++ ": " ++ str
+
+-- Used in detecting "not (a == b)" kind of things
+oppositeBinOp :: BinOp -> Maybe String
+oppositeBinOp ALT = Just ">="
+oppositeBinOp AGT = Just "<="
+oppositeBinOp ALEQ = Just ">"
+oppositeBinOp AGEQ = Just "<"
+oppositeBinOp ANEq = Just "=="
+oppositeBinOp AEq = Just "~="
+oppositeBinOp _ = Nothing
 }
 
 ----------------------------------------
@@ -36,10 +49,16 @@ attr AllStuff MToken MTokenList Token TokenList
     syn copy :: self
 
 attr MToken
-    syn mtok :: Token
+    syn mtok :: Token -- The token held by an MToken
 
 attr Field FieldList
-    chn fieldNames :: {S.Set Token}
+    chn fieldNames :: {S.Set Token} -- The field names of a table
+
+attr UnOp
+    syn isNegation :: Bool -- Whether this unop is a negation. Used in "not (a == b)" check
+
+attr MExpr Expr PrefixExp
+    inh isNegation :: Bool
 
 ---------------------------------------
 --  Semantics
@@ -54,9 +73,16 @@ sem MTokenList MStatList MExprList FieldList VarsList
         lhs.mtokenPos           = @hd.mtokenPos
     | Nil
 
+sem MExprList
+    | Cons
+        hd.isNegation           = False
+    | Nil
+
 sem Declaration
     | Tuple
         lhs.mtokenPos           = @x1.mtokenPos
+        x1.isNegation           = False
+        x2.isNegation           = False
 
 sem Block
     | Block
@@ -72,6 +98,7 @@ sem Stat
     | Def
     | LocDef
     | AFuncCall
+        fn.isNegation           = False
     | ALabel
     | ABreak
     | AContinue
@@ -81,10 +108,16 @@ sem Stat
     | ADo
     | AWhile
         body.loopLevel          = @lhs.loopLevel + 1
+        cond.isNegation         = False
     | ARepeat
+        cond.isNegation         = False
     | AIf
+        cond.isNegation         = False
     | ANFor
         body.loopLevel          = @lhs.loopLevel + 1
+        val.isNegation          = False
+        to.isNegation           = False
+        step.isNegation         = False
     | AGFor
         body.loopLevel          = @lhs.loopLevel + 1
     | AFunc
@@ -106,9 +139,21 @@ sem PrefixExp
     | ExprVar
         lhs.mtokenPos           = @expr.mtokenPos
 
+sem PFExprSuffix
+    | Call
+    | MetaCall
+    | ExprIndex
+        index.isNegation        = False
+    | DotIndex
+
+sem ElseIf
+    | Tuple
+        x1.isNegation           = False
+
 sem MExpr
     | MExpr
         lhs.mtokenPos           = @pos
+        expr.mtokenPos          = @pos
 
 sem Expr
     | ANil
@@ -120,9 +165,17 @@ sem Expr
     | AnonymousFunc
     | APrefixExpr
     | ATableConstructor
-        fields.fieldNames        = S.empty
+        fields.fieldNames       = S.empty
     | BinOpExpr
+        left.isNegation         = False
+        right.isNegation        = False
+
+        -- Wheter someone is doing "not (a == b)" or "not (a ~= b)"
+        loc.stupidNegation      = oppositeBinOp @op.copy
+        +warnings               = if not @lhs.isNegation || isNothing @loc.stupidNegation then id else
+                                    (:) $ warn @lhs.mtokenPos "Silly negation. Use '" ++ fromJust @loc.stupidNegation ++ "'"
     | UnOpExpr
+        right.isNegation        = @op.isNegation
 
 sem Args
     | ListArgs
@@ -133,13 +186,24 @@ sem Args
 sem Field
     | ExprField
         lhs.mtokenPos           = @key.mtokenPos
+        key.isNegation          = False
+        value.isNegation        = False
     | NamedField
         loc.mtokenPos           = @key.mtokenPos
         lhs.fieldNames          = S.insert @key.mtok @lhs.fieldNames
+        value.isNegation        = False
         +warnings               = if not $ S.member @key.mtok @lhs.fieldNames then id else
                                     (:) $ warn @key.mtokenPos "Duplicate key in table: '" ++ show @key.mtok ++ "'."
     | UnnamedField
+        value.isNegation        = False
 
+sem UnOp
+    | UnMinus
+        lhs.isNegation          = False
+    | ANot
+        lhs.isNegation          = True
+    | AHash
+        lhs.isNegation          = False
 ---------------------------------------
 --  Individual functions
 ---------------------------------------
