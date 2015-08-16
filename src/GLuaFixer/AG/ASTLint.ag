@@ -104,9 +104,6 @@ sem Field
 --  Individual functions
 ---------------------------------------
 {
-mpos :: MToken -> LineColPos
-mpos (MToken p _) = p
-
 inh_AST = Inh_AST
             (LineColPos 0 0 0)
             0

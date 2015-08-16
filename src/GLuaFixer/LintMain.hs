@@ -7,6 +7,7 @@ import GLua.Lexer
 import GLuaFixer.AG.LexLint
 import GLua.Parser
 import GLuaFixer.AG.ASTLint
+import Data.String.Utils
 
 -- | Read file in utf8_bom because that seems to work better
 doReadFile :: FilePath -> IO String
@@ -22,7 +23,10 @@ lint :: [FilePath] -> IO ()
 lint [] = return ()
 lint (f : fs) = do
     contents <- doReadFile f
-    let lexed = execParseTokens contents
+
+    let tabsToSpaces = replace "\t" "    " contents
+
+    let lexed = execParseTokens tabsToSpaces
     let tokens = fst lexed
     let warnings = lintWarnings tokens
     let parsed = parseGLua tokens
