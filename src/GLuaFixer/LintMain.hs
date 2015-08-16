@@ -6,6 +6,7 @@ import Control.Monad
 import GLua.Lexer
 import GLuaFixer.AG.LexLint
 import GLua.Parser
+import GLuaFixer.AG.ASTLint
 
 -- | Read file in utf8_bom because that seems to work better
 doReadFile :: FilePath -> IO String
