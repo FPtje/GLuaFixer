@@ -146,10 +146,11 @@ sem Stat
         loc.introduces          = S.fromList $ map tokenLabel @vars
         body.scopes             = @loc.introduces : @lhs.scopes
     | AFunc
-        loc.introduces          = S.fromList $ map tokenLabel @args
+        loc.introduces          = S.fromList . map tokenLabel . filter (/= MToken undefined VarArg) $ @args
         body.scopes             = @loc.introduces : @lhs.scopes
+        +warnings               = (:) $ show (@loc.introduces : @lhs.scopes)
     | ALocFunc
-        loc.introduces          = S.fromList $ map tokenLabel @args
+        loc.introduces          = S.fromList . map tokenLabel . filter (/= MToken undefined VarArg) $ @args
         body.scopes             = @loc.introduces : @lhs.scopes
 
 sem AReturn
