@@ -7,7 +7,6 @@ import Text.ParserCombinators.UU.BasicInstances
 import GLua.AG.Token
 import qualified GLua.AG.PrettyPrint as PP
 import qualified Data.Set as S
-import qualified Data.Map.Strict as M
 import Data.Maybe
 
 import Debug.Trace
@@ -31,6 +30,8 @@ oppositeBinOp AGEQ = Just "<"
 oppositeBinOp ANEq = Just "=="
 oppositeBinOp AEq = Just "~="
 oppositeBinOp _ = Nothing
+
+-- Variables in scopes
 }
 
 ----------------------------------------
@@ -46,8 +47,11 @@ attr AllStuff
 attr AllStuff MToken MTokenList
     chn mtokenPos :: {LineColPos} -- The location of the warning
 
+    chn scopes :: {[S.Set String]} -- Scopes of variables and parameters
+
 attr AllStuff MToken MTokenList Token TokenList
     syn copy :: self
+    syn identifier use {const} {"Unknown identifier"} :: String -- identifier of the first token
 
 attr MToken
     syn mtok :: Token -- The token held by an MToken
@@ -64,6 +68,12 @@ attr MExpr Expr PrefixExp
 ---------------------------------------
 --  Semantics
 ---------------------------------------
+sem Token
+    | Label
+        lhs.identifier          = @lbl
+    | Identifier
+        lhs.identifier          = @ident
+
 sem MToken
     | MToken
         lhs.mtokenPos           = @mpos
@@ -85,11 +95,16 @@ sem Declaration
         x1.isNegation           = False
         x2.isNegation           = False
 
+sem AST
+    | AST
+        chunk.scopes            = S.empty : @lhs.scopes
+
 sem Block
     | Block
         stats.scopeLevel        = @lhs.scopeLevel + 1
         +warnings               = if @lhs.scopeLevel /= 5 then id else
                                     (:) $ warn @stats.mtokenPos "Are you Egyptian? What's with these fucking scope pyramids!?"
+        lhs.scopes              = tail @stats.scopes
 
 sem MStat
     | MStat
@@ -107,22 +122,35 @@ sem Stat
         +warnings               = if @lhs.loopLevel >= 2 then id else
                                     (:) $ warn @lbl.mtokenPos "Don't use labels and gotos unless you're jumping out of multiple loops."
     | ADo
+        body.scopes             = S.empty : @lhs.scopes
     | AWhile
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
+        body.scopes             = S.empty : @lhs.scopes
     | ARepeat
+        body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
+        body.scopes             = S.empty : @lhs.scopes
     | AIf
         cond.isNegation         = False
+        body.scopes             = S.empty : @lhs.scopes
     | ANFor
         body.loopLevel          = @lhs.loopLevel + 1
         val.isNegation          = False
         to.isNegation           = False
         step.isNegation         = False
+        body.scopes             = S.singleton @var.identifier : @lhs.scopes
     | AGFor
         body.loopLevel          = @lhs.loopLevel + 1
+        -- The variables the for loop introduces
+        loc.introduces          = S.fromList $ map tokenLabel @vars
+        body.scopes             = @loc.introduces : @lhs.scopes
     | AFunc
+        loc.introduces          = S.fromList $ map tokenLabel @args
+        body.scopes             = @loc.introduces : @lhs.scopes
     | ALocFunc
+        loc.introduces          = S.fromList $ map tokenLabel @args
+        body.scopes             = @loc.introduces : @lhs.scopes
 
 sem AReturn
     | AReturn
@@ -164,6 +192,8 @@ sem Expr
     | AString
     | AVarArg
     | AnonymousFunc
+        loc.introduces          = S.fromList $ map tokenLabel @pars
+        body.scopes             = @loc.introduces : @lhs.scopes
     | APrefixExpr
     | ATableConstructor
         fields.fieldNames       = S.empty
@@ -213,6 +243,7 @@ inh_AST = Inh_AST
             0
             (LineColPos 0 0 0)
             0
+            [S.empty]
 
 astWarnings :: AST -> [String]
 astWarnings p = warnings_Syn_AST (wrap_AST (sem_AST p) inh_AST)
