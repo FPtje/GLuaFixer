@@ -9,6 +9,9 @@ import GLua.Parser
 import GLuaFixer.AG.ASTLint
 import Data.String.Utils
 
+version :: String
+version = "1.0.0"
+
 -- | Read file in utf8_bom because that seems to work better
 doReadFile :: FilePath -> IO String
 doReadFile f = do
@@ -46,4 +49,7 @@ lint (f : fs) = do
 main :: IO ()
 main = do
     args <- getArgs
-    lint args
+    if head args == "--version" then
+        putStrLn version
+    else
+        lint args
