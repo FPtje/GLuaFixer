@@ -31,7 +31,22 @@ oppositeBinOp ANEq = Just "=="
 oppositeBinOp AEq = Just "~="
 oppositeBinOp _ = Nothing
 
--- Variables in scopes
+-- Checks whether a variable shadows existing variables
+checkShadows :: [S.Set String] -> MToken -> Maybe String
+checkShadows [] _ = Nothing
+checkShadows (scope : scs) mtok = if S.member lbl scope then
+                                    Just $ warn (mpos mtok) ("Variable shadows existing binding of '" ++ lbl ++ "'")
+                                   else
+                                    checkShadows scs mtok
+    where
+        lbl = tokenLabel mtok
+
+-- Registers a variable as global variable when it hasn't been
+-- introduced in any of the visible scopes
+registerVariable :: [S.Set String] -> String -> [S.Set String]
+registerVariable (scope : []) var = [S.insert var scope] -- global scope
+registerVariable ss@(scope : scs) var = if S.member var scope then ss else
+                                        scope : registerVariable scs var
 }
 
 ----------------------------------------
@@ -65,6 +80,12 @@ attr UnOp
 attr MExpr Expr PrefixExp
     inh isNegation :: Bool
 
+attr VarsList Declaration
+    inh localDefinition :: Bool
+
+attr PrefixExp
+    syn varName :: {Maybe MToken}
+
 ---------------------------------------
 --  Semantics
 ---------------------------------------
@@ -95,6 +116,19 @@ sem Declaration
         x1.isNegation           = False
         x2.isNegation           = False
 
+        loc.var                 = tokenLabel . fromJust $ @x1.varName
+        loc.shadowWarning       = do
+                                    var <- @x1.varName
+                                    checkShadows @lhs.scopes var
+        x1.scopes               = if @lhs.localDefinition then
+                                    S.insert @loc.var (head @lhs.scopes) : tail @lhs.scopes
+                                   else if isJust @x1.varName then
+                                            registerVariable @lhs.scopes @loc.var -- non-local assignments
+                                        else
+                                            @lhs.scopes -- ExprVar assignments don't affect the scope
+        +warnings               = if not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
+                                    (:) . fromJust $ @loc.shadowWarning
+
 sem AST
     | AST
         chunk.scopes            = S.empty : @lhs.scopes
@@ -112,7 +146,11 @@ sem MStat
 
 sem Stat
     | Def
+        -- Global definitions never shadow existing bindings
+        vars.localDefinition    = False
     | LocDef
+        -- Local definitions might shadow existing bindings
+        vars.localDefinition    = True
     | AFuncCall
         fn.isNegation           = False
     | ALabel
@@ -140,18 +178,30 @@ sem Stat
         to.isNegation           = False
         step.isNegation         = False
         body.scopes             = S.singleton @var.identifier : @lhs.scopes
+        loc.shadowWarning       = checkShadows @lhs.scopes @var.copy
+        +warnings               = if isNothing @loc.shadowWarning then id else (:) . fromJust $ @loc.shadowWarning
     | AGFor
         body.loopLevel          = @lhs.loopLevel + 1
         -- The variables the for loop introduces
         loc.introduces          = S.fromList $ map tokenLabel @vars
         body.scopes             = @loc.introduces : @lhs.scopes
+        +warnings               = (++) . catMaybes . map (checkShadows @lhs.scopes) $ @vars
     | AFunc
-        loc.introduces          = S.fromList . map tokenLabel . filter (/= MToken undefined VarArg) $ @args
-        body.scopes             = @loc.introduces : @lhs.scopes
-        +warnings               = (:) $ show (@loc.introduces : @lhs.scopes)
+        loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
+        loc.introduces          = S.fromList . map tokenLabel $ @loc.argIdentifiers
+        body.scopes             = @loc.introduces : (registerVariable @lhs.scopes @name.identifier)
+        -- Parameter shadowing
+        +warnings               = (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
     | ALocFunc
-        loc.introduces          = S.fromList . map tokenLabel . filter (/= MToken undefined VarArg) $ @args
+        loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
+        loc.introduces          = S.fromList . map tokenLabel $ @loc.argIdentifiers
+        loc.funcname            = MToken @name.mtokenPos (Identifier @name.identifier)
         body.scopes             = @loc.introduces : @lhs.scopes
+        -- Parameter shadowing
+        +warnings               = (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
+        -- Function name shadowing
+        loc.funcNameShadows     = checkShadows @lhs.scopes @loc.funcname
+        +warnings               = if isNothing @loc.funcNameShadows then id else (:) . fromJust $ @loc.funcNameShadows
 
 sem AReturn
     | AReturn
@@ -162,12 +212,15 @@ sem AReturn
 sem FuncName
     | FuncName
         lhs.mtokenPos           = mpos (head @names)
+        lhs.identifier          = tokenLabel . head $ @names
 
 sem PrefixExp
     | PFVar
         lhs.mtokenPos           = @name.mtokenPos
+        lhs.varName             = Just @name.copy
     | ExprVar
         lhs.mtokenPos           = @expr.mtokenPos
+        lhs.varName             = Nothing
 
 sem PFExprSuffix
     | Call
