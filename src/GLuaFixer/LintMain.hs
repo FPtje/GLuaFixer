@@ -28,7 +28,7 @@ lint [] = return ()
 lint (f : fs) = do
     contents <- doReadFile f
 
-    let tabsToSpaces = replace "\n\t" "\n " contents
+    let tabsToSpaces = replace "\t" " " contents
 
     let lexed = execParseTokens tabsToSpaces
     let tokens = fst lexed
