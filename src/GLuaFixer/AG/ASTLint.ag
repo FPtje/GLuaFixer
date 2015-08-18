@@ -63,6 +63,7 @@ attr AllStuff MToken MTokenList
     chn mtokenPos :: {LineColPos} -- The location of the warning
 
     chn scopes :: {[S.Set String]} -- Scopes of variables and parameters
+    inh isMeta :: Bool -- whether the current piece of code is within a metafunction definition
 
 attr AllStuff MToken MTokenList Token TokenList
     syn copy :: self
@@ -85,6 +86,9 @@ attr VarsList Declaration
 
 attr PrefixExp
     syn varName :: {Maybe MToken}
+
+attr FuncName
+    syn isMeta :: Bool
 
 ---------------------------------------
 --  Semantics
@@ -192,6 +196,7 @@ sem Stat
         body.scopes             = @loc.introduces : (registerVariable @lhs.scopes @name.identifier)
         -- Parameter shadowing
         +warnings               = (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
+        body.isMeta             = @name.isMeta
     | ALocFunc
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
         loc.introduces          = S.fromList . map tokenLabel $ @loc.argIdentifiers
@@ -213,11 +218,14 @@ sem FuncName
     | FuncName
         lhs.mtokenPos           = mpos (head @names)
         lhs.identifier          = tokenLabel . head $ @names
+        lhs.isMeta              = isJust @meta
 
 sem PrefixExp
     | PFVar
         lhs.mtokenPos           = @name.mtokenPos
         lhs.varName             = Just @name.copy
+        +warnings               = if @lhs.isMeta || tokenLabel @name.copy /= "self" then id else
+                                    (:) $ warn @name.mtokenPos "Don't use self in a non-metafunction"
     | ExprVar
         lhs.mtokenPos           = @expr.mtokenPos
         lhs.varName             = Nothing
@@ -294,6 +302,7 @@ sem UnOp
 ---------------------------------------
 {
 inh_AST = Inh_AST
+            False
             0
             (LineColPos 0 0 0)
             0
