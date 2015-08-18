@@ -8,6 +8,7 @@ import GLuaFixer.AG.LexLint
 import GLua.Parser
 import GLuaFixer.AG.ASTLint
 import Data.String.Utils
+import System.FilePath.Posix
 
 version :: String
 version = "1.0.0"
@@ -31,10 +32,10 @@ lint (f : fs) = do
 
     let lexed = execParseTokens tabsToSpaces
     let tokens = fst lexed
-    let warnings = lintWarnings tokens
+    let warnings = map ((++) (takeFileName f ++ ": ")) $ lintWarnings tokens
     let parsed = parseGLua tokens
     let ast = fst parsed
-    let parserWarnings = astWarnings ast
+    let parserWarnings = map ((++) (takeFileName f ++ ": ")) $ astWarnings ast
 
     -- Print all warnings
     when (null . snd $ lexed) $ do
