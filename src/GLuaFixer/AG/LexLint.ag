@@ -31,6 +31,11 @@ syntaxInconsistency l c = "Inconsistent use of '" ++ l ++ "' and '" ++ c ++ "'"
 mTokenWarning :: MToken -> String -> String
 mTokenWarning (MToken pos _) str = "[Warning] " ++ renderPos pos ++ ": " ++ str
 
+-- Whether a token is whitespace
+whitespace :: Token -> Bool
+whitespace (Whitespace _) = True
+whitespace _ = False
+
 ----------------------------------------
 --  Deprecated stuff
 ----------------------------------------
@@ -134,7 +139,12 @@ deprecatedThings = [
 
         ("Stupid", [(==) $ Identifier "net", (==) Dot, (==) $ Identifier "WriteEntity", (==) LRound, (==) $ Identifier "LocalPlayer", (==) LRound, (==) RRound], "The server already knows who sent the net message, use the first parameter of net.Receive"),
         ("Stupid", [(==) $ Identifier "self", (==) Dot, (==) $ Identifier "Weapon"], "That's the same as just 'self' in SWEPs"),
-        ("Stupid", [(==) $ Identifier "self", (==) Dot,  (==) $ Identifier "Entity"], "That's the same as just 'self' in SENTs")
+        ("Stupid", [(==) $ Identifier "self", (==) Dot,  (==) $ Identifier "Entity"], "That's the same as just 'self' in SENTs"),
+
+        -- Whitespace reasoning
+        ("Style", [not . whitespace, (==) Equals, not . whitespace], "Please put some whitespace around the '='"),
+        ("Style", [      whitespace, (==) Equals, not . whitespace], "Please put some whitespace around the '='"),
+        ("Style", [not . whitespace, (==) Equals,       whitespace], "Please put some whitespace around the '='")
     ]
 
 progress :: [(String, [Token -> Bool], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
