@@ -320,17 +320,20 @@ sem Token
 
 
 {
+
+
 inh_MTokenList :: Inh_MTokenList
-inh_MTokenList = Inh_MTokenList
-                    mempty
-                    (array (0, length badSequences - 1) (zip [0..] (replicate (length badSequences - 1) 0))) -- deprScan
-                    mempty
-                    mempty
-                    mempty
-                    mempty
-                    mempty
-                    mempty
-                    mempty
+inh_MTokenList = Inh_MTokenList {
+                    andSyntax_Inh_MTokenList                = mempty,
+                    indentation_Inh_MTokenList              = mempty,
+                    lineCommentSyntax_Inh_MTokenList        = mempty,
+                    multilineCommentSyntax_Inh_MTokenList   = mempty,
+                    neqSyntax_Inh_MTokenList                = mempty,
+                    notSyntax_Inh_MTokenList                = mempty,
+                    orSyntax_Inh_MTokenList                 = mempty,
+                    strSyntax_Inh_MTokenList                = mempty,
+                    deprScan_Inh_MTokenList                 = array (0, length badSequences - 1) (zip [0..] (replicate (length badSequences - 1) 0))
+                 }
 
 lintWarnings        :: [MToken] -> [String]
 lintWarnings p      = warnings_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) inh_MTokenList)
