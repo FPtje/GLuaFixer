@@ -28,12 +28,13 @@ lint [] = return ()
 lint (f : fs) = do
     contents <- doReadFile f
 
-    let tabsToSpaces = replace "\t" " " contents
-
-    let lexed = execParseTokens tabsToSpaces
+    let lexed = execParseTokens contents
     let tokens = fst lexed
     let warnings = map ((++) (takeFileName f ++ ": ")) $ lintWarnings tokens
-    let parsed = parseGLua tokens
+
+    -- Fixed for positions
+    let fixedTokens = fixedLexPositions tokens
+    let parsed = parseGLua fixedTokens
     let ast = fst parsed
     let parserWarnings = map ((++) (takeFileName f ++ ": ")) $ astWarnings ast
 

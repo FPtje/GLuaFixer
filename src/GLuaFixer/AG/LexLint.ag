@@ -12,6 +12,18 @@ include "../../GLua/AG/Token.ag"
 
 
 {
+----------------------------------------
+--  Correcting token positions
+----------------------------------------
+customAdvanceChr :: LineColPos -> Char -> LineColPos
+customAdvanceChr (LineColPos line pos abs) '\n' = LineColPos (line + 1) 0 (abs + 1)
+customAdvanceChr (LineColPos line pos abs) _    = LineColPos line (pos + 1) (abs + 1)
+
+customAdvanceStr :: LineColPos -> String -> LineColPos
+customAdvanceStr lp str = foldl' customAdvanceChr lp str
+
+customAdvanceToken :: LineColPos -> Token -> LineColPos
+customAdvanceToken (LineColPos line pos abs) t = let len = tokenSize t in LineColPos line (pos + len) (abs + len)
 
 ----------------------------------------
 --  C-style / Lua-style syntax inconsistencies
@@ -197,6 +209,8 @@ attr MTokenList MToken Token TokenList
     chn strSyntax :: SyntaxUsed
     chn indentation :: SyntaxUsed -- Let's imagine Lua syntax = spaces, C syntax = tabs
 
+    chn nextTokenPos :: LineColPos
+
 attr MTokenList MToken
     -- How far each deprecation scan is going
     -- The index of the array is the nth element in the badSequences array
@@ -216,12 +230,15 @@ sem MToken
     | MToken
         loc.deprecation = progress badSequences 0 @lhs.deprScan @mtok.copy
         lhs.deprScan = snd @loc.deprecation
+        loc.mpos = @lhs.nextTokenPos
+        loc.copy = MToken @loc.mpos @mtok.copy
 
         -- Warnings from tokens
         lhs.warnings = map (mTokenWarning @loc.copy) (fst @loc.deprecation ++ @mtok.warnings)
 
 sem Token
     | Whitespace
+        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @space
         loc.whitespaceUsed = mappend @lhs.indentation $ SyntaxUsed (isInfixOf "\n " @space) (isInfixOf "\n\t" @space)
         loc.inconsistent = luaUsed @loc.whitespaceUsed && cUsed @loc.whitespaceUsed
         loc.indentation = if @loc.inconsistent then mempty else @loc.whitespaceUsed
@@ -233,12 +250,14 @@ sem Token
                         (:) "Inconsistent use of tabs and spaces for indentation"
 
     | DashComment
+        lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
         loc.consistent = not . cUsed $ @lhs.lineCommentSyntax
         loc.lineCommentSyntax = SyntaxUsed @loc.consistent False -- When inconsistent, reset consistency check
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "--" "//"
 
     | SlashComment
+        lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
         loc.consistent = not . luaUsed $ @lhs.lineCommentSyntax
         loc.lineCommentSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
@@ -246,16 +265,25 @@ sem Token
 
 
     | DashBlockComment
+        loc.str = showString "--[" . showString (replicate @depth '-') . showChar '[' . showString @comment . showChar ']' . showString (replicate @depth '-') . showChar ']' $ ""
+        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @loc.str
         loc.consistent = not . cUsed $ @lhs.multilineCommentSyntax
         loc.multilineCommentSyntax = SyntaxUsed @loc.consistent False
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "--[[ ]]" "/* */"
+        +warnings = (:) @loc.str
 
     | SlashBlockComment
+        loc.str = showString "/*" . showString @comment . showString "*/" $ ""
+        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @loc.str
         loc.consistent = not . luaUsed $ @lhs.multilineCommentSyntax
         loc.multilineCommentSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "/* */" "--[[ ]]"
+        +warnings = (:) @loc.str
+
+    | Semicolon TNumber DQString SQString TTrue TFalse Nil VarArg Plus Minus Multiply Divide Modulus Power TEq TNEq TCNEq TLEQ TGEQ TLT TGT Equals Concatenate Colon Dot Comma Hash Not CNot And CAnd Or COr Function Local If Then Elseif Else For In Do While Until Repeat Continue Break Return End Goto LRound RRound LCurly RCurly LSquare RSquare Identifier
+        lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
 
     | DQString
         loc.consistent = not . cUsed $ @lhs.strSyntax
@@ -268,6 +296,9 @@ sem Token
         loc.strSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "single quoted strings" "double quoted strings"
+
+    | MLString
+        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @str
 
     | Not
         loc.consistent = not . cUsed $ @lhs.notSyntax
@@ -317,7 +348,8 @@ sem Token
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "!=" "~="
 
-
+    | Label
+        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos (showString "::" . showString @lbl . showString "::" $ "")
 
 {
 
@@ -332,9 +364,14 @@ inh_MTokenList = Inh_MTokenList {
                     notSyntax_Inh_MTokenList                = mempty,
                     orSyntax_Inh_MTokenList                 = mempty,
                     strSyntax_Inh_MTokenList                = mempty,
-                    deprScan_Inh_MTokenList                 = array (0, length badSequences - 1) (zip [0..] (replicate (length badSequences - 1) 0))
+                    deprScan_Inh_MTokenList                 = array (0, length badSequences - 1) (zip [0..] (replicate (length badSequences - 1) 0)),
+                    nextTokenPos_Inh_MTokenList             = LineColPos 0 0 0
                  }
 
 lintWarnings        :: [MToken] -> [String]
 lintWarnings p      = warnings_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) inh_MTokenList)
+
+-- Necessary because uu-parsinglib parses tabs as 8 spaces
+fixedLexPositions   :: [MToken] -> [MToken]
+fixedLexPositions p = copy_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) inh_MTokenList)
 }
