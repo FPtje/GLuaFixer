@@ -3,7 +3,7 @@ module {GLuaFixer.AG.LexLint}{}{}
 imports
 {
 import Data.Array.Unboxed
-
+import Data.List
 import GLua.TokenTypes
 import GLua.AG.Token
 import GLua.AG.PrettyPrint
@@ -203,6 +203,9 @@ sem MToken
         lhs.warnings = map (mTokenWarning @loc.copy) (fst @loc.deprecation ++ @mtok.warnings)
 
 sem Token
+    | Whitespace
+        +warnings = if not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space) then id else
+                        (:) "Trailing whitespace"
     | DashComment
         loc.consistent = not . cUsed $ @lhs.lineCommentSyntax
         loc.lineCommentSyntax = SyntaxUsed @loc.consistent False -- When inconsistent, reset consistency check
