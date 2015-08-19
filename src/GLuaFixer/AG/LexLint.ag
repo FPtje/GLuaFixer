@@ -144,7 +144,12 @@ deprecatedThings = [
         -- Whitespace reasoning
         ("Style", [not . whitespace, (==) Equals, not . whitespace], "Please put some whitespace around the '='"),
         ("Style", [      whitespace, (==) Equals, not . whitespace], "Please put some whitespace around the '='"),
-        ("Style", [not . whitespace, (==) Equals,       whitespace], "Please put some whitespace around the '='")
+        ("Style", [not . whitespace, (==) Equals,       whitespace], "Please put some whitespace around the '='"),
+
+        ("Style", [(==) If, not . whitespace], "Please put some whitespace after 'if'"),
+        ("Style", [(==) Elseif, not . whitespace], "Please put some whitespace after 'elseif'"),
+        ("Style", [(==) While, not . whitespace], "Please put some whitespace after 'while'"),
+        ("Style", [(==) Until, not . whitespace], "Please put some whitespace after 'until'")
     ]
 
 progress :: [(String, [Token -> Bool], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
