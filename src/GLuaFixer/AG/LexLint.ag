@@ -17,7 +17,7 @@ include "../../GLua/AG/Token.ag"
 --  C-style / Lua-style syntax inconsistencies
 ----------------------------------------
 -- For detecting the usage of Lua/C syntax inconsistently
-data SyntaxUsed = SyntaxUsed { luaUsed :: Bool, cUsed :: Bool }
+data SyntaxUsed = SyntaxUsed { luaUsed :: Bool, cUsed :: Bool } deriving (Show)
 
 -- Monoid instance
 instance Monoid SyntaxUsed where
@@ -195,6 +195,7 @@ attr MTokenList MToken Token TokenList
     chn orSyntax  :: SyntaxUsed
     chn neqSyntax :: SyntaxUsed
     chn strSyntax :: SyntaxUsed
+    chn indentation :: SyntaxUsed -- Let's imagine Lua syntax = spaces, C syntax = tabs
 
 attr MTokenList MToken
     -- How far each deprecation scan is going
@@ -221,8 +222,16 @@ sem MToken
 
 sem Token
     | Whitespace
+        loc.whitespaceUsed = mappend @lhs.indentation $ SyntaxUsed (isInfixOf "\n " @space) (isInfixOf "\n\t" @space)
+        loc.inconsistent = luaUsed @loc.whitespaceUsed && cUsed @loc.whitespaceUsed
+        loc.indentation = if @loc.inconsistent then mempty else @loc.whitespaceUsed
+
         +warnings = if not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space) then id else
                         (:) "Trailing whitespace"
+
+        +warnings = if not @loc.inconsistent then id else
+                        (:) "Inconsistent use of tabs and spaces for indentation"
+
     | DashComment
         loc.consistent = not . cUsed $ @lhs.lineCommentSyntax
         loc.lineCommentSyntax = SyntaxUsed @loc.consistent False -- When inconsistent, reset consistency check
@@ -315,6 +324,7 @@ inh_MTokenList :: Inh_MTokenList
 inh_MTokenList = Inh_MTokenList
                     mempty
                     (array (0, length badSequences - 1) (zip [0..] (replicate (length badSequences - 1) 0))) -- deprScan
+                    mempty
                     mempty
                     mempty
                     mempty
