@@ -37,16 +37,16 @@ instance IsLocationUpdatedBy LineColPos MTokenPos where
 -- | Parse Garry's mod Lua tokens to an abstract syntax tree.
 -- Also returns parse errors
 parseGLua :: [MToken] -> (AST, [Error LineColPos])
-parseGLua mts = let (cms, ts) = splitComments mts in
+parseGLua mts = let (cms, ts) = splitComments . filter (not . isWhitespace) $ mts in
                  execAParser (parseChunk cms) ts
 
 -- | Parse a string directly into an AST
 parseGLuaFromString :: String -> (AST, [Error LineColPos])
-parseGLuaFromString = parseGLua . fst . Lex.execParseTokens
+parseGLuaFromString = parseGLua . filter (not . isWhitespace) . fst . Lex.execParseTokens
 
 -- | Parse a string directly
 parseFromString :: AParser a -> String -> (a, [Error LineColPos])
-parseFromString p = execAParser p . fst . Lex.execParseTokens
+parseFromString p = execAParser p . filter (not . isWhitespace) . fst . Lex.execParseTokens
 
 -- | Create a parsable string from MTokens
 createString :: [MToken] -> Str MTokenPos [MTokenPos] LineColPos

@@ -18,7 +18,8 @@ type LParser a = P (Str Char String LineColPos) a
 
 -- | Whitespace parser.
 parseWhitespace :: LParser String
-parseWhitespace = pMunch (`elem` " \r\n\t")
+parseWhitespace = pSome $ pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' ' 5)
+    --MToken <$> pPos <*> (Whitespace <$> pMunch (`elem` " \r\n\t"))
 
 -- | Blanco parser. Parses anything. Used in parsing comments.
 parseAnyChar :: LParser Char
@@ -219,18 +220,24 @@ parseToken =    parseComment                                 <<|>
                 RRound <$ pToken ")"                         <<|>
                 LCurly <$ pToken "{"                         <<|>
                 RCurly <$ pToken "}"                         <<|>
-                RSquare <$ pToken "]" -- Other square bracket is parsed in parseString
+                -- Other square bracket is parsed in parseString
+                RSquare <$ pToken "]"                        <<|>
+                Whitespace <$> parseWhitespace
 
 -- | Parse a list of tokens and turn them into MTokens.
 parseTokens :: LParser [MToken]
-parseTokens = pMany (MToken <$> pPos <*> parseToken <* parseWhitespace)
+parseTokens = pMany (MToken <$> pPos <*> parseToken)
 
 -- | Parse the potential #!comment on the first line
 -- Lua ignores the first line if it starts with #
 parseHashBang :: LParser String
 parseHashBang = opt (pToken "#" <* pUntilEnd) ""
 
+-- | Lex a string with a given lexer
+lexFromString :: LParser a -> String -> (a, [Error LineColPos])
+lexFromString p = parse ((,) <$> p <*> pErrors <* pEnd) . createStr (LineColPos 0 0 0)
+
 -- | Parse a string into MTokens. Also returns parse errors.
 execParseTokens :: String -> ([MToken], [Error LineColPos])
-execParseTokens = parse ((,) <$ parseHashBang <* parseWhitespace <*> parseTokens <*> pErrors <* pEnd) . createStr (LineColPos 0 0 0)
+execParseTokens = parse ((,) <$ parseHashBang <*> parseTokens <*> pErrors <* pEnd) . createStr (LineColPos 0 0 0)
 

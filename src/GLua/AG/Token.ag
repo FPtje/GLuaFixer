@@ -10,6 +10,7 @@ type MTokenList = [MToken]
 
 -- | Simple token types
 data Token
+    | Whitespace                    space :: String
     -- Comments
     | DashComment 					comment :: String             -- ^ dash comment
     | DashBlockComment 	depth ::Int comment :: String    -- ^ where the Int is the depth of the comment delimiter, i.e. the amount of '='-signs in -[=[]=]
