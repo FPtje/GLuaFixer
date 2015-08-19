@@ -39,8 +39,8 @@ whitespace _ = False
 ----------------------------------------
 --  Deprecated stuff
 ----------------------------------------
-deprecatedThings :: [(String, [Token -> Bool], String)]
-deprecatedThings = [
+badSequences :: [(String, [Token -> Bool], String)]
+badSequences = [
         -- Global/library functions
         ("Deprecated", [(==) $ Identifier "gcinfo"], "Use collectgarbage(\"count\") instead"),
         ("Deprecated", [(==) $ Identifier "GetConVarNumber"], "Use ConVar objects instead"),
@@ -198,7 +198,7 @@ attr MTokenList MToken Token TokenList
 
 attr MTokenList MToken
     -- How far each deprecation scan is going
-    -- The index of the array is the nth element in the deprecatedThings array
+    -- The index of the array is the nth element in the badSequences array
     -- The value is the progress
     chn deprScan :: {UArray Int Int}
 
@@ -213,7 +213,7 @@ sem MTokenList
 
 sem MToken
     | MToken
-        loc.deprecation = progress deprecatedThings 0 @lhs.deprScan @mtok.copy
+        loc.deprecation = progress badSequences 0 @lhs.deprScan @mtok.copy
         lhs.deprScan = snd @loc.deprecation
 
         -- Warnings from tokens
@@ -314,7 +314,7 @@ sem Token
 inh_MTokenList :: Inh_MTokenList
 inh_MTokenList = Inh_MTokenList
                     mempty
-                    (array (0, length deprecatedThings - 1) (zip [0..] (replicate (length deprecatedThings - 1) 0))) -- deprScan
+                    (array (0, length badSequences - 1) (zip [0..] (replicate (length badSequences - 1) 0))) -- deprScan
                     mempty
                     mempty
                     mempty
