@@ -149,7 +149,9 @@ deprecatedThings = [
         ("Style", [(==) If, not . whitespace], "Please put some whitespace after 'if'"),
         ("Style", [(==) Elseif, not . whitespace], "Please put some whitespace after 'elseif'"),
         ("Style", [(==) While, not . whitespace], "Please put some whitespace after 'while'"),
-        ("Style", [(==) Until, not . whitespace], "Please put some whitespace after 'until'")
+        ("Style", [(==) Until, not . whitespace], "Please put some whitespace after 'until'"),
+
+        ("Style", [(==) RRound, \t -> not (elem t [RRound, LRound, Colon, Comma]) && not (whitespace t)], "Please put some whitespace after ')'")
     ]
 
 progress :: [(String, [Token -> Bool], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
