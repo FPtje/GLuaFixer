@@ -271,7 +271,6 @@ sem Token
         loc.multilineCommentSyntax = SyntaxUsed @loc.consistent False
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "--[[ ]]" "/* */"
-        +warnings = (:) @loc.str
 
     | SlashBlockComment
         loc.str = showString "/*" . showString @comment . showString "*/" $ ""
@@ -280,7 +279,6 @@ sem Token
         loc.multilineCommentSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "/* */" "--[[ ]]"
-        +warnings = (:) @loc.str
 
     | Semicolon TNumber DQString SQString TTrue TFalse Nil VarArg Plus Minus Multiply Divide Modulus Power TEq TNEq TCNEq TLEQ TGEQ TLT TGT Equals Concatenate Colon Dot Comma Hash Not CNot And CAnd Or COr Function Local If Then Elseif Else For In Do While Until Repeat Continue Break Return End Goto LRound RRound LCurly RCurly LSquare RSquare Identifier
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
