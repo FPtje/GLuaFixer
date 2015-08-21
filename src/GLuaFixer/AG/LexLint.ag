@@ -163,7 +163,8 @@ badSequences = [
         ("Style", [(==) While, not . whitespace], "Please put some whitespace after 'while'"),
         ("Style", [(==) Until, not . whitespace], "Please put some whitespace after 'until'"),
 
-        ("Style", [(==) RRound, \t -> not (elem t [RRound, LRound, LSquare, RSquare, LCurly, RCurly, Colon, Comma, Dot, Semicolon]) && not (whitespace t)], "Please put some whitespace after ')'")
+        ("Style", [(==) RRound, \t -> not (elem t [RRound, LRound, LSquare, RSquare, LCurly, RCurly, Colon, Comma, Dot, Semicolon]) && not (whitespace t)], "Please put some whitespace after ')'"),
+        ("Style", [ not . whitespace, (`elem` [Plus, Minus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr]), not . whitespace], "Please put some whitespace after the operator")
     ]
 
 progress :: [(String, [Token -> Bool], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
