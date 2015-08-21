@@ -7,6 +7,7 @@ import GLua.Lexer
 import GLuaFixer.AG.LexLint
 import GLua.Parser
 import GLuaFixer.AG.ASTLint
+import GLua.AG.PrettyPrint
 import System.FilePath.Posix
 import GLuaFixer.LintSettings
 import System.Exit
@@ -44,12 +45,15 @@ lint ls (f : fs) = do
     let ast = fst parsed
     let parserWarnings = map ((++) (takeFileName f ++ ": ")) $ astWarnings ls ast
 
-    -- Print all warnings
-    when (null . snd $ lexed) $ do
-        mapM_ putStrLn warnings
+    let syntaxErrors = map ((++) (takeFileName f ++ ": [Error] ") . renderError) $ snd lexed ++ snd parsed
 
-        when (null . snd $ parsed) $ do
-            mapM_ putStrLn parserWarnings
+    -- Print syntax errors
+    when (reportSyntaxErrors ls) $
+        mapM_ putStrLn syntaxErrors
+
+    -- Print all warnings
+    mapM_ putStrLn warnings
+    mapM_ putStrLn parserWarnings
 
     -- Lint the other files
     lint ls fs
