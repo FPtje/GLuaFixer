@@ -6,7 +6,7 @@ import Control.Monad
 
 data LintSettings = LintSettings {
                         maxScopeDepth :: Int
-                    }
+                    } deriving (Show)
 
 defaultLintSettings :: LintSettings
 defaultLintSettings =   LintSettings {
