@@ -152,6 +152,7 @@ badSequences = [
         ("Stupid", [(==) $ Identifier "net", (==) Dot, (==) $ Identifier "WriteEntity", (==) LRound, (==) $ Identifier "LocalPlayer", (==) LRound, (==) RRound], "The server already knows who sent the net message, use the first parameter of net.Receive"),
         ("Stupid", [(==) $ Identifier "self", (==) Dot, (==) $ Identifier "Weapon"], "That's the same as just 'self' in SWEPs"),
         ("Stupid", [(==) $ Identifier "self", (==) Dot,  (==) $ Identifier "Entity"], "That's the same as just 'self' in SENTs"),
+        ("Stupid", [(==) While, whitespace,  (==) TTrue, whitespace, (==) Do, whitespace, (==) End], "Jesus christ fuck off already"),
 
         -- Whitespace reasoning
         ("Style", [(==) If, not . whitespace], "Please put some whitespace after 'if'"),
@@ -160,7 +161,7 @@ badSequences = [
         ("Style", [(==) Until, not . whitespace], "Please put some whitespace after 'until'"),
 
         ("Style", [(==) RRound, \t -> not (elem t [RRound, LRound, LSquare, RSquare, LCurly, RCurly, Colon, Comma, Dot, Semicolon]) && not (whitespace t)], "Please put some whitespace after ')'"),
-        ("Style", [not . whitespace, (`elem` [Plus, Minus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr])], "Please put some whitespace after the operator"),
+        ("Style", [not . whitespace, (`elem` [Plus, Minus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr])], "Please put some whitespace before the operator"),
         ("Style", [(`elem` [Plus, Minus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr]), not . whitespace], "Please put some whitespace after the operator")
     ]
 
@@ -186,7 +187,7 @@ progress ((status, x, reason) : xs) i scan tok = (newWarnings, scanned)
         -- Adds the warning to the warnings list
         newWarnings :: [String]
         newWarnings = if not isDeprecated then warnings else
-                        (status ++ ": (" ++ reason ++ ")") : warnings
+                        (status ++ ": " ++ reason) : warnings
 
 
 }
