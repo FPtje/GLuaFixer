@@ -256,6 +256,8 @@ sem PrefixExp
     | PFVar
         lhs.mtokenPos           = @name.mtokenPos
         lhs.varName             = Just @name.copy
+        -- When using variables, register them. Find out more about the global scope
+        name.scopes             = registerVariable @lhs.scopes (show @name.mtok)
         +warnings               = if @lhs.isMeta || tokenLabel @name.copy /= "self" then id else
                                     (:) $ warn @name.mtokenPos "Don't use self in a non-metafunction"
     | ExprVar
