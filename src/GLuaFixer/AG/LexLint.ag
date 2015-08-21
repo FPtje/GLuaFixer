@@ -7,6 +7,7 @@ import Data.List
 import GLua.TokenTypes
 import GLua.AG.Token
 import GLua.AG.PrettyPrint
+import GLuaFixer.LintSettings
 }
 include "../../GLua/AG/Token.ag"
 
@@ -196,6 +197,7 @@ progress ((status, x, reason) : xs) i scan tok = (newWarnings, scanned)
 ----------------------------------------
 attr MTokenList MToken Token TokenList
     syn copy :: self
+    inh config :: LintSettings
 
     syn warnings use {++} {[]} :: {[String]}
 
@@ -209,6 +211,7 @@ attr MTokenList MToken Token TokenList
     chn indentation :: SyntaxUsed -- Let's imagine Lua syntax = spaces, C syntax = tabs
 
     chn nextTokenPos :: LineColPos
+
 
 attr MTokenList MToken
     -- How far each deprecation scan is going
@@ -351,8 +354,9 @@ sem Token
 {
 
 
-inh_MTokenList :: Inh_MTokenList
-inh_MTokenList = Inh_MTokenList {
+inh_MTokenList :: LintSettings -> Inh_MTokenList
+inh_MTokenList conf = Inh_MTokenList {
+                    config_Inh_MTokenList                   = conf,
                     andSyntax_Inh_MTokenList                = mempty,
                     indentation_Inh_MTokenList              = mempty,
                     lineCommentSyntax_Inh_MTokenList        = mempty,
@@ -365,10 +369,10 @@ inh_MTokenList = Inh_MTokenList {
                     nextTokenPos_Inh_MTokenList             = LineColPos 0 0 0
                  }
 
-lintWarnings        :: [MToken] -> [String]
-lintWarnings p      = warnings_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) inh_MTokenList)
+lintWarnings        :: LintSettings -> [MToken] -> [String]
+lintWarnings conf p = warnings_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) (inh_MTokenList conf))
 
 -- Necessary because uu-parsinglib parses tabs as 8 spaces
 fixedLexPositions   :: [MToken] -> [MToken]
-fixedLexPositions p = copy_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) inh_MTokenList)
+fixedLexPositions p = copy_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) (inh_MTokenList defaultLintSettings))
 }

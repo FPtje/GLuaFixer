@@ -8,6 +8,7 @@ import GLua.AG.Token
 import qualified GLua.AG.PrettyPrint as PP
 import qualified Data.Set as S
 import Data.Maybe
+import GLuaFixer.LintSettings
 
 import Debug.Trace
 }
@@ -54,6 +55,7 @@ registerVariable ss@(scope : scs) var = if S.member var scope then ss else
 ----------------------------------------
 
 attr AllStuff
+    inh config :: LintSettings
     syn warnings use {++} {[]} :: {[String]}
 
     inh scopeLevel :: Int
@@ -148,7 +150,8 @@ sem AST
 sem Block
     | Block
         stats.scopeLevel        = @lhs.scopeLevel + 1
-        +warnings               = if @lhs.scopeLevel /= 7 then id else
+        loc.maxScopeDepth       = maxScopeDepth @lhs.config
+        +warnings               = if @loc.maxScopeDepth /= 0 && @lhs.scopeLevel /= @loc.maxScopeDepth then id else
                                     (:) $ warn @stats.mtokenPos "Are you Egyptian? What's with these fucking scope pyramids!?"
         lhs.scopes              = tail @stats.scopes
 
@@ -335,13 +338,16 @@ sem UnOp
 --  Individual functions
 ---------------------------------------
 {
-inh_AST = Inh_AST
-            False
-            0
-            (LineColPos 0 0 0)
-            0
-            [S.empty]
+inh_AST :: LintSettings -> Inh_AST
+inh_AST conf = Inh_AST {
+                config_Inh_AST                  = conf,
+                isMeta_Inh_AST                  = False,
+                loopLevel_Inh_AST               = 0,
+                mtokenPos_Inh_AST               = LineColPos 0 0 0,
+                scopeLevel_Inh_AST              = 0,
+                scopes_Inh_AST                  = [S.empty]
+               }
 
-astWarnings :: AST -> [String]
-astWarnings p = warnings_Syn_AST (wrap_AST (sem_AST p) inh_AST)
+astWarnings :: LintSettings -> AST -> [String]
+astWarnings conf p = warnings_Syn_AST (wrap_AST (sem_AST p) (inh_AST conf))
 }

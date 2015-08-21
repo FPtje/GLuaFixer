@@ -36,13 +36,13 @@ lint ls (f : fs) = do
 
     let lexed = execParseTokens contents
     let tokens = fst lexed
-    let warnings = map ((++) (takeFileName f ++ ": ")) $ lintWarnings tokens
+    let warnings = map ((++) (takeFileName f ++ ": ")) $ lintWarnings ls tokens
 
     -- Fixed for positions
     let fixedTokens = fixedLexPositions tokens
     let parsed = parseGLua fixedTokens
     let ast = fst parsed
-    let parserWarnings = map ((++) (takeFileName f ++ ": ")) $ astWarnings ast
+    let parserWarnings = map ((++) (takeFileName f ++ ": ")) $ astWarnings ls ast
 
     -- Print all warnings
     when (null . snd $ lexed) $ do
