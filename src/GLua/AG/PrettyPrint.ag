@@ -58,9 +58,9 @@ comesBefore :: LineColPos -> LineColPos -> Bool
 comesBefore (LineColPos _ _ l) (LineColPos a b r) = l <= r
 
 renderError :: Error LineColPos -> String
-renderError (Inserted str pos strs)       = "Inserted '" ++ str ++ "' at " ++ renderPos pos ++ ". " ++ render_expecting strs
-renderError (Deleted str pos strs)        = "Removed '" ++ str ++ "' at " ++ renderPos pos ++ ". " ++ render_expecting strs
-renderError (Replaced str1 str2 pos strs) = "Replaced '" ++ str1 ++ "' with '" ++ str2 ++ "' at " ++ renderPos pos ++ render_expecting strs
+renderError (Inserted str pos strs)       = renderPos pos ++ ": Inserted '" ++ str ++ "'." ++ render_expecting strs
+renderError (Deleted str pos strs)        = renderPos pos ++ ": Removed '" ++ str ++ "'. " ++render_expecting strs
+renderError (Replaced str1 str2 pos strs) = renderPos pos ++ ": Replaced '" ++ str1 ++ "' with '" ++ str2 ++ "' at " ++ renderPos pos ++ render_expecting strs
 renderError (DeletedAtEnd str)            = "Deleted '"  ++ str ++ "' at the end of the Lua file because the parser doesn't know what to do with it."
 
 render_expecting :: [String] -> String
