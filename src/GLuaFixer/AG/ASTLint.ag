@@ -69,6 +69,9 @@ attr AllStuff MToken MTokenList Token TokenList
     syn copy :: self
     syn identifier use {const} {"Unknown identifier"} :: String -- identifier of the first token
 
+attr Block MStat MStatList AReturn
+    syn statementCount use {+} {1} :: Int
+
 attr MToken
     syn mtok :: Token -- The token held by an MToken
 
@@ -109,6 +112,11 @@ sem MTokenList MStatList MExprList FieldList VarsList
         lhs.mtokenPos           = @hd.mtokenPos
     | Nil
 
+sem MStatList
+    | Cons
+    | Nil
+        lhs.statementCount      = 0
+
 sem MExprList
     | Cons
         hd.isNegation           = False
@@ -147,6 +155,7 @@ sem Block
 sem MStat
     | MStat
         lhs.mtokenPos           = @pos
+        stat.mtokenPos          = @pos
 
 sem Stat
     | Def
@@ -165,17 +174,27 @@ sem Stat
                                     (:) $ warn @lbl.mtokenPos "Don't use labels and gotos unless you're jumping out of multiple loops."
     | ADo
         body.scopes             = S.empty : @lhs.scopes
+        +warnings               = if @body.statementCount > 0 then id else
+                                    (:) $ warn @lhs.mtokenPos "Empty do block"
     | AWhile
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
         body.scopes             = S.empty : @lhs.scopes
+        +warnings               = if @body.statementCount > 0 then id else
+                                    (:) $ warn @lhs.mtokenPos "Empty while loop"
     | ARepeat
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
         body.scopes             = S.empty : @lhs.scopes
+        +warnings               = if @body.statementCount > 0 then id else
+                                    (:) $ warn @lhs.mtokenPos "Empty repeat statement"
     | AIf
         cond.isNegation         = False
         body.scopes             = S.empty : @lhs.scopes
+        elifs.mtokenPos         = @lhs.mtokenPos
+        els.mtokenPos           = @lhs.mtokenPos
+        +warnings               = if @body.statementCount > 0 then id else
+                                    (:) $ warn @lhs.mtokenPos "Empty if statement"
     | ANFor
         body.loopLevel          = @lhs.loopLevel + 1
         val.isNegation          = False
@@ -184,12 +203,16 @@ sem Stat
         body.scopes             = S.singleton @var.identifier : @lhs.scopes
         loc.shadowWarning       = checkShadows @lhs.scopes @var.copy
         +warnings               = if isNothing @loc.shadowWarning then id else (:) . fromJust $ @loc.shadowWarning
+        +warnings               = if @body.statementCount > 0 then id else
+                                    (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AGFor
         body.loopLevel          = @lhs.loopLevel + 1
         -- The variables the for loop introduces
         loc.introduces          = S.fromList $ map tokenLabel @vars
         body.scopes             = @loc.introduces : @lhs.scopes
         +warnings               = (++) . catMaybes . map (checkShadows @lhs.scopes) $ @vars
+        +warnings               = if @body.statementCount > 0 then id else
+                                    (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AFunc
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
         loc.introduces          = S.fromList . map tokenLabel $ @loc.argIdentifiers
@@ -208,11 +231,20 @@ sem Stat
         loc.funcNameShadows     = checkShadows @lhs.scopes @loc.funcname
         +warnings               = if isNothing @loc.funcNameShadows then id else (:) . fromJust $ @loc.funcNameShadows
 
+sem ElseIf
+    | Tuple
+        +warnings               = if @x2.statementCount > 0 then id else
+                                    (:) $ warn @lhs.mtokenPos "Empty elseif statement"
+
+sem Else
+    | Just
+        +warnings               = if @just.statementCount > 0 then id else
+                                    (:) $ warn @lhs.mtokenPos "Empty else statement"
 sem AReturn
     | AReturn
         lhs.mtokenPos           = @pos
     | NoReturn
-
+        lhs.statementCount      = 0
 
 sem FuncName
     | FuncName
