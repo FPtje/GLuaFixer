@@ -148,7 +148,7 @@ sem AST
 sem Block
     | Block
         stats.scopeLevel        = @lhs.scopeLevel + 1
-        +warnings               = if @lhs.scopeLevel /= 5 then id else
+        +warnings               = if @lhs.scopeLevel /= 7 then id else
                                     (:) $ warn @stats.mtokenPos "Are you Egyptian? What's with these fucking scope pyramids!?"
         lhs.scopes              = tail @stats.scopes
 
