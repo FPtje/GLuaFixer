@@ -253,14 +253,14 @@ sem Token
 
     | DashComment
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
-        loc.consistent = not . cUsed $ @lhs.lineCommentSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.lineCommentSyntax)
         loc.lineCommentSyntax = SyntaxUsed @loc.consistent False -- When inconsistent, reset consistency check
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "--" "//"
 
     | SlashComment
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
-        loc.consistent = not . luaUsed $ @lhs.lineCommentSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.lineCommentSyntax)
         loc.lineCommentSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "//" "--"
@@ -269,7 +269,7 @@ sem Token
     | DashBlockComment
         loc.str = showString "--[" . showString (replicate @depth '-') . showChar '[' . showString @comment . showChar ']' . showString (replicate @depth '-') . showChar ']' $ ""
         lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @loc.str
-        loc.consistent = not . cUsed $ @lhs.multilineCommentSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.multilineCommentSyntax)
         loc.multilineCommentSyntax = SyntaxUsed @loc.consistent False
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "--[[ ]]" "/* */"
@@ -277,7 +277,7 @@ sem Token
     | SlashBlockComment
         loc.str = showString "/*" . showString @comment . showString "*/" $ ""
         lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @loc.str
-        loc.consistent = not . luaUsed $ @lhs.multilineCommentSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.multilineCommentSyntax)
         loc.multilineCommentSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "/* */" "--[[ ]]"
@@ -286,13 +286,13 @@ sem Token
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
 
     | DQString
-        loc.consistent = not . cUsed $ @lhs.strSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.strSyntax)
         loc.strSyntax = SyntaxUsed @loc.consistent False
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "double quoted strings" "single quoted strings"
 
     | SQString
-        loc.consistent = (not . luaUsed $ @lhs.strSyntax) || length @str == 1 -- Allow single character ' ' strings
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.strSyntax) || length @str == 1 -- Allow single character ' ' strings
         loc.strSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "single quoted strings" "double quoted strings"
@@ -301,49 +301,49 @@ sem Token
         lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @str
 
     | Not
-        loc.consistent = not . cUsed $ @lhs.notSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.notSyntax)
         loc.notSyntax = SyntaxUsed @loc.consistent False
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "not" "!"
 
     | CNot
-        loc.consistent = not . luaUsed $ @lhs.notSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.notSyntax)
         loc.notSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "!" "not"
 
     | And
-        loc.consistent = not . cUsed $ @lhs.andSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.andSyntax)
         loc.andSyntax = SyntaxUsed @loc.consistent False
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "and" "&&"
 
     | CAnd
-        loc.consistent = not . luaUsed $ @lhs.andSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.andSyntax)
         loc.andSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "&&" "and"
 
     | Or
-        loc.consistent = not . cUsed $ @lhs.orSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.orSyntax)
         loc.orSyntax = SyntaxUsed @loc.consistent False
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "or" "||"
 
     | COr
-        loc.consistent = not . luaUsed $ @lhs.orSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.orSyntax)
         loc.orSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "||" "or"
 
     | TNEq
-        loc.consistent = not . cUsed $ @lhs.neqSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.neqSyntax)
         loc.neqSyntax = SyntaxUsed @loc.consistent False
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "~=" "!="
 
     | TCNEq
-        loc.consistent = not . luaUsed $ @lhs.neqSyntax
+        loc.consistent = (not . reportSyntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.neqSyntax)
         loc.neqSyntax = SyntaxUsed False @loc.consistent
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "!=" "~="
