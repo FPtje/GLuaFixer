@@ -98,6 +98,12 @@ attr Declaration VarsList
 attr MStatList MExprList VarsList
     inh isHead :: Bool
 
+attr MStatList
+    syn isLast use {||} {True} :: Bool
+
+attr MStat Stat
+    inh isLastStatement :: Bool
+
 attr FieldList Field MExprList Expr MExpr PrefixExp ExprSuffixList PFExprSuffix Args Declaration VarsList
     syn multiline use {||} {False} :: Bool -- Whether a table should be printed as multiline
 
@@ -117,6 +123,8 @@ sem MStatList
                  hd.comments = drop (length @loc.commentsHere) @lhs.comments
                  tl.comments = @hd.comments
                  tl.isHead  = False
+                 hd.isLastStatement = @tl.isLast
+                 lhs.isLast = False
     | Nil        lhs.pretty = empty
 
 sem MStat
@@ -186,22 +194,29 @@ sem Stat
     | ABreak     lhs.pretty = text "break"
     | AContinue  lhs.pretty = text "continue"
     | AGoto      lhs.pretty = text "goto" <-> tok @lbl
-    | ADo        lhs.pretty = text "do" $+$ nest 4 @body.pretty $+$ text "end\n"
+    | ADo        loc.newl = if @lhs.isLastStatement then empty else char '\n'
+                 lhs.pretty = text "do" $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
                  body.indent = @lhs.indent + 1
-    | AWhile     lhs.pretty = text "while" <-> @cond.pretty <-> text "do" $+$ nest 4 @body.pretty $+$ text "end\n"
+    | AWhile     loc.newl = if @lhs.isLastStatement then empty else char '\n'
+                 lhs.pretty = text "while" <-> @cond.pretty <-> text "do" $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
                  body.indent = @lhs.indent + 1
     | ARepeat    lhs.pretty = text "repeat" $+$ nest 4 @body.pretty $+$ text "until" <-> @cond.pretty
                  body.indent = @lhs.indent + 1
-    | AIf        lhs.pretty = text "if" <-> @cond.pretty <-> text "then" $+$ nest 4 @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ text "end\n"
+    | AIf        loc.newl = if @lhs.isLastStatement then empty else char '\n'
+                 lhs.pretty = text "if" <-> @cond.pretty <-> text "then" $+$ nest 4 @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ text "end" <> @loc.newl
                  body.indent = @lhs.indent + 1
-    | ANFor      lhs.pretty = text "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> zchr ',' <-> @step.pretty <-> text "do" $+$ nest 4 @body.pretty $+$ text "end\n"
+    | ANFor      loc.newl = if @lhs.isLastStatement then empty else char '\n'
+                 lhs.pretty = text "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> zchr ',' <-> @step.pretty <-> text "do" $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
                  body.indent = @lhs.indent + 1
-    | AGFor      lhs.pretty = text "for" <-> printList tok ", " @vars <-> text "in" <-> @vals.pretty <-> text "do" $+$ nest 4 @body.pretty $+$ text "end\n"
+    | AGFor      loc.newl = if @lhs.isLastStatement then empty else char '\n'
+                 lhs.pretty = text "for" <-> printList tok ", " @vars <-> text "in" <-> @vals.pretty <-> text "do" $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
                  body.indent = @lhs.indent + 1
                  vals.isHead = True
-    | AFunc      lhs.pretty = text "function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ text "end\n"
+    | AFunc      loc.newl = if @lhs.isLastStatement then empty else char '\n'
+                 lhs.pretty = text "function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
                  body.indent = @lhs.indent + 1
-    | ALocFunc   lhs.pretty = text "local function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ text "end\n"
+    | ALocFunc   loc.newl = if @lhs.isLastStatement then empty else char '\n'
+                 lhs.pretty = text "local function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
                  body.indent = @lhs.indent + 1
 
 sem AReturn
@@ -297,7 +312,7 @@ pp_block :: Block -> Int -> Doc
 pp_block p i = pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] i))
 
 pp_mstat :: MStat -> Int -> Doc
-pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] i))
+pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] i False))
 
 pp_prefixexp :: PrefixExp -> Doc
 pp_prefixexp p = pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0))
@@ -318,10 +333,10 @@ renderBlock        :: Block -> String
 renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] 0))
 
 renderStat         :: Stat -> String
-renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat [] 0))
+renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat [] 0 False))
 
 renderMStat         :: MStat -> String
-renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] 0))
+renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] 0 False))
 
 renderAReturn      :: AReturn -> String
 renderAReturn p    = render $ pretty_Syn_AReturn (wrap_AReturn (sem_AReturn p) (Inh_AReturn [] 0))
