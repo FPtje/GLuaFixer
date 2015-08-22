@@ -16,6 +16,7 @@ import Data.Aeson
 import Data.Maybe
 import System.Directory
 import Control.Applicative
+import GLuaFixer.AG.DarkRPRewrite
 
 version :: String
 version = "1.0.0"
@@ -27,6 +28,17 @@ doReadFile f = do
     hSetEncoding handle utf8_bom
     contents <- hGetContents handle
     return contents
+
+
+prettyPrint :: IO ()
+prettyPrint = do
+                lua <- getContents
+
+                let parsed = parseGLuaFromString lua
+                let ast = fst parsed
+                let pretty = prettyprint . fixOldDarkRPSyntax $ ast
+
+                putStr pretty
 
 
 -- | Lint a set of files
@@ -67,6 +79,7 @@ settingsFromFile f = do
 
 parseCLArgs :: [String] -> IO (Maybe LintSettings, [FilePath])
 parseCLArgs [] = return (Nothing, [])
+parseCLArgs ("--pretty-print" : _) = prettyPrint >> exitWith ExitSuccess
 parseCLArgs ("--version" : _) = putStrLn version >> exitWith ExitSuccess
 parseCLArgs ("--config" : []) = putStrLn "Well give me a config file then you twat" >> exitWith (ExitFailure 1)
 parseCLArgs ("--config" : f : xs) = do
