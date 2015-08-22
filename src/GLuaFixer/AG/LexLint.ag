@@ -49,110 +49,114 @@ whitespace :: Token -> Bool
 whitespace (Whitespace _) = True
 whitespace _ = False
 
+-- Whether a token is a certain identifier
+ident :: String -> Token -> Bool
+ident = (==) . Identifier
+
 ----------------------------------------
 --  Deprecated stuff
 ----------------------------------------
 badSequences :: [(String, [Token -> Bool], String)]
 badSequences = [
         -- Global/library functions
-        ("Deprecated", [(==) $ Identifier "gcinfo"], "Use collectgarbage(\"count\") instead"),
-        ("Deprecated", [(==) $ Identifier "GetConVarNumber"], "Use ConVar objects instead"),
-        ("Deprecated", [(==) $ Identifier "GetConVarString"], "Use ConVar objects instead"),
-        ("Deprecated", [(==) $ Identifier "IncludeCS"], "Use AddCSLuaFile in the file itself instead"),
-        ("Deprecated", [(==) $ Identifier "SScale"], "Use ScreenScale instead"),
-        ("Deprecated", [(==) $ Identifier "UTIL_IsUselessModel"], "Use IsUselessModel instead"),
-        ("Deprecated", [(==) $ Identifier "ValidPanel"], "Use IsValid instead"),
+        ("Deprecated", [ident "gcinfo"], "Use collectgarbage(\"count\") instead"),
+        ("Deprecated", [ident "GetConVarNumber"], "Use ConVar objects instead"),
+        ("Deprecated", [ident "GetConVarString"], "Use ConVar objects instead"),
+        ("Deprecated", [ident "IncludeCS"], "Use AddCSLuaFile in the file itself instead"),
+        ("Deprecated", [ident "SScale"], "Use ScreenScale instead"),
+        ("Deprecated", [ident "UTIL_IsUselessModel"], "Use IsUselessModel instead"),
+        ("Deprecated", [ident "ValidPanel"], "Use IsValid instead"),
 
-        ("Deprecated", [(==) $ Identifier "ai", (==) Dot, (==) $ Identifier "GetScheduleID"], "The function is broken"),
-        ("Deprecated", [(==) $ Identifier "ai", (==) Dot, (==) $ Identifier "GetTaskID"], "The function is broken"),
+        ("Deprecated", [ident "ai", (==) Dot, ident "GetScheduleID"], "The function is broken"),
+        ("Deprecated", [ident "ai", (==) Dot, ident "GetTaskID"], "The function is broken"),
 
-        ("Deprecated", [(==) $ Identifier "math", (==) Dot, (==) $ Identifier "Dist"], "Use math.Distance instead"),
-        ("Deprecated", [(==) $ Identifier "math", (==) Dot, (==) $ Identifier "mod"], "Use math.fmod instead"),
+        ("Deprecated", [ident "math", (==) Dot, ident "Dist"], "Use math.Distance instead"),
+        ("Deprecated", [ident "math", (==) Dot, ident "mod"], "Use math.fmod instead"),
 
-        ("Deprecated", [(==) $ Identifier "spawnmenu", (==) Dot, (==) $ Identifier "DoSaveToTextFiles"], "Use spawnmenu.SaveToTextFiles instead"),
-        ("Deprecated", [(==) $ Identifier "spawnmenu", (==) Dot, (==) $ Identifier "PopulateFromEngineTextFiles"], "Use spawnmenu.PopulateFromTextFiles instead"),
-        ("Deprecated", [(==) $ Identifier "spawnmenu", (==) Dot, (==) $ Identifier "SwitchToolTab"], "The function is broken"),
+        ("Deprecated", [ident "spawnmenu", (==) Dot, ident "DoSaveToTextFiles"], "Use spawnmenu.SaveToTextFiles instead"),
+        ("Deprecated", [ident "spawnmenu", (==) Dot, ident "PopulateFromEngineTextFiles"], "Use spawnmenu.PopulateFromTextFiles instead"),
+        ("Deprecated", [ident "spawnmenu", (==) Dot, ident "SwitchToolTab"], "The function is broken"),
 
-        ("Deprecated", [(==) $ Identifier "string", (==) Dot, (==) $ Identifier "GetChar"], "Use either string.sub(str, index, index) or str[index]"),
-        ("Deprecated", [(==) $ Identifier "string", (==) Dot, (==) $ Identifier "gfind"], "Use string.gmatch instead"),
+        ("Deprecated", [ident "string", (==) Dot, ident "GetChar"], "Use either string.sub(str, index, index) or str[index]"),
+        ("Deprecated", [ident "string", (==) Dot, ident "gfind"], "Use string.gmatch instead"),
 
-        ("Deprecated", [(==) $ Identifier "surface", (==) Dot, (==) $ Identifier "ScreenHeight"], "Use ScrH instead"),
-        ("Deprecated", [(==) $ Identifier "surface", (==) Dot, (==) $ Identifier "ScreenWidth"], "Use ScrW instead"),
+        ("Deprecated", [ident "surface", (==) Dot, ident "ScreenHeight"], "Use ScrH instead"),
+        ("Deprecated", [ident "surface", (==) Dot, ident "ScreenWidth"], "Use ScrW instead"),
 
-        ("Deprecated", [(==) $ Identifier "table", (==) Dot, (==) $ Identifier "FindNext"], "Use ipairs or something instead"),
-        ("Deprecated", [(==) $ Identifier "table", (==) Dot, (==) $ Identifier "FindPrev"], "Use ipairs or something instead"),
-        ("Deprecated", [(==) $ Identifier "table", (==) Dot, (==) $ Identifier "foreach"], "Use pairs instead"),
-        ("Deprecated", [(==) $ Identifier "table", (==) Dot, (==) $ Identifier "ForEach"], "Use pairs instead"),
-        ("Deprecated", [(==) $ Identifier "table", (==) Dot, (==) $ Identifier "foreachi"], "Use ipairs instead"),
-        ("Deprecated", [(==) $ Identifier "table", (==) Dot, (==) $ Identifier "GetFirstKey"], "Use next instead"),
-        ("Deprecated", [(==) $ Identifier "table", (==) Dot, (==) $ Identifier "GetFirstValue"], "Use next instead"),
-        ("Deprecated", [(==) $ Identifier "table", (==) Dot, (==) $ Identifier "GetLastKey"], "Use #tbl instead"),
-        ("Deprecated", [(==) $ Identifier "table", (==) Dot, (==) $ Identifier "GetLastValue"], "Use tbl[#tbl] instead"),
-        ("Deprecated", [(==) $ Identifier "table", (==) Dot, (==) $ Identifier "getn"], "Use #tbl instead"),
+        ("Deprecated", [ident "table", (==) Dot, ident "FindNext"], "Use ipairs or something instead"),
+        ("Deprecated", [ident "table", (==) Dot, ident "FindPrev"], "Use ipairs or something instead"),
+        ("Deprecated", [ident "table", (==) Dot, ident "foreach"], "Use pairs instead"),
+        ("Deprecated", [ident "table", (==) Dot, ident "ForEach"], "Use pairs instead"),
+        ("Deprecated", [ident "table", (==) Dot, ident "foreachi"], "Use ipairs instead"),
+        ("Deprecated", [ident "table", (==) Dot, ident "GetFirstKey"], "Use next instead"),
+        ("Deprecated", [ident "table", (==) Dot, ident "GetFirstValue"], "Use next instead"),
+        ("Deprecated", [ident "table", (==) Dot, ident "GetLastKey"], "Use #tbl instead"),
+        ("Deprecated", [ident "table", (==) Dot, ident "GetLastValue"], "Use tbl[#tbl] instead"),
+        ("Deprecated", [ident "table", (==) Dot, ident "getn"], "Use #tbl instead"),
 
-        ("Deprecated", [(==) $ Identifier "timer", (==) Dot, (==) $ Identifier "Check"], "The function is broken"),
-        ("Deprecated", [(==) $ Identifier "timer", (==) Dot, (==) $ Identifier "Destroy"], "Use timer.Remove instead"),
+        ("Deprecated", [ident "timer", (==) Dot, ident "Check"], "The function is broken"),
+        ("Deprecated", [ident "timer", (==) Dot, ident "Destroy"], "Use timer.Remove instead"),
 
-        ("Deprecated", [(==) $ Identifier "umsg", (==) Dot, (==) $ Identifier "Start"], "Use net messages."),
-        ("Deprecated", [(==) $ Identifier "SendUserMessage"], "Use net messages."),
+        ("Deprecated", [ident "umsg", (==) Dot, ident "Start"], "Use net messages."),
+        ("Deprecated", [ident "SendUserMessage"], "Use net messages."),
 
-        ("Deprecated", [(==) $ Identifier "util", (==) Dot, (==) $ Identifier "tobool"], "Use tobool, without the util bit"),
-        ("Deprecated", [(==) $ Identifier "util", (==) Dot, (==) $ Identifier "TraceEntityHull"], "The function is broken"),
+        ("Deprecated", [ident "util", (==) Dot, ident "tobool"], "Use tobool, without the util bit"),
+        ("Deprecated", [ident "util", (==) Dot, ident "TraceEntityHull"], "The function is broken"),
 
         -- CLuaLocomotion functions
-        ("Deprecated", [(==) Colon, (==) $ Identifier "IsAscendingOrDescendingLadder"], "Use :IsUsingLadder instead"),
+        ("Deprecated", [(==) Colon, ident "IsAscendingOrDescendingLadder"], "Use :IsUsingLadder instead"),
 
         -- Panel functions
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetDrawBackground"], "Use :GetPaintBackground instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetDrawBackground"], "Use :SetPaintBackground instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "AddText"], "The function is broken"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "PostMessage"], "Only used by deprecated Derma controls"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "Refresh"], "The function is broken"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetActionFunction"], "Only used in deprecated Derma controls"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetKeyBoardInputEnabled"], "Use :SetKeyboardInputEnabled instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetPaintFunction"], "The function is broken"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetToolTip"], "Use :SetTooltip instead, notice the lowercase fucking t"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetToolTipPanel"], "use :SetTooltipPanel instead, notice the lowercase fucking t"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "Valid"], "Use :IsValid instead"),
+        ("Deprecated", [(==) Colon, ident "GetDrawBackground"], "Use :GetPaintBackground instead"),
+        ("Deprecated", [(==) Colon, ident "SetDrawBackground"], "Use :SetPaintBackground instead"),
+        ("Deprecated", [(==) Colon, ident "AddText"], "The function is broken"),
+        ("Deprecated", [(==) Colon, ident "PostMessage"], "Only used by deprecated Derma controls"),
+        ("Deprecated", [(==) Colon, ident "Refresh"], "The function is broken"),
+        ("Deprecated", [(==) Colon, ident "SetActionFunction"], "Only used in deprecated Derma controls"),
+        ("Deprecated", [(==) Colon, ident "SetKeyBoardInputEnabled"], "Use :SetKeyboardInputEnabled instead"),
+        ("Deprecated", [(==) Colon, ident "SetPaintFunction"], "The function is broken"),
+        ("Deprecated", [(==) Colon, ident "SetToolTip"], "Use :SetTooltip instead, notice the lowercase fucking t"),
+        ("Deprecated", [(==) Colon, ident "SetToolTipPanel"], "use :SetTooltipPanel instead, notice the lowercase fucking t"),
+        ("Deprecated", [(==) Colon, ident "Valid"], "Use :IsValid instead"),
 
         -- Entity functions
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetHitboxBone"], "Use :GetHitBoxBone instead, note the capital fucking B"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetNetworkedAngle"], "Use :GetNWAngle instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetNetworkedBool"], "Use :GetNWBool instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetNetworkedEntity"], "Use :GetNWEntity instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetNetworkedFloat"], "Use :GetNWFloat instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetNetworkedInt"], "Use :GetNWInt instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetNetworkedString"], "Use :GetNWString instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetNetworkedVarProxy"], "Use :GetNWVarProxy instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetNetworkedVarTable"], "Use :GetNWVarTable instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetNetworkedVector"], "Use :GetNWVector instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetWorkshopID"], "The function is broken"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetAttachment"], "Use :SetParent instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetNetworkedAngle"], "Use :SetNWAngle instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetNetworkedBool"], "Use :SetNWBool instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetNetworkedEntity"], "Use :SetNWEntity instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetNetworkedFloat"], "Use :SetNWFloat instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetNetworkedInt"], "Use :SetNWInt instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetNetworkedString"], "Use :SetNWString instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetNetworkedVarProxy"], "Use :SetNWVarProxy instead"),
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetNetworkedVector"], "Use :SetNWVector instead"),
+        ("Deprecated", [(==) Colon, ident "GetHitboxBone"], "Use :GetHitBoxBone instead, note the capital fucking B"),
+        ("Deprecated", [(==) Colon, ident "GetNetworkedAngle"], "Use :GetNWAngle instead"),
+        ("Deprecated", [(==) Colon, ident "GetNetworkedBool"], "Use :GetNWBool instead"),
+        ("Deprecated", [(==) Colon, ident "GetNetworkedEntity"], "Use :GetNWEntity instead"),
+        ("Deprecated", [(==) Colon, ident "GetNetworkedFloat"], "Use :GetNWFloat instead"),
+        ("Deprecated", [(==) Colon, ident "GetNetworkedInt"], "Use :GetNWInt instead"),
+        ("Deprecated", [(==) Colon, ident "GetNetworkedString"], "Use :GetNWString instead"),
+        ("Deprecated", [(==) Colon, ident "GetNetworkedVarProxy"], "Use :GetNWVarProxy instead"),
+        ("Deprecated", [(==) Colon, ident "GetNetworkedVarTable"], "Use :GetNWVarTable instead"),
+        ("Deprecated", [(==) Colon, ident "GetNetworkedVector"], "Use :GetNWVector instead"),
+        ("Deprecated", [(==) Colon, ident "GetWorkshopID"], "The function is broken"),
+        ("Deprecated", [(==) Colon, ident "SetAttachment"], "Use :SetParent instead"),
+        ("Deprecated", [(==) Colon, ident "SetNetworkedAngle"], "Use :SetNWAngle instead"),
+        ("Deprecated", [(==) Colon, ident "SetNetworkedBool"], "Use :SetNWBool instead"),
+        ("Deprecated", [(==) Colon, ident "SetNetworkedEntity"], "Use :SetNWEntity instead"),
+        ("Deprecated", [(==) Colon, ident "SetNetworkedFloat"], "Use :SetNWFloat instead"),
+        ("Deprecated", [(==) Colon, ident "SetNetworkedInt"], "Use :SetNWInt instead"),
+        ("Deprecated", [(==) Colon, ident "SetNetworkedString"], "Use :SetNWString instead"),
+        ("Deprecated", [(==) Colon, ident "SetNetworkedVarProxy"], "Use :SetNWVarProxy instead"),
+        ("Deprecated", [(==) Colon, ident "SetNetworkedVector"], "Use :SetNWVector instead"),
 
         -- Player functions
-        ("Deprecated", [(==) Colon, (==) $ Identifier "GetPunchAngle"], "Use :GetViewPunchAngles instead"),
+        ("Deprecated", [(==) Colon, ident "GetPunchAngle"], "Use :GetViewPunchAngles instead"),
 
         -- Material functions
-        ("Deprecated", [(==) Colon, (==) $ Identifier "SetShader"], "The function is broken"),
+        ("Deprecated", [(==) Colon, ident "SetShader"], "The function is broken"),
 
         -- Vector functions
-        ("Deprecated", [(==) Colon, (==) $ Identifier "DotProduct"], "Use :Dot instead"),
+        ("Deprecated", [(==) Colon, ident "DotProduct"], "Use :Dot instead"),
 
         -- Stupid shit
         ("Stupid", [(==) Semicolon, (==) Semicolon], "There's little fucking reason to use ';' in the first place, don't use it twice in a row"),
         ("Stupid", [(==) Comma, (==) Comma], "Two commas in a row"),
 
-        ("Stupid", [(==) $ Identifier "net", (==) Dot, (==) $ Identifier "WriteEntity", (==) LRound, (==) $ Identifier "LocalPlayer", (==) LRound, (==) RRound], "The server already knows who sent the net message, use the first parameter of net.Receive"),
-        ("Stupid", [(==) $ Identifier "self", (==) Dot, (==) $ Identifier "Weapon"], "That's the same as just 'self' in SWEPs"),
-        ("Stupid", [(==) $ Identifier "self", (==) Dot,  (==) $ Identifier "Entity"], "That's the same as just 'self' in SENTs"),
+        ("Stupid", [ident "net", (==) Dot, ident "WriteEntity", (==) LRound, ident "LocalPlayer", (==) LRound, (==) RRound], "The server already knows who sent the net message, use the first parameter of net.Receive"),
+        ("Stupid", [ident "self", (==) Dot, ident "Weapon"], "That's the same as just 'self' in SWEPs"),
+        ("Stupid", [ident "self", (==) Dot,  ident "Entity"], "That's the same as just 'self' in SENTs"),
         ("Stupid", [(==) While, whitespace,  (==) TTrue, whitespace, (==) Do, whitespace, (==) End], "Jesus christ fuck off already"),
 
         -- Whitespace reasoning
