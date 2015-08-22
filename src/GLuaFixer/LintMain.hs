@@ -93,6 +93,16 @@ searchSettings f = do
                             else
                                 searchSettings up
 
+-- Look for the file in the home directory
+searchHome :: IO (Maybe LintSettings)
+searchHome = do
+                home <- getHomeDirectory
+                exists <- doesFileExist (home </> settingsFile)
+                if exists then
+                    settingsFromFile (home </> settingsFile)
+                else
+                    return Nothing
+
 
 main :: IO ()
 main = do
@@ -100,6 +110,7 @@ main = do
     args <- getArgs
     (settings, files) <- parseCLArgs args
     searchedSettings <- searchSettings cwd
-    let config = fromJust $ settings <|> searchedSettings <|> Just defaultLintSettings
+    homeSettings <- searchHome
+    let config = fromJust $ settings <|> searchedSettings <|> homeSettings <|> Just defaultLintSettings
 
     lint config files
