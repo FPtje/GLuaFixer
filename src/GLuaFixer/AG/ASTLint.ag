@@ -298,6 +298,10 @@ sem Expr
     | AnonymousFunc
         loc.introduces          = S.fromList $ map tokenLabel @pars
         body.scopes             = @loc.introduces : @lhs.scopes
+        loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @pars
+        -- Parameter shadowing
+        +warnings               = if not (reportShadowing @lhs.config) then id else
+                                    (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
     | APrefixExpr
     | ATableConstructor
         fields.fieldNames       = S.empty
