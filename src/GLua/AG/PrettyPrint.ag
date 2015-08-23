@@ -79,7 +79,7 @@ tnest i doc = sizedText 0 (replicate (i * 4) ' ') <> doc
 zchr :: Char -> Doc
 zchr c = zeroWidthText [c]
 
--- Zero width <->
+-- Zero width <+>
 infixl 6 <->
 (<->) :: Doc -> Doc -> Doc
 a <-> b | a == empty = b
@@ -87,9 +87,11 @@ a <-> b | a == empty = b
         | otherwise  = a <> zchr ' ' <> b
 }
 
-attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp MStatList MExprList FieldList Declaration VarsList ElseIf ElseIfList Else ExprSuffixList
+
+attr AllStuff
     syn pretty :: Doc
     inh indent :: Int
+    syn isMultiline use {||} {False} :: Bool -- whether code is printed over multiple lines
 
 attr Declaration VarsList
     syn varPretty  use {<>} {empty}  :: Doc
@@ -117,7 +119,10 @@ attr FieldList
     syn isNil :: Bool
 
 sem MStatList
-    | Cons       lhs.pretty = @loc.prettyComments $+$ @hd.pretty $+$ @tl.pretty
+    | Cons
+                 lhs.isMultiline = @hd.isMultiline
+                 loc.addNewline = if not @tl.isLast && (@hd.isMultiline || @tl.isMultiline) then zchr '\n' else empty
+                 lhs.pretty = @loc.prettyComments $+$ @hd.pretty <> @loc.addNewline $+$ @tl.pretty
                  loc.prettyComments = foldl ($+$) empty . map tok $ @loc.commentsHere
                  loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `comesBefore` @hd.pos]
                  hd.comments = drop (length @loc.commentsHere) @lhs.comments
@@ -142,6 +147,7 @@ sem FieldList
                  loc.comma = if @tl.isNil then empty else zchr ','
                  loc.sep = if @loc.multiline then ($+$) else (<->)
                  loc.multiline = @hd.multiline || @tl.multiline
+                 lhs.isMultiline = @loc.multiline
                  lhs.isNil  = False
     | Nil        lhs.pretty = empty
                  lhs.isNil  = True
@@ -182,41 +188,41 @@ sem Block
                  stats.isHead = True
 
 sem Stat
-    | Def        lhs.pretty = @vars.pretty <> @loc.newl
-                 loc.newl = if @vars.multiline then zchr '\n' else empty
+    | Def        lhs.pretty = @vars.pretty
                  vars.isHead = True
-    | LocDef     lhs.pretty = zeroWidthText "local" <-> @vars.pretty<> @loc.newl
-                 loc.newl = if @vars.multiline then zchr '\n' else empty
+                 lhs.isMultiline = @vars.multiline
+    | LocDef     lhs.pretty = zeroWidthText "local" <-> @vars.pretty
+                 lhs.isMultiline = @vars.multiline
                  vars.isHead = True
-    | AFuncCall  lhs.pretty = @fn.pretty <> @loc.newl
-                 loc.newl = if @fn.multiline then zchr '\n' else empty
+    | AFuncCall  lhs.pretty = @fn.pretty
     | ALabel     lhs.pretty = tok @lbl
     | ABreak     lhs.pretty = zeroWidthText "break"
     | AContinue  lhs.pretty = zeroWidthText "continue"
     | AGoto      lhs.pretty = zeroWidthText "goto" <-> tok @lbl
-    | ADo        loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end" <> @loc.newl
+    | ADo
+                 lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
-    | AWhile     loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = zeroWidthText "while" <-> @cond.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end" <> @loc.newl
+    | AWhile     lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "while" <-> @cond.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
     | ARepeat    lhs.pretty = zeroWidthText "repeat" $+$ nest 4 @body.pretty $+$ zeroWidthText "until" <-> @cond.pretty
                  body.indent = @lhs.indent + 1
-    | AIf        loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ nest 4 @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ zeroWidthText "end" <> @loc.newl
+    | AIf        lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ nest 4 @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
-    | ANFor      loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> zchr ',' <-> @step.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end" <> @loc.newl
+    | ANFor      lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> zchr ',' <-> @step.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
-    | AGFor      loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = zeroWidthText "for" <-> printList tok ", " @vars <-> zeroWidthText "in" <-> @vals.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end" <> @loc.newl
+    | AGFor      lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "for" <-> printList tok ", " @vars <-> zeroWidthText "in" <-> @vals.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
                  vals.isHead = True
-    | AFunc      loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = zeroWidthText "function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ zeroWidthText "end" <> @loc.newl
+    | AFunc      lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
-    | ALocFunc   loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = zeroWidthText "local function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ zeroWidthText "end" <> @loc.newl
+    | ALocFunc   lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "local function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
 
 sem AReturn
