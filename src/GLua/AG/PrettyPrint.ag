@@ -193,7 +193,8 @@ sem AST
                 chunk.comments = @comments
 
 sem Block
-    | Block      lhs.pretty = @stats.pretty $+$ @ret.pretty
+    | Block      loc.newl = if @stats.statementCount > 0 && @ret.hasBreaking then zchr '\n' else empty
+                 lhs.pretty = @stats.pretty <> @loc.newl $+$ @ret.pretty
                  stats.isHead = True
 
 sem Stat
