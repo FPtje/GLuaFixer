@@ -106,9 +106,6 @@ attr MStatList
 attr MStat Stat
     inh isLastStatement :: Bool
 
-attr FieldList Field MExprList Expr MExpr PrefixExp ExprSuffixList PFExprSuffix Args Declaration VarsList
-    syn multiline use {||} {False} :: Bool -- Whether a table should be printed as multiline
-
 attr MStat MExprList MExpr
     syn pos :: LineColPos
 
@@ -145,9 +142,9 @@ sem MExprList
 sem FieldList
     | Cons       lhs.pretty = (@hd.pretty <> @loc.comma) `@loc.sep` @tl.pretty
                  loc.comma = if @tl.isNil then empty else zchr ','
-                 loc.sep = if @loc.multiline then ($+$) else (<->)
-                 loc.multiline = @hd.multiline || @tl.multiline
-                 lhs.isMultiline = @loc.multiline
+                 loc.sep = if @loc.isMultiline then ($+$) else (<->)
+                 loc.isMultiline = @hd.isMultiline || @tl.isMultiline
+                 lhs.isMultiline = @loc.isMultiline
                  lhs.isNil  = False
     | Nil        lhs.pretty = empty
                  lhs.isNil  = True
@@ -190,9 +187,7 @@ sem Block
 sem Stat
     | Def        lhs.pretty = @vars.pretty
                  vars.isHead = True
-                 lhs.isMultiline = @vars.multiline
     | LocDef     lhs.pretty = zeroWidthText "local" <-> @vars.pretty
-                 lhs.isMultiline = @vars.multiline
                  vars.isHead = True
     | AFuncCall  lhs.pretty = @fn.pretty
     | ALabel     lhs.pretty = tok @lbl
@@ -262,7 +257,7 @@ sem Expr
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         pexpr.indent = 0
     | ATableConstructor
-                        lhs.pretty = if @fields.multiline then @loc.prettyMulti else @loc.prettySingle
+                        lhs.pretty = if @fields.isMultiline then @loc.prettyMulti else @loc.prettySingle
                         loc.prettyMulti = zchr '{' $+$ nest 4 @fields.pretty $+$ zchr '}'
                         loc.prettySingle = zchr '{' <> @fields.pretty <> zchr '}'
     | BinOpExpr         lhs.pretty = @left.pretty <-> @op.pretty <-> @right.pretty
@@ -274,7 +269,7 @@ sem Expr
 sem Args
     | ListArgs  lhs.pretty = zchr '(' <> @args.pretty <> zchr ')'
                 args.isHead = True
-    | TableArg  lhs.pretty = if @arg.multiline then @loc.prettyMulti else @loc.prettySingle
+    | TableArg  lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
                 loc.prettyMulti = zchr '{' $+$ nest 4 @arg.pretty $+$ zchr '}'
                 loc.prettySingle = zchr '{' <> @arg.pretty <> zchr '}'
     | StringArg lhs.pretty = tok @arg
@@ -283,10 +278,10 @@ sem Field
     | ExprField     lhs.pretty = zchr '[' <> @key.pretty <> zchr ']' <-> zchr '=' <-> @value.pretty
                     value.indent = 0
                     key.indent = 0
-                    lhs.multiline = True
+                    lhs.isMultiline = True
     | NamedField    lhs.pretty = tok @key <-> zchr '=' <-> @value.pretty
                     value.indent = 0
-                    lhs.multiline = True
+                    lhs.isMultiline = True
     | UnnamedField  lhs.pretty = @value.pretty
                     value.indent = 0
 
