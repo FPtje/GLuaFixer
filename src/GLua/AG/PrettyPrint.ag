@@ -118,8 +118,8 @@ attr FieldList
 attr Block MStat MStatList AReturn
     syn statementCount use {+} {1} :: Int
 
-attr Block AReturn
-    syn hasReturn use {||} {False} :: Bool
+attr Block AReturn Stat MStat MStatList
+    syn hasBreaking use {||} {False} :: Bool -- whether it contains control flow breaking code (continue/return/break)
 
 attr ElseIfList Else
     syn elsesExist use {||} {False} :: Bool
@@ -204,35 +204,45 @@ sem Stat
     | AFuncCall  lhs.pretty = @fn.pretty
     | ALabel     lhs.pretty = tok @lbl
     | ABreak     lhs.pretty = zeroWidthText "break"
+                 lhs.hasBreaking = True
     | AContinue  lhs.pretty = zeroWidthText "continue"
+                 lhs.hasBreaking = True
     | AGoto      lhs.pretty = zeroWidthText "goto" <-> tok @lbl
     | ADo
                  lhs.isMultiline = True
                  lhs.pretty = zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
+                 lhs.hasBreaking = False
     | AWhile     lhs.isMultiline = True
                  lhs.pretty = zeroWidthText "while" <-> @cond.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
+                 lhs.hasBreaking = False
     | ARepeat    lhs.pretty = zeroWidthText "repeat" $+$ nest 4 @body.pretty $+$ zeroWidthText "until" <-> @cond.pretty
                  body.indent = @lhs.indent + 1
-    | AIf        loc.isMultiline = @cond.isMultiline || @body.hasReturn || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasReturn || @elifs.elsesExist || @els.elsesExist
+                 lhs.hasBreaking = False
+    | AIf        loc.isMultiline = @cond.isMultiline || @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking || @elifs.elsesExist || @els.elsesExist
                  loc.singleLinePretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" <-> @body.pretty <-> zeroWidthText "end"
                  loc.multilinePretty  = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ nest 4 @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ zeroWidthText "end"
-                 lhs.pretty = if @loc.isMultiline then @loc.singleLinePretty else @loc.multilinePretty
+                 lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
                  body.indent = @lhs.indent + 1
+                 lhs.hasBreaking = False
     | ANFor      lhs.isMultiline = True
                  lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> zchr ',' <-> @step.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
+                 lhs.hasBreaking = False
     | AGFor      lhs.isMultiline = True
                  lhs.pretty = zeroWidthText "for" <-> printList tok ", " @vars <-> zeroWidthText "in" <-> @vals.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
                  vals.isHead = True
+                 lhs.hasBreaking = False
     | AFunc      lhs.isMultiline = True
                  lhs.pretty = zeroWidthText "function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
+                 lhs.hasBreaking = False
     | ALocFunc   lhs.isMultiline = True
                  lhs.pretty = zeroWidthText "local function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
+                 lhs.hasBreaking = False
 
 sem AReturn
     | AReturn    lhs.pretty = @loc.prettyComments $+$ zeroWidthText "return" <-> @values.pretty
@@ -241,7 +251,7 @@ sem AReturn
                  values.comments = drop (length @loc.commentsHere) @lhs.comments
                  lhs.comments = @values.comments
                  values.isHead = True
-                 lhs.hasReturn = True
+                 lhs.hasBreaking = True
     | NoReturn   lhs.pretty = empty
                  lhs.statementCount = 0
 
