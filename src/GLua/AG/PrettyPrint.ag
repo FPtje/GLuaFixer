@@ -278,7 +278,10 @@ sem Expr
     | ANumber           lhs.pretty = zeroWidthText @num
     | AString           lhs.pretty = tok @str
     | AVarArg           lhs.pretty = zeroWidthText "..."
-    | AnonymousFunc     lhs.pretty = zeroWidthText "function(" <> printList tok ", " @pars <> zeroWidthText ")" $+$ (nest 4 @body.pretty) $+$ zeroWidthText "end"
+    | AnonymousFunc     loc.isMultiline = @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking
+                        loc.singleLinePretty = zeroWidthText "function(" <> printList tok ", " @pars <> zeroWidthText ")" <-> @body.pretty <-> zeroWidthText "end"
+                        loc.multilinePretty = zeroWidthText "function(" <> printList tok ", " @pars <> zeroWidthText ")" $+$ (nest 4 @body.pretty) $+$ zeroWidthText "end"
+                        lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
                         body.indent = 1
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         pexpr.indent = 0
