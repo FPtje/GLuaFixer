@@ -115,6 +115,15 @@ attr MStatList MExprList FieldList Declaration VarsList ExprSuffixList ElseIf El
 attr FieldList
     syn isNil :: Bool
 
+attr Block MStat MStatList AReturn
+    syn statementCount use {+} {1} :: Int
+
+attr Block AReturn
+    syn hasReturn use {||} {False} :: Bool
+
+attr ElseIfList Else
+    syn elsesExist use {||} {False} :: Bool
+
 sem MStatList
     | Cons
                  lhs.isMultiline = @hd.isMultiline
@@ -128,6 +137,7 @@ sem MStatList
                  hd.isLastStatement = @tl.isLast
                  lhs.isLast = False
     | Nil        lhs.pretty = empty
+                 lhs.statementCount = 0
 
 sem MStat
     | MStat      lhs.pos    = @pos
@@ -165,10 +175,12 @@ sem ElseIf
 
 sem ElseIfList
     | Cons      lhs.pretty = @hd.pretty $+$ @tl.pretty
+                lhs.elsesExist = True
     | Nil       lhs.pretty = empty
 
 sem Else
     | Just      lhs.pretty = zeroWidthText "else" $+$ nest 4 @just.pretty
+                lhs.elsesExist = True
     | Nothing   lhs.pretty = empty
 
 sem ExprSuffixList
@@ -203,8 +215,10 @@ sem Stat
                  body.indent = @lhs.indent + 1
     | ARepeat    lhs.pretty = zeroWidthText "repeat" $+$ nest 4 @body.pretty $+$ zeroWidthText "until" <-> @cond.pretty
                  body.indent = @lhs.indent + 1
-    | AIf        lhs.isMultiline = True
-                 lhs.pretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ nest 4 @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ zeroWidthText "end"
+    | AIf        loc.isMultiline = @cond.isMultiline || @body.hasReturn || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasReturn || @elifs.elsesExist || @els.elsesExist
+                 loc.singleLinePretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" <-> @body.pretty <-> zeroWidthText "end"
+                 loc.multilinePretty  = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ nest 4 @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ zeroWidthText "end"
+                 lhs.pretty = if @loc.isMultiline then @loc.singleLinePretty else @loc.multilinePretty
                  body.indent = @lhs.indent + 1
     | ANFor      lhs.isMultiline = True
                  lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> zchr ',' <-> @step.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
@@ -227,7 +241,9 @@ sem AReturn
                  values.comments = drop (length @loc.commentsHere) @lhs.comments
                  lhs.comments = @values.comments
                  values.isHead = True
+                 lhs.hasReturn = True
     | NoReturn   lhs.pretty = empty
+                 lhs.statementCount = 0
 
 sem FuncName
     | FuncName   lhs.pretty = printList tok "." @names <> metaDoc @meta
