@@ -15,7 +15,8 @@ data LintSettings = LintSettings {
                         reportShadowing :: Bool,
                         reportGotos :: Bool,
                         reportDoubleNegations :: Bool,
-                        reportDuplicateTableKeys :: Bool
+                        reportDuplicateTableKeys :: Bool,
+                        reportProfanity :: Bool
                     } deriving (Show)
 
 defaultLintSettings :: LintSettings
@@ -30,7 +31,8 @@ defaultLintSettings =   LintSettings {
                             reportShadowing = True,
                             reportGotos = True,
                             reportDoubleNegations = True,
-                            reportDuplicateTableKeys = True
+                            reportDuplicateTableKeys = True,
+                            reportProfanity = True
                         }
 
 instance FromJSON LintSettings where
@@ -45,7 +47,8 @@ instance FromJSON LintSettings where
                                v .:? "reportShadowing" .!= (reportShadowing defaultLintSettings) <*>
                                v .:? "reportGotos" .!= (reportGotos defaultLintSettings) <*>
                                v .:? "reportDoubleNegations" .!= (reportDoubleNegations defaultLintSettings) <*>
-                               v .:? "reportDuplicateTableKeys" .!= (reportDuplicateTableKeys defaultLintSettings)
+                               v .:? "reportDuplicateTableKeys" .!= (reportDuplicateTableKeys defaultLintSettings) <*>
+                               v .:? "reportProfanity" .!= (reportProfanity defaultLintSettings)
 
     parseJSON _          = mzero
 
@@ -57,9 +60,10 @@ instance ToJSON LintSettings where
                         "reportDeprecated" .= reportDeprecated ls,
                         "reportWhitespaceStyle" .= reportWhitespaceStyle ls,
                         "reportBeginnerMistakes" .= reportBeginnerMistakes ls,
-                        "reportEmptyBlocks" .= reportBeginnerMistakes ls,
-                        "reportShadowing" .= reportBeginnerMistakes ls,
-                        "reportGotos" .= reportBeginnerMistakes ls,
-                        "reportDoubleNegations" .= reportBeginnerMistakes ls,
-                        "reportDuplicateTableKeys" .= reportBeginnerMistakes ls
+                        "reportEmptyBlocks" .= reportEmptyBlocks ls,
+                        "reportShadowing" .= reportShadowing ls,
+                        "reportGotos" .= reportGotos ls,
+                        "reportDoubleNegations" .= reportDoubleNegations ls,
+                        "reportDuplicateTableKeys" .= reportDuplicateTableKeys ls,
+                        "reportProfanity" .= reportProfanity ls
                        ]

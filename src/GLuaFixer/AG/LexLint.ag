@@ -166,7 +166,25 @@ badSequences = [
 
         (reportWhitespaceStyle, "Style", [(==) RRound, \t -> not (elem t [RRound, LRound, LSquare, RSquare, LCurly, RCurly, Colon, Comma, Dot, Semicolon]) && not (whitespace t)], "Please put some whitespace after ')'"),
         (reportWhitespaceStyle, "Style", [not . whitespace, (`elem` [Plus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr])], "Please put some whitespace before the operator"),
-        (reportWhitespaceStyle, "Style", [(`elem` [Plus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr]), not . whitespace], "Please put some whitespace after the operator")
+        (reportWhitespaceStyle, "Style", [(`elem` [Plus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr]), not . whitespace], "Please put some whitespace after the operator"),
+
+        -- Profanity. Not because I hate bad words in code, but because
+        -- it's very useful to have your temporary debug variables marked by the linter
+        (reportProfanity, "Profanity", [ident "bitch"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "cunt"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "dick"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "dicks"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "fuck"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "fucking"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "goddamnit"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "knob"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "knobs"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "motherfucker"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "nigger"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "niggers"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "niggertits"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "nipple"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "shit"], "Watch your profanity.")
     ]
 
 progress :: LintSettings -> [(LintSettings -> Bool, String, [Token -> Bool], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
