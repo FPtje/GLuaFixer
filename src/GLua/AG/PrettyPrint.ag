@@ -19,7 +19,7 @@ printList f sep []       = empty
 printList f sep (e : es) = (f e) <> g es
     where
         g []       = empty
-        g (e : es) = text sep <> (f e) <> g es
+        g (e : es) = zeroWidthText sep <> (f e) <> g es
 
 metaDoc :: Maybe MToken -> Doc
 metaDoc (Just m) = zchr ':' <> tok m
@@ -34,11 +34,11 @@ printStats (x : xs) i = nest (i * 4) (pp_mstat x i) $+$ printStats xs i
 
 printElIfs :: [(MExpr, Block)] -> Int -> Doc
 printElIfs [] i = empty
-printElIfs ((e, b) : es) i = text "elseif" <-> pp_mexpr e <-> text "then" $+$ pp_block b i $+$ printElIfs es i
+printElIfs ((e, b) : es) i = zeroWidthText "elseif" <-> pp_mexpr e <-> zeroWidthText "then" $+$ pp_block b i $+$ printElIfs es i
 
 printEls :: Maybe Block -> Int -> Doc
 printEls Nothing i = empty
-printEls (Just b) i = text "else" $+$ pp_block b i
+printEls (Just b) i = zeroWidthText "else" $+$ pp_block b i
 
 
 renderPos :: LineColPos -> String
@@ -79,7 +79,7 @@ tnest i doc = sizedText 0 (replicate (i * 4) ' ') <> doc
 zchr :: Char -> Doc
 zchr c = zeroWidthText [c]
 
--- Zero width <->
+-- Zero width <+>
 infixl 6 <->
 (<->) :: Doc -> Doc -> Doc
 a <-> b | a == empty = b
@@ -87,9 +87,11 @@ a <-> b | a == empty = b
         | otherwise  = a <> zchr ' ' <> b
 }
 
-attr UnOp AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp MStatList MExprList FieldList Declaration VarsList ElseIf ElseIfList Else ExprSuffixList
+
+attr AllStuff
     syn pretty :: Doc
     inh indent :: Int
+    syn isMultiline use {||} {False} :: Bool -- whether code is printed over multiple lines
 
 attr Declaration VarsList
     syn varPretty  use {<>} {empty}  :: Doc
@@ -104,9 +106,6 @@ attr MStatList
 attr MStat Stat
     inh isLastStatement :: Bool
 
-attr FieldList Field MExprList Expr MExpr PrefixExp ExprSuffixList PFExprSuffix Args Declaration VarsList
-    syn multiline use {||} {False} :: Bool -- Whether a table should be printed as multiline
-
 attr MStat MExprList MExpr
     syn pos :: LineColPos
 
@@ -116,8 +115,20 @@ attr MStatList MExprList FieldList Declaration VarsList ExprSuffixList ElseIf El
 attr FieldList
     syn isNil :: Bool
 
+attr Block MStat MStatList AReturn
+    syn statementCount use {+} {1} :: Int
+
+attr Block AReturn
+    syn hasReturn use {||} {False} :: Bool
+
+attr ElseIfList Else
+    syn elsesExist use {||} {False} :: Bool
+
 sem MStatList
-    | Cons       lhs.pretty = @loc.prettyComments $+$ @hd.pretty $+$ @tl.pretty
+    | Cons
+                 lhs.isMultiline = @hd.isMultiline
+                 loc.addNewline = if not @tl.isLast && (@hd.isMultiline || @tl.isMultiline) then zchr '\n' else empty
+                 lhs.pretty = @loc.prettyComments $+$ @hd.pretty <> @loc.addNewline $+$ @tl.pretty
                  loc.prettyComments = foldl ($+$) empty . map tok $ @loc.commentsHere
                  loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `comesBefore` @hd.pos]
                  hd.comments = drop (length @loc.commentsHere) @lhs.comments
@@ -126,6 +137,7 @@ sem MStatList
                  hd.isLastStatement = @tl.isLast
                  lhs.isLast = False
     | Nil        lhs.pretty = empty
+                 lhs.statementCount = 0
 
 sem MStat
     | MStat      lhs.pos    = @pos
@@ -140,8 +152,9 @@ sem MExprList
 sem FieldList
     | Cons       lhs.pretty = (@hd.pretty <> @loc.comma) `@loc.sep` @tl.pretty
                  loc.comma = if @tl.isNil then empty else zchr ','
-                 loc.sep = if @loc.multiline then ($+$) else (<->)
-                 loc.multiline = @hd.multiline || @tl.multiline
+                 loc.sep = if @loc.isMultiline then ($+$) else (<->)
+                 loc.isMultiline = @hd.isMultiline || @tl.isMultiline
+                 lhs.isMultiline = @loc.isMultiline
                  lhs.isNil  = False
     | Nil        lhs.pretty = empty
                  lhs.isNil  = True
@@ -158,14 +171,16 @@ sem VarsList
     | Nil       lhs.pretty = empty
 
 sem ElseIf
-    | Tuple     lhs.pretty = text "elseif" <-> @x1.pretty <-> text "then" $+$ nest 4 @x2.pretty
+    | Tuple     lhs.pretty = zeroWidthText "elseif" <-> @x1.pretty <-> zeroWidthText "then" $+$ nest 4 @x2.pretty
 
 sem ElseIfList
     | Cons      lhs.pretty = @hd.pretty $+$ @tl.pretty
+                lhs.elsesExist = True
     | Nil       lhs.pretty = empty
 
 sem Else
-    | Just      lhs.pretty = text "else" $+$ nest 4 @just.pretty
+    | Just      lhs.pretty = zeroWidthText "else" $+$ nest 4 @just.pretty
+                lhs.elsesExist = True
     | Nothing   lhs.pretty = empty
 
 sem ExprSuffixList
@@ -182,51 +197,53 @@ sem Block
                  stats.isHead = True
 
 sem Stat
-    | Def        lhs.pretty = @vars.pretty <> @loc.newl
-                 loc.newl = if @vars.multiline then zchr '\n' else empty
+    | Def        lhs.pretty = @vars.pretty
                  vars.isHead = True
-    | LocDef     lhs.pretty = text "local" <-> @vars.pretty<> @loc.newl
-                 loc.newl = if @vars.multiline then zchr '\n' else empty
+    | LocDef     lhs.pretty = zeroWidthText "local" <-> @vars.pretty
                  vars.isHead = True
-    | AFuncCall  lhs.pretty = @fn.pretty <> @loc.newl
-                 loc.newl = if @fn.multiline then zchr '\n' else empty
+    | AFuncCall  lhs.pretty = @fn.pretty
     | ALabel     lhs.pretty = tok @lbl
-    | ABreak     lhs.pretty = text "break"
-    | AContinue  lhs.pretty = text "continue"
-    | AGoto      lhs.pretty = text "goto" <-> tok @lbl
-    | ADo        loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = text "do" $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
+    | ABreak     lhs.pretty = zeroWidthText "break"
+    | AContinue  lhs.pretty = zeroWidthText "continue"
+    | AGoto      lhs.pretty = zeroWidthText "goto" <-> tok @lbl
+    | ADo
+                 lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
-    | AWhile     loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = text "while" <-> @cond.pretty <-> text "do" $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
+    | AWhile     lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "while" <-> @cond.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
-    | ARepeat    lhs.pretty = text "repeat" $+$ nest 4 @body.pretty $+$ text "until" <-> @cond.pretty
+    | ARepeat    lhs.pretty = zeroWidthText "repeat" $+$ nest 4 @body.pretty $+$ zeroWidthText "until" <-> @cond.pretty
                  body.indent = @lhs.indent + 1
-    | AIf        loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = text "if" <-> @cond.pretty <-> text "then" $+$ nest 4 @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ text "end" <> @loc.newl
+    | AIf        loc.isMultiline = @cond.isMultiline || @body.hasReturn || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasReturn || @elifs.elsesExist || @els.elsesExist
+                 loc.singleLinePretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" <-> @body.pretty <-> zeroWidthText "end"
+                 loc.multilinePretty  = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ nest 4 @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ zeroWidthText "end"
+                 lhs.pretty = if @loc.isMultiline then @loc.singleLinePretty else @loc.multilinePretty
                  body.indent = @lhs.indent + 1
-    | ANFor      loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = text "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> zchr ',' <-> @step.pretty <-> text "do" $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
+    | ANFor      lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> zchr ',' <-> @step.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
-    | AGFor      loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = text "for" <-> printList tok ", " @vars <-> text "in" <-> @vals.pretty <-> text "do" $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
+    | AGFor      lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "for" <-> printList tok ", " @vars <-> zeroWidthText "in" <-> @vals.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
                  vals.isHead = True
-    | AFunc      loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = text "function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
+    | AFunc      lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
-    | ALocFunc   loc.newl = if @lhs.isLastStatement then empty else char '\n'
-                 lhs.pretty = text "local function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ text "end" <> @loc.newl
+    | ALocFunc   lhs.isMultiline = True
+                 lhs.pretty = zeroWidthText "local function" <-> @name.pretty <> zchr '(' <> printList tok ", " @args <> zchr ')' $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
 
 sem AReturn
-    | AReturn    lhs.pretty = @loc.prettyComments $+$ text "return" <-> @values.pretty
+    | AReturn    lhs.pretty = @loc.prettyComments $+$ zeroWidthText "return" <-> @values.pretty
                  loc.prettyComments = foldl ($+$) empty . map tok $ @loc.commentsHere
                  loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `comesBefore` @values.pos]
                  values.comments = drop (length @loc.commentsHere) @lhs.comments
                  lhs.comments = @values.comments
                  values.isHead = True
+                 lhs.hasReturn = True
     | NoReturn   lhs.pretty = empty
+                 lhs.statementCount = 0
 
 sem FuncName
     | FuncName   lhs.pretty = printList tok "." @names <> metaDoc @meta
@@ -245,18 +262,18 @@ sem MExpr
     | MExpr             lhs.pos    = @pos
 
 sem Expr
-    | ANil              lhs.pretty = text "nil"
-    | AFalse            lhs.pretty = text "false"
-    | ATrue             lhs.pretty = text "true"
-    | ANumber           lhs.pretty = text @num
+    | ANil              lhs.pretty = zeroWidthText "nil"
+    | AFalse            lhs.pretty = zeroWidthText "false"
+    | ATrue             lhs.pretty = zeroWidthText "true"
+    | ANumber           lhs.pretty = zeroWidthText @num
     | AString           lhs.pretty = tok @str
-    | AVarArg           lhs.pretty = text "..."
-    | AnonymousFunc     lhs.pretty = text "function(" <> printList tok ", " @pars <> text ")" $+$ (nest 4 @body.pretty) $+$ text "end"
+    | AVarArg           lhs.pretty = zeroWidthText "..."
+    | AnonymousFunc     lhs.pretty = zeroWidthText "function(" <> printList tok ", " @pars <> zeroWidthText ")" $+$ (nest 4 @body.pretty) $+$ zeroWidthText "end"
                         body.indent = 1
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         pexpr.indent = 0
     | ATableConstructor
-                        lhs.pretty = if @fields.multiline then @loc.prettyMulti else @loc.prettySingle
+                        lhs.pretty = if @fields.isMultiline then @loc.prettyMulti else @loc.prettySingle
                         loc.prettyMulti = zchr '{' $+$ nest 4 @fields.pretty $+$ zchr '}'
                         loc.prettySingle = zchr '{' <> @fields.pretty <> zchr '}'
     | BinOpExpr         lhs.pretty = @left.pretty <-> @op.pretty <-> @right.pretty
@@ -268,7 +285,7 @@ sem Expr
 sem Args
     | ListArgs  lhs.pretty = zchr '(' <> @args.pretty <> zchr ')'
                 args.isHead = True
-    | TableArg  lhs.pretty = if @arg.multiline then @loc.prettyMulti else @loc.prettySingle
+    | TableArg  lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
                 loc.prettyMulti = zchr '{' $+$ nest 4 @arg.pretty $+$ zchr '}'
                 loc.prettySingle = zchr '{' <> @arg.pretty <> zchr '}'
     | StringArg lhs.pretty = tok @arg
@@ -277,34 +294,34 @@ sem Field
     | ExprField     lhs.pretty = zchr '[' <> @key.pretty <> zchr ']' <-> zchr '=' <-> @value.pretty
                     value.indent = 0
                     key.indent = 0
-                    lhs.multiline = True
+                    lhs.isMultiline = True
     | NamedField    lhs.pretty = tok @key <-> zchr '=' <-> @value.pretty
                     value.indent = 0
-                    lhs.multiline = True
+                    lhs.isMultiline = True
     | UnnamedField  lhs.pretty = @value.pretty
                     value.indent = 0
 
 sem BinOp
-    | APlus         lhs.pretty = text "+"
-    | BinMinus      lhs.pretty = text "-"
-    | AMultiply     lhs.pretty = text "*"
-    | ADivide       lhs.pretty = text "/"
-    | AModulus      lhs.pretty = text "%"
-    | APower        lhs.pretty = text "^"
-    | AConcatenate  lhs.pretty = text ".."
-    | ALT           lhs.pretty = text "<"
-    | ALEQ          lhs.pretty = text "<="
-    | AGT           lhs.pretty = text ">"
-    | AGEQ          lhs.pretty = text ">="
-    | AEq           lhs.pretty = text "=="
-    | ANEq          lhs.pretty = text "~="
-    | AAnd          lhs.pretty = text "and"
-    | AOr           lhs.pretty = text "or"
+    | APlus         lhs.pretty = zeroWidthText "+"
+    | BinMinus      lhs.pretty = zeroWidthText "-"
+    | AMultiply     lhs.pretty = zeroWidthText "*"
+    | ADivide       lhs.pretty = zeroWidthText "/"
+    | AModulus      lhs.pretty = zeroWidthText "%"
+    | APower        lhs.pretty = zeroWidthText "^"
+    | AConcatenate  lhs.pretty = zeroWidthText ".."
+    | ALT           lhs.pretty = zeroWidthText "<"
+    | ALEQ          lhs.pretty = zeroWidthText "<="
+    | AGT           lhs.pretty = zeroWidthText ">"
+    | AGEQ          lhs.pretty = zeroWidthText ">="
+    | AEq           lhs.pretty = zeroWidthText "=="
+    | ANEq          lhs.pretty = zeroWidthText "~="
+    | AAnd          lhs.pretty = zeroWidthText "and"
+    | AOr           lhs.pretty = zeroWidthText "or"
 
 sem UnOp
-    | UnMinus  lhs.pretty = text "-"
-    | ANot     lhs.pretty = text "not "
-    | AHash    lhs.pretty = text "#"
+    | UnMinus  lhs.pretty = zeroWidthText "-"
+    | ANot     lhs.pretty = zeroWidthText "not "
+    | AHash    lhs.pretty = zeroWidthText "#"
 
 {
 
