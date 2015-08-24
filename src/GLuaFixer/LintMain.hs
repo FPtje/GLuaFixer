@@ -116,14 +116,19 @@ searchHome = do
                 else
                     return Nothing
 
+getSettings :: IO (Maybe LintSettings)
+getSettings = do
+    cwd <- getCurrentDirectory
+    searchedSettings <- searchSettings cwd
+    homeSettings <- searchHome
+    return $ searchedSettings <|> homeSettings <|> Just defaultLintSettings
 
 main :: IO ()
 main = do
-    cwd <- getCurrentDirectory
     args <- getArgs
     (settings, files) <- parseCLArgs args
-    searchedSettings <- searchSettings cwd
-    homeSettings <- searchHome
-    let config = fromJust $ settings <|> searchedSettings <|> homeSettings <|> Just defaultLintSettings
+    defaultSettings <- getSettings
+
+    let config = fromJust $ settings <|> defaultSettings
 
     lint config files
