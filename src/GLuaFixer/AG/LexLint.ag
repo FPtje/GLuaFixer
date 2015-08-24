@@ -171,6 +171,8 @@ badSequences = [
         -- Profanity. Not because I hate bad words in code, but because
         -- it's very useful to have your temporary debug variables marked by the linter
         (reportProfanity, "Profanity", [ident "bitch"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "cock"], "Watch your profanity."),
+        (reportProfanity, "Profanity", [ident "cocks"], "Watch your profanity."),
         (reportProfanity, "Profanity", [ident "cunt"], "Watch your profanity."),
         (reportProfanity, "Profanity", [ident "dick"], "Watch your profanity."),
         (reportProfanity, "Profanity", [ident "dicks"], "Watch your profanity."),
