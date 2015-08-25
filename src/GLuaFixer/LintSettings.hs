@@ -3,6 +3,7 @@ module GLuaFixer.LintSettings where
 
 import Data.Aeson
 import Control.Monad
+import GLua.AG.PrettyPrint
 
 data LintSettings = LintSettings {
                         lint_maxScopeDepth :: Int,
@@ -16,7 +17,13 @@ data LintSettings = LintSettings {
                         lint_gotos :: Bool,
                         lint_doubleNegations :: Bool,
                         lint_duplicateTableKeys :: Bool,
-                        lint_profanity :: Bool
+                        lint_profanity :: Bool,
+
+                        prettyprint_spaceAfterParens :: Bool,
+                        prettyprint_spaceAfterBrackets :: Bool,
+                        prettyprint_spaceAfterBraces :: Bool,
+                        prettyprint_semicolons :: Bool,
+                        prettyprint_cStyle :: Bool
                     } deriving (Show)
 
 defaultLintSettings :: LintSettings
@@ -32,7 +39,13 @@ defaultLintSettings =   LintSettings {
                             lint_gotos = True,
                             lint_doubleNegations = True,
                             lint_duplicateTableKeys = True,
-                            lint_profanity = True
+                            lint_profanity = True,
+
+                            prettyprint_spaceAfterParens = False,
+                            prettyprint_spaceAfterBrackets = False,
+                            prettyprint_spaceAfterBraces = False,
+                            prettyprint_semicolons = False,
+                            prettyprint_cStyle = False
                         }
 
 instance FromJSON LintSettings where
@@ -48,9 +61,23 @@ instance FromJSON LintSettings where
                                v .:? "lint_gotos" .!= (lint_gotos defaultLintSettings) <*>
                                v .:? "lint_doubleNegations" .!= (lint_doubleNegations defaultLintSettings) <*>
                                v .:? "lint_duplicateTableKeys" .!= (lint_duplicateTableKeys defaultLintSettings) <*>
-                               v .:? "lint_profanity" .!= (lint_profanity defaultLintSettings)
+                               v .:? "lint_profanity" .!= (lint_profanity defaultLintSettings) <*>
+                               v .:? "prettyprint_spaceAfterParens" .!= (prettyprint_spaceAfterParens defaultLintSettings) <*>
+                               v .:? "prettyprint_spaceAfterBrackets" .!= (prettyprint_spaceAfterBrackets defaultLintSettings) <*>
+                               v .:? "prettyprint_spaceAfterBraces" .!= (prettyprint_spaceAfterBraces defaultLintSettings) <*>
+                               v .:? "prettyprint_semicolons" .!= (prettyprint_semicolons defaultLintSettings) <*>
+                               v .:? "prettyprint_cStyle" .!= (prettyprint_cStyle defaultLintSettings)
 
     parseJSON _          = mzero
+
+lint2ppSetting :: LintSettings -> PrettyPrintConfig
+lint2ppSetting ls = PPConfig{
+  spaceAfterParens = prettyprint_spaceAfterParens ls,
+  spaceAfterBrackets = prettyprint_spaceAfterBrackets ls,
+  spaceAfterBraces = prettyprint_spaceAfterBraces ls,
+  semicolons = prettyprint_semicolons ls,
+  cStyle = prettyprint_cStyle ls
+}
 
 instance ToJSON LintSettings where
     toJSON ls = object [
@@ -65,5 +92,10 @@ instance ToJSON LintSettings where
                         "lint_gotos" .= lint_gotos ls,
                         "lint_doubleNegations" .= lint_doubleNegations ls,
                         "lint_duplicateTableKeys" .= lint_duplicateTableKeys ls,
-                        "lint_profanity" .= lint_profanity ls
+                        "lint_profanity" .= lint_profanity ls,
+                        "prettyprint_spaceAfterParens" .= prettyprint_spaceAfterParens ls,
+                        "prettyprint_spaceAfterBrackets" .= prettyprint_spaceAfterBrackets ls,
+                        "prettyprint_spaceAfterBraces" .= prettyprint_spaceAfterBraces ls,
+                        "prettyprint_semicolons" .= prettyprint_semicolons ls,
+                        "prettyprint_cStyle" .= prettyprint_cStyle ls
                        ]

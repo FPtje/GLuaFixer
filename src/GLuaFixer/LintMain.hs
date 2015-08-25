@@ -34,9 +34,11 @@ prettyPrint :: IO ()
 prettyPrint = do
                 lua <- getContents
 
+                lintsettings <- getSettings
                 let parsed = parseGLuaFromString lua
                 let ast = fst parsed
-                let pretty = prettyprint . fixOldDarkRPSyntax $ ast
+                let ppconf = lint2ppSetting lintsettings
+                let pretty = prettyprintConf ppconf . fixOldDarkRPSyntax $ ast
 
                 putStr pretty
 
@@ -116,12 +118,12 @@ searchHome = do
                 else
                     return Nothing
 
-getSettings :: IO (Maybe LintSettings)
+getSettings :: IO LintSettings
 getSettings = do
     cwd <- getCurrentDirectory
     searchedSettings <- searchSettings cwd
     homeSettings <- searchHome
-    return $ searchedSettings <|> homeSettings <|> Just defaultLintSettings
+    return . fromJust $ searchedSettings <|> homeSettings <|> Just defaultLintSettings
 
 main :: IO ()
 main = do
@@ -129,6 +131,6 @@ main = do
     (settings, files) <- parseCLArgs args
     defaultSettings <- getSettings
 
-    let config = fromJust $ settings <|> defaultSettings
+    let config = fromJust $ settings <|> Just defaultSettings
 
     lint config files
