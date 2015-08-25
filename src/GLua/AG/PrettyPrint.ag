@@ -423,6 +423,9 @@ pp_mexpr p = pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 defaultP
 prettyprint :: AST -> String
 prettyprint p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0 defaultPPConfig))
 
+prettyprintConf :: PrettyPrintConfig -> AST -> String
+prettyprintConf conf p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0 conf))
+
 renderBlock        :: Block -> String
 renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] 0 defaultPPConfig))
 
