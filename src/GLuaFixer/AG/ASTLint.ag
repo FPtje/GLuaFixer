@@ -241,6 +241,7 @@ sem Stat
 
 sem ElseIf
     | Tuple
+        x1.isNegation           = False
         x2.scopes               = S.empty : @lhs.scopes
         +warnings               = if not (reportEmptyBlocks @lhs.config) || @x2.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty elseif statement"
@@ -280,10 +281,6 @@ sem PFExprSuffix
     | ExprIndex
         index.isNegation        = False
     | DotIndex
-
-sem ElseIf
-    | Tuple
-        x1.isNegation           = False
 
 sem MExpr
     | MExpr
