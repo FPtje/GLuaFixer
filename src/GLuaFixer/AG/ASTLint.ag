@@ -51,10 +51,8 @@ registerVariable ss@(scope : scs) var = if S.member var scope then ss else
                                         scope : registerVariable scs var
 
 findSelf :: [MToken] -> Bool
-findSelf = or . map isSelf
-    where
-        isSelf (MToken _ (Identifier "self")) = True
-        isSelf _ = False
+findSelf ((MToken _ (Identifier "self")) : _) = True
+findSelf _ = False
 }
 
 ----------------------------------------
