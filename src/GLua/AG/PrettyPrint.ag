@@ -26,6 +26,7 @@ data PrettyPrintConfig = PPConfig {
     spaceAfterParens :: Bool,
     spaceAfterBrackets :: Bool,
     spaceAfterBraces :: Bool,
+    semicolons :: Bool,
     cStyle :: Bool
 }
 
@@ -34,6 +35,7 @@ defaultPPConfig = PPConfig {
     spaceAfterParens = False,
     spaceAfterBrackets = False,
     spaceAfterBraces = False,
+    semicolons = False,
     cStyle = False
 }
 
@@ -252,17 +254,23 @@ sem Block
                  stats.isHead = True
 
 sem Stat
-    | Def        lhs.pretty = @vars.pretty
+    | Def        lhs.pretty = @vars.pretty <> @loc.semicolon
+                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  vars.isHead = True
-    | LocDef     lhs.pretty = zeroWidthText "local" <-> @vars.pretty
+    | LocDef     lhs.pretty = zeroWidthText "local" <-> @vars.pretty <> @loc.semicolon
+                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  vars.isHead = True
-    | AFuncCall  lhs.pretty = @fn.pretty
+    | AFuncCall  lhs.pretty = @fn.pretty <> @loc.semicolon
+                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
     | ALabel     lhs.pretty = tok @lbl
-    | ABreak     lhs.pretty = zeroWidthText "break"
+    | ABreak     lhs.pretty = zeroWidthText "break" <> @loc.semicolon
+                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  lhs.hasBreaking = True
-    | AContinue  lhs.pretty = zeroWidthText "continue"
+    | AContinue  lhs.pretty = zeroWidthText "continue" <> @loc.semicolon
+                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  lhs.hasBreaking = True
-    | AGoto      lhs.pretty = zeroWidthText "goto" <-> tok @lbl
+    | AGoto      lhs.pretty = zeroWidthText "goto" <-> tok @lbl <> @loc.semicolon
+                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
     | ADo
                  lhs.isMultiline = True
                  lhs.pretty = zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
@@ -300,7 +308,8 @@ sem Stat
                  lhs.hasBreaking = False
 
 sem AReturn
-    | AReturn    lhs.pretty = @loc.prettyComments $+$ zeroWidthText "return" <-> @values.pretty
+    | AReturn    lhs.pretty = @loc.prettyComments $+$ zeroWidthText "return" <-> @values.pretty <> @loc.semicolon
+                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  loc.prettyComments = renderComments @lhs.ppconf @loc.commentsHere
                  loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `comesBefore` @values.pos]
                  values.comments = drop (length @loc.commentsHere) @lhs.comments
