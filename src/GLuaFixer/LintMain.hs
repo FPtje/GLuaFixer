@@ -60,7 +60,7 @@ lint ls (f : fs) = do
     let syntaxErrors = map ((++) (takeFileName f ++ ": [Error] ") . renderError) $ snd lexed ++ snd parsed
 
     -- Print syntax errors
-    when (reportSyntaxErrors ls) $
+    when (lint_syntaxErrors ls) $
         mapM_ putStrLn syntaxErrors
 
     -- Print all warnings

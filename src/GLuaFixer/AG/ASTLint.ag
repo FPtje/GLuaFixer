@@ -140,7 +140,7 @@ sem Declaration
                                             registerVariable @lhs.scopes @loc.var -- non-local assignments
                                         else
                                             @lhs.scopes -- ExprVar assignments don't affect the scope
-        +warnings               = if not (reportShadowing @lhs.config) || not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
+        +warnings               = if not (lint_shadowing @lhs.config) || not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
                                     (:) . fromJust $ @loc.shadowWarning
 
 sem AST
@@ -150,7 +150,7 @@ sem AST
 sem Block
     | Block
         stats.scopeLevel        = @lhs.scopeLevel + 1
-        loc.maxScopeDepth       = maxScopeDepth @lhs.config
+        loc.maxScopeDepth       = lint_maxScopeDepth @lhs.config
         +warnings               = if @loc.maxScopeDepth /= 0 && @lhs.scopeLevel /= @loc.maxScopeDepth then id else
                                     (:) $ warn @stats.mtokenPos "Are you Egyptian? What's with these fucking scope pyramids!?"
         lhs.scopes              = tail @stats.scopes
@@ -173,30 +173,30 @@ sem Stat
     | ABreak
     | AContinue
     | AGoto
-        +warnings               = if not (reportGotos @lhs.config) || @lhs.loopLevel >= 2 then id else
+        +warnings               = if not (lint_gotos @lhs.config) || @lhs.loopLevel >= 2 then id else
                                     (:) $ warn @lbl.mtokenPos "Don't use labels and gotos unless you're jumping out of multiple loops."
     | ADo
         body.scopes             = S.empty : @lhs.scopes
-        +warnings               = if not (reportEmptyBlocks @lhs.config) || @body.statementCount > 0 then id else
+        +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty do block"
     | AWhile
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
         body.scopes             = S.empty : @lhs.scopes
-        +warnings               = if not (reportEmptyBlocks @lhs.config) || @body.statementCount > 0 then id else
+        +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty while loop"
     | ARepeat
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
         body.scopes             = S.empty : @lhs.scopes
-        +warnings               = if not (reportEmptyBlocks @lhs.config) || @body.statementCount > 0 then id else
+        +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty repeat statement"
     | AIf
         cond.isNegation         = False
         body.scopes             = S.empty : @lhs.scopes
         elifs.mtokenPos         = @lhs.mtokenPos
         els.mtokenPos           = @lhs.mtokenPos
-        +warnings               = if not (reportEmptyBlocks @lhs.config) || @body.statementCount > 0 then id else
+        +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty if statement"
     | ANFor
         body.loopLevel          = @lhs.loopLevel + 1
@@ -205,25 +205,25 @@ sem Stat
         step.isNegation         = False
         body.scopes             = S.singleton @var.identifier : @lhs.scopes
         loc.shadowWarning       = checkShadows @lhs.scopes @var.copy
-        +warnings               = if not (reportShadowing @lhs.config) || isNothing @loc.shadowWarning then id else
+        +warnings               = if not (lint_shadowing @lhs.config) || isNothing @loc.shadowWarning then id else
                                     (:) . fromJust $ @loc.shadowWarning
-        +warnings               = if not (reportEmptyBlocks @lhs.config) || @body.statementCount > 0 then id else
+        +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AGFor
         body.loopLevel          = @lhs.loopLevel + 1
         -- The variables the for loop introduces
         loc.introduces          = S.fromList $ map tokenLabel @vars
         body.scopes             = @loc.introduces : @lhs.scopes
-        +warnings               = if not (reportShadowing @lhs.config) then id else
+        +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @vars
-        +warnings               = if not (reportEmptyBlocks @lhs.config) || @body.statementCount > 0 then id else
+        +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AFunc
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
         loc.introduces          = S.fromList . map tokenLabel $ @loc.argIdentifiers
         body.scopes             = @loc.introduces : (registerVariable @lhs.scopes @name.identifier)
         -- Parameter shadowing
-        +warnings               = if not (reportShadowing @lhs.config) then id else
+        +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
         body.isMeta             = @name.isMeta
     | ALocFunc
@@ -232,24 +232,24 @@ sem Stat
         loc.funcname            = MToken @name.mtokenPos (Identifier @name.identifier)
         body.scopes             = @loc.introduces : @lhs.scopes
         -- Parameter shadowing
-        +warnings               = if not (reportShadowing @lhs.config) then id else
+        +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
         -- Function name shadowing
         loc.funcNameShadows     = checkShadows @lhs.scopes @loc.funcname
-        +warnings               = if not (reportShadowing @lhs.config) || isNothing @loc.funcNameShadows then id else
+        +warnings               = if not (lint_shadowing @lhs.config) || isNothing @loc.funcNameShadows then id else
                                     (:) . fromJust $ @loc.funcNameShadows
 
 sem ElseIf
     | Tuple
         x1.isNegation           = False
         x2.scopes               = S.empty : @lhs.scopes
-        +warnings               = if not (reportEmptyBlocks @lhs.config) || @x2.statementCount > 0 then id else
+        +warnings               = if not (lint_emptyBlocks @lhs.config) || @x2.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty elseif statement"
 
 sem Else
     | Just
         just.scopes             = S.empty : @lhs.scopes
-        +warnings               = if not (reportEmptyBlocks @lhs.config) || @just.statementCount > 0 then id else
+        +warnings               = if not (lint_emptyBlocks @lhs.config) || @just.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty else statement"
 sem AReturn
     | AReturn
@@ -269,7 +269,7 @@ sem PrefixExp
         lhs.varName             = Just @name.copy
         -- When using variables, register them. Find out more about the global scope
         name.scopes             = registerVariable @lhs.scopes (show @name.mtok)
-        +warnings               = if not (reportBeginnerMistakes @lhs.config) || @lhs.isMeta || tokenLabel @name.copy /= "self" then id else
+        +warnings               = if not (lint_beginnerMistakes @lhs.config) || @lhs.isMeta || tokenLabel @name.copy /= "self" then id else
                                     (:) $ warn @name.mtokenPos "Don't use self in a non-metafunction"
     | ExprVar
         lhs.mtokenPos           = @expr.mtokenPos
@@ -299,7 +299,7 @@ sem Expr
         body.scopes             = @loc.introduces : @lhs.scopes
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @pars
         -- Parameter shadowing
-        +warnings               = if not (reportShadowing @lhs.config) then id else
+        +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
     | APrefixExpr
     | ATableConstructor
@@ -310,7 +310,7 @@ sem Expr
 
         -- Wheter someone is doing "not (a == b)" or "not (a ~= b)"
         loc.stupidNegation      = oppositeBinOp @op.copy
-        +warnings               = if not (reportDoubleNegations @lhs.config) || not @lhs.isNegation || isNothing @loc.stupidNegation then id else
+        +warnings               = if not (lint_doubleNegations @lhs.config) || not @lhs.isNegation || isNothing @loc.stupidNegation then id else
                                     (:) $ warn @lhs.mtokenPos "Silly negation. Use '" ++ fromJust @loc.stupidNegation ++ "'"
     | UnOpExpr
         right.isNegation        = @op.isNegation
@@ -330,7 +330,7 @@ sem Field
         loc.mtokenPos           = @key.mtokenPos
         lhs.fieldNames          = S.insert @key.mtok @lhs.fieldNames
         value.isNegation        = False
-        +warnings               = if not (reportDuplicateTableKeys @lhs.config) || not (S.member @key.mtok @lhs.fieldNames) then id else
+        +warnings               = if not (lint_duplicateTableKeys @lhs.config) || not (S.member @key.mtok @lhs.fieldNames) then id else
                                     (:) $ warn @key.mtokenPos "Duplicate key in table: '" ++ show @key.mtok ++ "'."
     | UnnamedField
         value.isNegation        = False
