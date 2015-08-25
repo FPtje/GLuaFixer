@@ -29,7 +29,7 @@ data LintSettings = LintSettings {
 defaultLintSettings :: LintSettings
 defaultLintSettings =   LintSettings {
                             lint_maxScopeDepth = 7,
-                            lint_syntaxErrors = False,
+                            lint_syntaxErrors = True,
                             lint_syntaxInconsistencies = True,
                             lint_deprecated = True,
                             lint_whitespaceStyle = True,
