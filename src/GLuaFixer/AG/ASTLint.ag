@@ -35,6 +35,7 @@ oppositeBinOp _ = Nothing
 -- Checks whether a variable shadows existing variables
 checkShadows :: [S.Set String] -> MToken -> Maybe String
 checkShadows [] _ = Nothing
+checkShadows _ (MToken _ (Identifier "_")) = Nothing -- Exception for vars named '_'
 checkShadows (scope : scs) mtok = if S.member lbl scope then
                                     Just $ warn (mpos mtok) ("Variable shadows existing binding of '" ++ lbl ++ "'")
                                    else
