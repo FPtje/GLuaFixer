@@ -241,11 +241,13 @@ sem Stat
 
 sem ElseIf
     | Tuple
+        x2.scopes               = S.empty : @lhs.scopes
         +warnings               = if not (reportEmptyBlocks @lhs.config) || @x2.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty elseif statement"
 
 sem Else
     | Just
+        just.scopes             = S.empty : @lhs.scopes
         +warnings               = if not (reportEmptyBlocks @lhs.config) || @just.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty else statement"
 sem AReturn
