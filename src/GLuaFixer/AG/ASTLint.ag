@@ -49,6 +49,12 @@ registerVariable :: [S.Set String] -> String -> [S.Set String]
 registerVariable (scope : []) var = [S.insert var scope] -- global scope
 registerVariable ss@(scope : scs) var = if S.member var scope then ss else
                                         scope : registerVariable scs var
+
+findSelf :: [MToken] -> Bool
+findSelf = or . map isSelf
+    where
+        isSelf (MToken _ (Identifier "self")) = True
+        isSelf _ = False
 }
 
 ----------------------------------------
@@ -226,12 +232,13 @@ sem Stat
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
-        body.isMeta             = @name.isMeta
+        body.isMeta             = @name.isMeta || findSelf @args
     | ALocFunc
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
         loc.introduces          = S.fromList . map tokenLabel $ @loc.argIdentifiers
         loc.funcname            = MToken @name.mtokenPos (Identifier @name.identifier)
         body.scopes             = @loc.introduces : @lhs.scopes
+        body.isMeta             = findSelf @args
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
@@ -298,6 +305,7 @@ sem Expr
     | AnonymousFunc
         loc.introduces          = S.fromList $ map tokenLabel @pars
         body.scopes             = @loc.introduces : @lhs.scopes
+        body.isMeta             = findSelf @pars
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @pars
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
