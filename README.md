@@ -13,8 +13,8 @@ After performing these steps, you can run `glualint` from the terminal or let yo
 # Configuring glualint
 `glualint` Allows some configuration. This is done through a file called `glualint.json`. `glualint` looks for this file in three places (in order of priority)
 
-- The file you give to the `--config` parameter (e.g. `glualint --config "C:\glualint.json"` will load `"C:\glualint.json"`)
-- Any folder above the file you're working in (e.g. when you're working in `garrysmod\gamemodes\darkrp\libraries\fn.lua` it will automatically find `garrysmod\gamemode\darkrp\glualint.json` if it's there)
+- The file you give to the `--config` parameter (when using the terminal)
+- Any folder above the file you're working in
 - Your home folder, which is `C:\users\yourusername\glualint.json` on Windows or `/users/yourusername/glualint.json` on Unix.
 
 Note: Calling the file anything other than `glualint.json` will make `glualint` not read it.
