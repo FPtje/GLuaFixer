@@ -316,7 +316,7 @@ sem Token
 
     | SQString
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.strSyntax) || length @str == 1 -- Allow single character ' ' strings
-        loc.strSyntax = SyntaxUsed False @loc.consistent
+        loc.strSyntax = SyntaxUsed False (@loc.consistent && length @str /= 1)
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "single quoted strings" "double quoted strings"
 
