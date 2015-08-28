@@ -88,7 +88,7 @@ attr Field FieldList
 attr UnOp
     syn isNegation :: Bool -- Whether this unop is a negation. Used in "not (a == b)" check
 
-attr MExpr Expr PrefixExp
+attr MExpr Expr PrefixExp MaybeMExpr
     inh isNegation :: Bool
 
 attr VarsList Declaration
