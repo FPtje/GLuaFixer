@@ -13,9 +13,7 @@ import GLua.AG.AST
 import qualified GLua.Lexer as Lex
 
 import Text.ParserCombinators.UU
-import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.BasicInstances
-import Text.ParserCombinators.UU.Derived
 import qualified Data.ListLike as LL
 
 -- | MTokens with the positions of the next MToken (used in the advance of parser)
@@ -31,7 +29,7 @@ type AParser a = forall state. (IsLocationUpdatedBy LineColPos MTokenPos, LL.Lis
 instance IsLocationUpdatedBy LineColPos MTokenPos where
     -- advance :: LineColPos -> MToken -> LineColPos
     -- Assume the position of the next MToken
-    advance pos (MTokenPos _ p) = p
+    advance _ (MTokenPos _ p) = p
 
 
 -- | Parse Garry's mod Lua tokens to an abstract syntax tree.
@@ -128,11 +126,7 @@ parseCallDef = (PFVar <$> pName <<|> -- Statemens begin with either a simple nam
   where
     -- Simple direct declaration: varName, ... = 1, ...
     namedVarDecl :: [PrefixExp] -> LineColPos -> [MExpr] -> (ExprSuffixList -> PrefixExp) -> Stat
-    namedVarDecl vars pos exprs pfe = let pfes = (pfe []) : vars in Def (zip pfes $ exprs ++ nils pos)
-
-    -- Pad with nils (e.g "a, b = 1" => "a, b = 1, nil")
-    nils :: LineColPos -> [MExpr]
-    nils p = repeat (MExpr p ANil)
+    namedVarDecl vars pos exprs pfe = let pfes = (pfe []) : vars in Def (zip pfes $ map Just exprs ++ repeat Nothing)
 
     -- This is where we know it's a variable declaration
     -- Takes a function that turns it into a proper Def Stat
@@ -161,7 +155,7 @@ parseCallDef = (PFVar <$> pName <<|> -- Statemens begin with either a simple nam
     -- Multiple suffixes have been found, and proof has been found that this must be a declaration.
     -- Now to give all the collected suffixes and a function that creates the declaration
     complexDecl :: [PrefixExp] -> LineColPos -> [MExpr] -> PFExprSuffix -> ([PFExprSuffix], PrefixExp -> Stat)
-    complexDecl vars pos exprs s = ([s], \pf -> Def (zip (pf : vars) $ exprs ++ nils pos))
+    complexDecl vars pos exprs s = ([s], \pf -> Def (zip (pf : vars) $ map Just exprs ++ repeat Nothing))
 
 
 -- | Parse a single statement
@@ -187,7 +181,7 @@ parseStat = parseCallDef <<|>
                 pMTok Function <*> parseFuncName <*> pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
                 parseBlock <* pMTok End <<|>
               -- local variables
-              (\v (p,e) l -> LocDef (zip v $ e ++ repeat (MExpr p ANil))) <$> parseVarList <*> ((,) <$ pMTok Equals <*> pPos <*> parseExpressionList <<|> (,) <$> pPos <*> pReturn [])
+              (\v (p,e) l -> LocDef (zip v $ map Just e ++ repeat Nothing)) <$> parseVarList <*> ((,) <$ pMTok Equals <*> pPos <*> parseExpressionList <<|> (,) <$> pPos <*> pReturn [])
             )
 
 

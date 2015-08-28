@@ -10,7 +10,8 @@ import GLua.AG.Token
 type MStatList = [MStat]
 type MExprList = [MExpr]
 type FieldList = [Field]
-type Declaration = (PrefixExp, MExpr)
+type MaybeMExpr = maybe MExpr
+type Declaration = (PrefixExp, MaybeMExpr)
 type VarsList  = [Declaration]
 type ExprSuffixList = [PFExprSuffix]
 type ElseIf    = (MExpr, Block)
@@ -143,13 +144,13 @@ deriving UnOp : Show
 
 set StatementStuff  = Block MStatList MStat Stat AReturn
 set IfStuff         = ElseIf ElseIfList Else
-set ExprStuff       = PrefixExp PFExprSuffix MExpr Expr MExprList ExprSuffixList
+set ExprStuff       = PrefixExp PFExprSuffix MaybeMExpr MExpr Expr MExprList ExprSuffixList
 set VarStuff        = Args Field FieldList Declaration VarsList
-set AllStuff        = MStatList MExprList FieldList Declaration VarsList ExprSuffixList ElseIf ElseIfList Else AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
+set AllStuff        = MStatList MExprList FieldList Declaration MaybeMExpr VarsList ExprSuffixList ElseIf ElseIfList Else AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
 -- Semantics
 {-
 
-attr MStatList MExprList FieldList Declaration VarsList ExprSuffixList ElseIf ElseIfList Else AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
+attr MStatList MExprList FieldList Declaration MaybeMExpr VarsList ExprSuffixList ElseIf ElseIfList Else AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
 
 sem AST
     | AST
