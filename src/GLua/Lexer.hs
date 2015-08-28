@@ -112,7 +112,7 @@ parseString = DQString <$> parseLineString '"' <<|>
 
 -- | Parse any kind of number.
 parseNumber :: LParser Token
-parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber <<|> pDecimal) <*> opt pSuffix "")
+parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber) <*> opt parseNumberSuffix "")
 
     where
         pNumber :: LParser String
@@ -128,10 +128,11 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber <<|> pDecimal) <*
         pHex = pDigit <<|> pSym 'a' <<|> pSym 'b' <<|> pSym 'c' <<|> pSym 'd' <<|> pSym 'e' <<|> pSym 'f'
                       <<|> pSym 'A' <<|> pSym 'B' <<|> pSym 'C' <<|> pSym 'D' <<|> pSym 'E' <<|> pSym 'F'
 
-        pSuffix :: LParser String
-        pSuffix = (\e s d -> e : s ++ d) <$> (pSym 'e' <<|> pSym 'E' <<|> pSym 'p' <<|> pSym 'P')
-                    <*> opt (pToken "+" <<|> pToken "-") ""
-                    <*> pSome pDigit
+-- Parse the suffix of a number
+parseNumberSuffix :: LParser String
+parseNumberSuffix = (\e s d -> e : s ++ d) <$> (pSym 'e' <<|> pSym 'E' <<|> pSym 'p' <<|> pSym 'P')
+            <*> opt (pToken "+" <<|> pToken "-") ""
+            <*> pSome pDigit
 
 -- | Parse a keyword. Note: It must really a key/word/! This parser makes sure to return an identifier when
 -- it's actually an identifier that starts with that keyword.
@@ -158,6 +159,7 @@ parseDots = pToken "." <**> ( -- A dot means it's either a VarArg (...), concate
                     const VarArg <$ pToken "." <<|>
                     const <$> pReturn Concatenate
                 )) <<|>
+                (\ds sfx dot -> TNumber $ dot ++ ds ++ sfx) <$> pSome pDigit <*> opt parseNumberSuffix "" <<|>
                 const <$> pReturn Dot
                 )
 
