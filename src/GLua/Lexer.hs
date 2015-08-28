@@ -112,11 +112,14 @@ parseString = DQString <$> parseLineString '"' <<|>
 
 -- | Parse any kind of number.
 parseNumber :: LParser Token
-parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber) <*> opt pSuffix "")
+parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber <<|> pDecimal) <*> opt pSuffix "")
 
     where
         pNumber :: LParser String
-        pNumber = (++) <$> pSome pDigit <*> opt ((:) <$> pSym '.' <*> pSome pDigit) ""
+        pNumber = (++) <$> pSome pDigit <*> opt pDecimal ""
+
+        pDecimal :: LParser String
+        pDecimal = (:) <$> pSym '.' <*> pSome pDigit
 
         pHexadecimal :: LParser String
         pHexadecimal = (++) <$> pToken "0x" <*> pSome pHex

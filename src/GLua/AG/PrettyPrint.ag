@@ -6,6 +6,7 @@ import GLua.AG.AST
 import Text.PrettyPrint hiding (parens, brackets, braces)
 import GLua.TokenTypes
 import GLua.AG.Token
+import Data.Maybe
 }
 
 include "AST.ag"
@@ -43,8 +44,8 @@ metaDoc :: Maybe MToken -> Doc
 metaDoc (Just m) = zchr ':' <> tok m
 metaDoc Nothing  = empty
 
-printVarList :: [(PrefixExp, MExpr)] -> Doc
-printVarList vars = printList pp_prefixexp ", " (map fst vars) <-> zchr '=' <-> printList pp_mexpr ", " (map snd vars)
+printVarList :: [(PrefixExp, Maybe MExpr)] -> Doc
+printVarList vars = printList pp_prefixexp ", " (map fst vars) <-> zchr '=' <-> printList pp_mexpr ", " (catMaybes . map snd $ vars)
 
 printStats :: [MStat] -> Int -> Doc
 printStats [] i = empty
@@ -153,6 +154,9 @@ attr Declaration VarsList
     syn varPretty  use {<>} {empty}  :: Doc
     syn exprPretty use {<>} {empty}  :: Doc
 
+attr MaybeMExpr Declaration
+    syn isDefined :: Bool
+
 attr MStatList MExprList VarsList
     inh isHead :: Bool
 
@@ -165,7 +169,7 @@ attr MStat Stat
 attr MStat MExprList MExpr
     syn pos :: LineColPos
 
-attr MStatList MExprList FieldList Declaration VarsList ExprSuffixList ElseIf ElseIfList Else Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
+attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList ElseIf ElseIfList Else Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
     chn comments :: {[MToken]}
 
 attr FieldList
@@ -215,6 +219,14 @@ sem FieldList
     | Nil        lhs.pretty = empty
                  lhs.isNil  = True
 
+sem MaybeMExpr
+    | Just
+                lhs.pretty = @just.pretty
+                lhs.isDefined = True
+    | Nothing
+                lhs.pretty = empty
+                lhs.isDefined = False
+
 sem Declaration
     | Tuple     lhs.varPretty = @x1.pretty
                 lhs.exprPretty = @x2.pretty
@@ -222,7 +234,7 @@ sem Declaration
 sem VarsList
     | Cons      lhs.pretty = @loc.varPretty <-> zchr '=' <-> @loc.exprPretty
                 loc.varPretty = (if @lhs.isHead then empty else zchr ',') <-> @hd.varPretty <> @tl.varPretty
-                loc.exprPretty = (if @lhs.isHead then empty else zchr ',') <-> @hd.exprPretty <> @tl.exprPretty
+                loc.exprPretty = (if @lhs.isHead || not @hd.isDefined then empty else zchr ',') <-> @hd.exprPretty <> @tl.exprPretty
                 tl.isHead  = False
     | Nil       lhs.pretty = empty
 
