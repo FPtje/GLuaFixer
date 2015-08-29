@@ -49,6 +49,12 @@ whitespace :: Token -> Bool
 whitespace (Whitespace _) = True
 whitespace _ = False
 
+isSingleChar :: String -> Bool
+isSingleChar [] = True
+isSingleChar ('\\' : xs) = length xs == 1
+isSingleChar (_ : []) = True
+isSingleChar _ = False
+
 -- Whether a token is a certain identifier
 ident :: String -> Token -> Bool
 ident = (==) . Identifier
@@ -315,8 +321,8 @@ sem Token
                         (:) $ syntaxInconsistency "double quoted strings" "single quoted strings"
 
     | SQString
-        loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.strSyntax) || length @str == 1 -- Allow single character ' ' strings
-        loc.strSyntax = SyntaxUsed False (@loc.consistent && length @str /= 1)
+        loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.strSyntax) || isSingleChar @str -- Allow single character ' ' strings
+        loc.strSyntax = SyntaxUsed False (@loc.consistent && not (isSingleChar @str))
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "single quoted strings" "double quoted strings"
 
