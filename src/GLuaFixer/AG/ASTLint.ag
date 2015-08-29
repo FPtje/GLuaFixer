@@ -303,7 +303,7 @@ sem Expr
     | AnonymousFunc
         loc.introduces          = S.fromList $ map tokenLabel @pars
         body.scopes             = @loc.introduces : @lhs.scopes
-        body.isMeta             = findSelf @pars
+        body.isMeta             = @lhs.isMeta || findSelf @pars
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @pars
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
