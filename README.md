@@ -1,7 +1,7 @@
 glualint
 ==========
 
-glualint - Linter and pretty printer for Garry's Mod's variant of Lua. 
+glualint - Linter and pretty printer for Garry's Mod's variant of Lua.
 
 # Installing
 1. Download the latest version of `glualint` from [the releases page](https://github.com/FPtje/GLuaFixer/releases).
@@ -22,23 +22,25 @@ Note: Calling the file anything other than `glualint.json` will make `glualint` 
 Example `glualint.json` with the default options:
 ```json
 {
-	"lint_maxScopeDepth":				7,
-	"lint_syntaxErrors":				true,
-	"lint_syntaxInconsistencies":		true,
-	"lint_deprecated":					true,
-	"lint_whitespaceStyle":				true,
-	"lint_beginnerMistakes":			true,
-	"lint_emptyBlocks":					true,
-	"lint_shadowing":					true,
-	"lint_gotos":						true,
-	"lint_doubleNegations":				true,
-	"lint_duplicateTableKeys":			true,
+    "lint_maxScopeDepth":               7,
+    "lint_syntaxErrors":                true,
+    "lint_syntaxInconsistencies":       true,
+    "lint_deprecated":                  true,
+    "lint_whitespaceStyle":             true,
+    "lint_beginnerMistakes":            true,
+    "lint_emptyBlocks":                 true,
+    "lint_shadowing":                   true,
+    "lint_gotos":                       true,
+    "lint_doubleNegations":             true,
+    "lint_duplicateTableKeys":          true,
+    "lint_profanity":                   true,
+    "lint_unusedVars":                  true,
 
-	"prettyprint_spaceAfterParens": 	false,
-	"prettyprint_spaceAfterBrackets": 	false,
-	"prettyprint_spaceAfterBraces": 	false,
-	"prettyprint_semicolons": 			false,
-	"prettyprint_cStyle": 				false
+    "prettyprint_spaceAfterParens":     false,
+    "prettyprint_spaceAfterBrackets":   false,
+    "prettyprint_spaceAfterBraces":     false,
+    "prettyprint_semicolons":           false,
+    "prettyprint_cStyle":               false
 }
 ```
 
@@ -56,9 +58,11 @@ Example `glualint.json` with the default options:
 - `lint_gotos`: Warn for inappropriate gotos (i.e. the ones not used to jump out of a double loop)
 - `lint_doubleNegations`: Warn for double negations (things like `not (a == b)`)
 - `lint_duplicateTableKeys`: Warn for duplicate table keys (e.g. `{a = 1, a = 2}`)
+- `lint_profanity`: Warn for profanity (bitch, cock, cocks, cunt, dick, dicks, fuck, fucking, goddamnit, knob, knobs, motherfucker, nigger, niggers, niggertits, nipple, shit)
+- `lint_unusedVars`: Warn for variables that are never used
 
 # Pretty print options
-These options affect the pretty printing functionality of `glualint`. 
+These options affect the pretty printing functionality of `glualint`.
 
 - `prettyprint_spaceAfterParens`: Put a space between all parentheses
 - `prettyprint_spaceAfterBrackets`: Put a space between all brackets

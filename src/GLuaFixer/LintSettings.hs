@@ -18,6 +18,7 @@ data LintSettings = LintSettings {
                         lint_doubleNegations :: Bool,
                         lint_duplicateTableKeys :: Bool,
                         lint_profanity :: Bool,
+                        lint_unusedVars :: Bool,
 
                         prettyprint_spaceAfterParens :: Bool,
                         prettyprint_spaceAfterBrackets :: Bool,
@@ -40,6 +41,7 @@ defaultLintSettings =   LintSettings {
                             lint_doubleNegations = True,
                             lint_duplicateTableKeys = True,
                             lint_profanity = True,
+                            lint_unusedVars = True,
 
                             prettyprint_spaceAfterParens = False,
                             prettyprint_spaceAfterBrackets = False,
@@ -62,6 +64,7 @@ instance FromJSON LintSettings where
                                v .:? "lint_doubleNegations" .!= (lint_doubleNegations defaultLintSettings) <*>
                                v .:? "lint_duplicateTableKeys" .!= (lint_duplicateTableKeys defaultLintSettings) <*>
                                v .:? "lint_profanity" .!= (lint_profanity defaultLintSettings) <*>
+                               v .:? "lint_unusedVars" .!= (lint_unusedVars defaultLintSettings) <*>
                                v .:? "prettyprint_spaceAfterParens" .!= (prettyprint_spaceAfterParens defaultLintSettings) <*>
                                v .:? "prettyprint_spaceAfterBrackets" .!= (prettyprint_spaceAfterBrackets defaultLintSettings) <*>
                                v .:? "prettyprint_spaceAfterBraces" .!= (prettyprint_spaceAfterBraces defaultLintSettings) <*>
@@ -93,6 +96,7 @@ instance ToJSON LintSettings where
                         "lint_doubleNegations" .= lint_doubleNegations ls,
                         "lint_duplicateTableKeys" .= lint_duplicateTableKeys ls,
                         "lint_profanity" .= lint_profanity ls,
+                        "lint_unusedVars" .= lint_unusedVars ls,
                         "prettyprint_spaceAfterParens" .= prettyprint_spaceAfterParens ls,
                         "prettyprint_spaceAfterBrackets" .= prettyprint_spaceAfterBrackets ls,
                         "prettyprint_spaceAfterBraces" .= prettyprint_spaceAfterBraces ls,
