@@ -49,7 +49,8 @@ checkShadows (scope : scs) mtok = if M.member lbl scope then
 registerVariable :: [M.Map String (Bool, LineColPos)] -> LineColPos -> String -> Bool -> [M.Map String (Bool, LineColPos)]
 registerVariable (scope : []) pos var used = [M.insert var (used, pos) scope] -- global scope
 registerVariable (scope : scs) pos var used = case M.lookup var scope of
-                                                Just (_, pos) -> M.insert var (used, pos) scope : scs
+                                                Just (True, pos) -> scope : scs
+                                                Just (False, pos) -> M.insert var (used, pos) scope : scs
                                                 Nothing -> scope : registerVariable scs pos var used
 
 findSelf :: [MToken] -> Bool
@@ -98,6 +99,7 @@ attr VarsList Declaration
 
 attr PrefixExp
     syn varName :: {Maybe MToken}
+    syn hasSuffixes :: Bool
     inh registerVarUse :: Bool
 
 attr FuncName
@@ -146,7 +148,8 @@ sem Declaration
         x1.scopes               = if @lhs.localDefinition then
                                     M.insert @loc.var (False, @x1.mtokenPos) (head @lhs.scopes) : tail @lhs.scopes
                                    else if isJust @x1.varName then
-                                            registerVariable @lhs.scopes @x1.mtokenPos @loc.var False -- non-local assignments
+                                            -- non-local assignments. Register as used when a suffix of them is assigned
+                                            registerVariable @lhs.scopes @x1.mtokenPos @loc.var @x1.hasSuffixes
                                         else
                                             @lhs.scopes -- ExprVar assignments don't affect the scope
         +warnings               = if not (lint_shadowing @lhs.config) || not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
@@ -280,16 +283,18 @@ sem FuncName
 sem PrefixExp
     | PFVar
         lhs.mtokenPos           = @name.mtokenPos
+        lhs.hasSuffixes         = not . null $ @suffixes.copy
         lhs.varName             = Just @name.copy
         -- When using variables, register them. Find out more about the global scope
+        -- Also register the usage of variables when this prefixExpr is not part of a declaration
         loc.foundVars           = registerVariable @lhs.scopes @name.mtokenPos (show @name.mtok) @lhs.registerVarUse
-        -- Register the usage of variables when this prefixExpr is not part of a declaration
         name.scopes             = @loc.foundVars
         +warnings               = if not (lint_beginnerMistakes @lhs.config) || @lhs.isMeta || tokenLabel @name.copy /= "self" then id else
                                     (:) $ warn @name.mtokenPos "Don't use self in a non-metafunction"
     | ExprVar
         lhs.mtokenPos           = @expr.mtokenPos
         lhs.varName             = Nothing
+        lhs.hasSuffixes         = False
 
 sem PFExprSuffix
     | Call
