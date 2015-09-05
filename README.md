@@ -35,6 +35,7 @@ Example `glualint.json` with the default options:
     "lint_duplicateTableKeys":          true,
     "lint_profanity":                   true,
     "lint_unusedVars":                  true,
+    "lint_unusedParameters":            false,
 
     "prettyprint_spaceAfterParens":     false,
     "prettyprint_spaceAfterBrackets":   false,
@@ -60,6 +61,7 @@ Example `glualint.json` with the default options:
 - `lint_duplicateTableKeys`: Warn for duplicate table keys (e.g. `{a = 1, a = 2}`)
 - `lint_profanity`: Warn for profanity (bitch, cock, cocks, cunt, dick, dicks, fuck, fucking, goddamnit, knob, knobs, motherfucker, nigger, niggers, niggertits, nipple, shit)
 - `lint_unusedVars`: Warn for variables that are never used
+- `lint_unusedParameters`: Warn for function parameters that are never used. *NOTE:* Only has effect when `lint_unusedVars` is enabled!
 
 # Pretty print options
 These options affect the pretty printing functionality of `glualint`.
