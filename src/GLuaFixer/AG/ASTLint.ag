@@ -311,7 +311,7 @@ sem Expr
     | AString
     | AVarArg
     | AnonymousFunc
-        loc.introduces          = M.fromList $ map (\mt -> (tokenLabel mt, (False, mpos mt))) @pars
+        loc.introduces          = M.fromList $ map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) @pars
         body.scopes             = @loc.introduces : @lhs.scopes
         body.isMeta             = @lhs.isMeta || findSelf @pars
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @pars
