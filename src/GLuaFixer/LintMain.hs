@@ -94,6 +94,9 @@ parseCLArgs (f : xs) = do (ls, fs) <- parseCLArgs xs
 settingsFile :: FilePath
 settingsFile = "glualint" <.> "json"
 
+homeSettingsFile :: FilePath
+homeSettingsFile = ".glualint" <.> "json"
+
 -- Search upwards in the file path until a settings file is found
 searchSettings :: FilePath -> IO (Maybe LintSettings)
 searchSettings f = do
@@ -112,9 +115,9 @@ searchSettings f = do
 searchHome :: IO (Maybe LintSettings)
 searchHome = do
                 home <- getHomeDirectory
-                exists <- doesFileExist (home </> settingsFile)
+                exists <- doesFileExist (home </> homeSettingsFile)
                 if exists then
-                    settingsFromFile (home </> settingsFile)
+                    settingsFromFile (home </> homeSettingsFile)
                 else
                     return Nothing
 
