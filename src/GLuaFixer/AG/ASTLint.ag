@@ -44,20 +44,13 @@ checkShadows (scope : scs) mtok = if M.member lbl scope then
     where
         lbl = tokenLabel mtok
 
--- Register the usage of a variable
-registerVarUse :: [M.Map String (Bool, LineColPos)] -> String -> [M.Map String (Bool, LineColPos)]
-registerVarUse [] _ = []
-registerVarUse (s : scs) var = case M.lookup var s of
-                                    Just (_, pos) -> M.insert var (True, pos) s : scs
-                                    Nothing -> s : (registerVarUse scs var)
-
-
 -- Registers a variable as global variable when it hasn't been
 -- introduced in any of the visible scopes
-registerVariable :: [M.Map String (Bool, LineColPos)] -> LineColPos -> String -> [M.Map String (Bool, LineColPos)]
-registerVariable (scope : []) pos var = [M.insert var (False, pos) scope] -- global scope
-registerVariable ss@(scope : scs) pos var = if M.member var scope then ss else
-                                        scope : registerVariable scs pos var
+registerVariable :: [M.Map String (Bool, LineColPos)] -> LineColPos -> String -> Bool -> [M.Map String (Bool, LineColPos)]
+registerVariable (scope : []) pos var used = [M.insert var (used, pos) scope] -- global scope
+registerVariable (scope : scs) pos var used = case M.lookup var scope of
+                                                Just (_, pos) -> M.insert var (used, pos) scope : scs
+                                                Nothing -> scope : registerVariable scs pos var used
 
 findSelf :: [MToken] -> Bool
 findSelf ((MToken _ (Identifier "self")) : _) = True
@@ -153,7 +146,7 @@ sem Declaration
         x1.scopes               = if @lhs.localDefinition then
                                     M.insert @loc.var (False, @x1.mtokenPos) (head @lhs.scopes) : tail @lhs.scopes
                                    else if isJust @x1.varName then
-                                            registerVariable @lhs.scopes @x1.mtokenPos @loc.var -- non-local assignments
+                                            registerVariable @lhs.scopes @x1.mtokenPos @loc.var False -- non-local assignments
                                         else
                                             @lhs.scopes -- ExprVar assignments don't affect the scope
         +warnings               = if not (lint_shadowing @lhs.config) || not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
@@ -241,7 +234,7 @@ sem Stat
     | AFunc
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
         loc.introduces          = M.fromList . map (\mt -> (tokenLabel mt, (False, mpos mt))) $ @loc.argIdentifiers
-        body.scopes             = @loc.introduces : (registerVariable @name.scopes @name.mtokenPos @name.identifier)
+        body.scopes             = @loc.introduces : (registerVariable @name.scopes @name.mtokenPos @name.identifier True)
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
@@ -289,9 +282,9 @@ sem PrefixExp
         lhs.mtokenPos           = @name.mtokenPos
         lhs.varName             = Just @name.copy
         -- When using variables, register them. Find out more about the global scope
-        loc.foundVars           = registerVariable @lhs.scopes @name.mtokenPos (show @name.mtok)
+        loc.foundVars           = registerVariable @lhs.scopes @name.mtokenPos (show @name.mtok) @lhs.registerVarUse
         -- Register the usage of variables when this prefixExpr is not part of a declaration
-        name.scopes             = if @lhs.registerVarUse then registerVarUse @loc.foundVars (show @name.mtok) else @loc.foundVars
+        name.scopes             = @loc.foundVars
         +warnings               = if not (lint_beginnerMistakes @lhs.config) || @lhs.isMeta || tokenLabel @name.copy /= "self" then id else
                                     (:) $ warn @name.mtokenPos "Don't use self in a non-metafunction"
     | ExprVar
