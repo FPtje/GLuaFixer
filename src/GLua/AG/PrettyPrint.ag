@@ -149,6 +149,7 @@ attr AllStuff
     inh indent :: Int
     syn isMultiline use {||} {False} :: Bool -- whether code is printed over multiple lines
     inh ppconf :: PrettyPrintConfig
+    syn copy :: self
 
 attr Declaration VarsList
     syn varPretty  use {<>} {empty}  :: Doc
@@ -302,7 +303,10 @@ sem Stat
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
     | ANFor      lhs.isMultiline = True
-                 lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> zchr ',' <-> @step.pretty <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
+                 loc.step = case @step.copy of
+                                MExpr _ (ANumber "1") -> empty
+                                otherwise -> zchr ',' <-> @step.pretty
+                 lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> @loc.step <-> zeroWidthText "do" $+$ nest 4 @body.pretty $+$ zeroWidthText "end"
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
     | AGFor      lhs.isMultiline = True
