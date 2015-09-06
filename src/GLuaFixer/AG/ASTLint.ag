@@ -166,7 +166,7 @@ sem Block
         +warnings               = if @loc.maxScopeDepth /= 0 && @lhs.scopeLevel /= @loc.maxScopeDepth then id else
                                     (:) $ warn @stats.mtokenPos "Are you Egyptian? What's with these fucking scope pyramids!?"
         loc.deadVars            = M.filterWithKey (\k (b, _) -> head k /= '_' && not b) (head @ret.scopes)
-        +warnings               = if @lhs.scopeLevel == 0 || not (lint_unusedVars @lhs.config) then id else
+        +warnings               = if not (lint_unusedVars @lhs.config) then id else
                                     (++) $ M.foldrWithKey (\k (_, pos) ls -> warn pos ("Unused variable: " ++ k) : ls) [] @loc.deadVars
         lhs.scopes              = tail @ret.scopes
 
