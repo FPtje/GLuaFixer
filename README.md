@@ -37,6 +37,7 @@ Example `glualint.json` with the default options:
     "lint_profanity":                   true,
     "lint_unusedVars":                  true,
     "lint_unusedParameters":            false,
+    "lint_unusedLoopVars":              false,
 
     "prettyprint_spaceAfterParens":     false,
     "prettyprint_spaceAfterBrackets":   false,
@@ -63,6 +64,7 @@ Example `glualint.json` with the default options:
 - `lint_profanity`: Warn for profanity (bitch, cock, cocks, cunt, dick, dicks, fuck, fucking, goddamnit, knob, knobs, motherfucker, nigger, niggers, niggertits, nipple, shit)
 - `lint_unusedVars`: Warn for variables that are never used
 - `lint_unusedParameters`: Warn for function parameters that are never used. *NOTE:* Only has effect when `lint_unusedVars` is enabled!
+- `lint_unusedLoopVars`: Warn for loop variables that are never used (`for k,v in ...`). *NOTE:* Only has effect when `lint_unusedVars` is enabled!
 
 # Pretty print options
 These options affect the pretty printing functionality of `glualint`.
