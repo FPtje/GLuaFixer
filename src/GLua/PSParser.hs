@@ -9,10 +9,10 @@ import GLua.AG.AST
 import qualified GLua.Lexer as Lex
 
 import Text.Parsec
-import Text.Parsec.Prim
-import Text.Parsec.Combinator
 import Text.Parsec.Pos
-import Text.ParserCombinators.UU.BasicInstances(LineColPos(..)) -- for LineColPos
+import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
+
+import Debug.Trace
 
 type AParser = Parsec [MToken] ()
 
@@ -32,14 +32,14 @@ parseGLua mts = let (cms, ts) = splitComments . filter (not . isWhitespace) $ mt
 
 -- | LineColPos to SourcePos
 lcp2sp :: LineColPos -> SourcePos
-lcp2sp (LineColPos l c _) = newPos "source.lua" (l - 1) (c - 1)
+lcp2sp (LineColPos l c _) = newPos "source.lua" l c
 
 sp2lcp :: SourcePos -> LineColPos
-sp2lcp pos = LineColPos (sourceLine pos + 1) (sourceColumn pos + 1) 0
+sp2lcp pos = LineColPos (sourceLine pos) (sourceColumn pos) 0
 
 -- | Update a SourcePos with an MToken
 updatePosMToken :: SourcePos -> MToken -> [MToken] -> SourcePos
-updatePosMToken _ (MToken p _) [] = lcp2sp p
+updatePosMToken _ (MToken p tok) [] = incSourceColumn (lcp2sp p) (tokenSize tok)
 updatePosMToken _ _ ((MToken p _) : _) = lcp2sp p
 
 -- | Match a token
@@ -60,14 +60,11 @@ pMSatisfy cond = tokenPrim show updatePosMToken testMToken
 pPos :: AParser LineColPos
 pPos = sp2lcp <$> getPosition
 
-nope :: AParser a
-nope = parserFail "Not implemented yet"
-
 -- | Parses the full AST
 -- Its first parameter contains all comments
 -- Assumes the mtokens fed to the AParser have no comments
 parseChunk :: [MToken] -> AParser AST
-parseChunk cms = AST cms <$> parseBlock
+parseChunk cms = AST cms <$> parseBlock <* eof
 
 -- | Parse a block with an optional return value
 parseBlock :: AParser Block
@@ -114,7 +111,7 @@ parseStat = ALabel <$> parseLabel <|>
 -- | Global definition
 -- Note: Will not fail immediately when the statement is a function call.
 parseDefinition :: (VarsList -> Stat) -> AParser Stat
-parseDefinition stat = def <$> parseVarList <* pMTok Equals <*> parseExpressionList
+parseDefinition stat = def <$> parseVarList <* pMTok Equals <*> parseExpressionList <?> "variable definition"
     where
         def :: [PrefixExp] -> [MExpr] -> Stat
         def ps exs = stat $ zip ps (map Just exs ++ repeat Nothing)
@@ -124,7 +121,7 @@ parseFunction :: (FuncName -> [MToken] -> Block -> Stat) -> AParser Stat
 parseFunction stat = stat <$ pMTok Function <*> parseFuncName <*>
                      between (pMTok LRound) (pMTok RRound) parseParList <*>
                      parseBlock <*
-                     pMTok End
+                     pMTok End <?> "function definition"
 
 -- | Parse if then elseif then else end expressions
 parseIf :: AParser Stat
@@ -222,7 +219,7 @@ parseAnonymFunc = AnonymousFunc <$
                    pMTok Function <*
                    pMTok LRound <*> parseParList <* pMTok RRound <*>
                    parseBlock <*
-                   pMTok End
+                   pMTok End <?> "anonymous function"
 
 -- | Parse operators of the same precedence in a chain
 samePrioL :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
@@ -316,7 +313,7 @@ pPFExprIndexSuffix = ExprIndex <$ pMTok LSquare <*> parseExpression <* pMTok RSq
 
 -- | Function calls are prefix expressions, but the last suffix MUST be either a function call or a metafunction call
 pFunctionCall :: AParser PrefixExp
-pFunctionCall = pPrefixExp suffixes
+pFunctionCall = pPrefixExp suffixes <?> "function call"
     where
         suffixes = concat <$> many1 ((\ix c -> ix ++ [c]) <$> many1 pPFExprIndexSuffix <*> pPFExprCallSuffix <|>
                                      (:[])                <$> pPFExprCallSuffix)
@@ -325,7 +322,7 @@ pFunctionCall = pPrefixExp suffixes
 -- var ::= Name [{PFExprSuffix}* indexation] | '(' exp ')' {PFExprSuffix}* indexation
 -- where "{PFExprSuffix}* indexation" is any arbitrary sequence of prefix expression suffixes that end with an indexation
 parseVar :: AParser PrefixExp
-parseVar = pPrefixExp suffixes
+parseVar = pPrefixExp suffixes <?> "variable"
     where
         suffixes = concat <$> many ((\c ix -> c ++ [ix]) <$> many1 pPFExprCallSuffix <*> pPFExprIndexSuffix <|>
                                     (:[])                <$> pPFExprIndexSuffix)
@@ -338,7 +335,7 @@ parseArgs = ListArgs <$ pMTok LRound <*> option [] parseExpressionList <* pMTok 
 
 -- | Table constructor
 parseTableConstructor :: AParser [Field]
-parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly
+parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly <?> "table"
 
 -- | A list of table entries
 -- Grammar: field {separator field} [separator]
@@ -349,7 +346,7 @@ parseFieldList = sepEndBy parseField parseFieldSep <* many parseFieldSep
 parseField :: AParser Field
 parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <|>
              try (NamedField <$> pName <* pMTok Equals <*> parseExpression) <|>
-             UnnamedField <$> parseExpression
+             UnnamedField <$> parseExpression <?> "field"
 
 -- | Field separator
 parseFieldSep :: AParser MToken
