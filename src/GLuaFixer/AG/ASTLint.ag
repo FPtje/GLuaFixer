@@ -228,7 +228,7 @@ sem Stat
     | AGFor
         body.loopLevel          = @lhs.loopLevel + 1
         -- The variables the for loop introduces
-        loc.introduces          = M.fromList $ map (\mt -> (tokenLabel mt, (False, mpos mt))) @vars
+        loc.introduces          = M.fromList $ map (\mt -> (tokenLabel mt, (not (lint_unusedLoopVars @lhs.config), mpos mt))) @vars
         body.scopes             = @loc.introduces : @vals.scopes
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @vars
