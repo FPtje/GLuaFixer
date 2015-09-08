@@ -3,7 +3,9 @@ module Main where
 import GLua.Lexer
 import GLua.TokenTypes
 import GLua.Parser
+import qualified GLua.PSParser as PS
 import GLua.AG.PrettyPrint
+import GLua.AG.AST
 
 import Data.Char
 
@@ -12,6 +14,7 @@ import System.Environment
 import System.IO
 import System.Exit
 import Control.Monad
+import Text.Parsec
 
 help = unlines ["",
  "Usage: GLuaParser <ACTION> <FILE>",
@@ -20,6 +23,16 @@ help = unlines ["",
  "    fix       - attempt to fix syntax errors in the Lua script"
  ]
 
+
+printErrors :: ParseError -> IO ()
+printErrors ps = do
+    putStrLn "Errors:"
+    putStrLn . renderPSError $ ps
+
+printAST :: AST -> IO ()
+printAST ast = do
+    putStrLn "Pretty printed code:"
+    putStrLn . prettyprint $ ast
 
 main = do
     args <- getArgs
@@ -50,12 +63,17 @@ main = do
 
         exitWith (ExitFailure 1)
 
-    let ast = parseGLua tokens
+    let ast = PS.parseGLua tokens
 
+    either printErrors printAST ast
+
+    {-
     putStrLn "Errors:"
     mapM_ (putStrLn . renderError) . snd $ ast
 
     putStrLn "Pretty printed code:"
     putStrLn . prettyprint . fst $ ast
+
+    -- -}
 
     exitSuccess
