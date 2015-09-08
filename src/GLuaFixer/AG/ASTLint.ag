@@ -219,7 +219,7 @@ sem Stat
         val.isNegation          = False
         to.isNegation           = False
         step.isNegation         = False
-        body.scopes             = M.singleton @var.identifier (False, @var.mtokenPos) : @step.scopes
+        body.scopes             = M.singleton @var.identifier (not (lint_unusedLoopVars @lhs.config), @var.mtokenPos) : @step.scopes
         loc.shadowWarning       = checkShadows @lhs.scopes @var.copy
         +warnings               = if not (lint_shadowing @lhs.config) || isNothing @loc.shadowWarning then id else
                                     (:) . fromJust $ @loc.shadowWarning
