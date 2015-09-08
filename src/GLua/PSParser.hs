@@ -32,14 +32,15 @@ parseGLua mts = let (cms, ts) = splitComments . filter (not . isWhitespace) $ mt
 
 -- | LineColPos to SourcePos
 lcp2sp :: LineColPos -> SourcePos
-lcp2sp (LineColPos l c _) = newPos "source.lua" l c
+lcp2sp (LineColPos l c _) = newPos "source.lua" (l - 1) (c - 1)
 
 sp2lcp :: SourcePos -> LineColPos
-sp2lcp pos = LineColPos (sourceLine pos) (sourceColumn pos) 0
+sp2lcp pos = LineColPos (sourceLine pos + 1) (sourceColumn pos + 1) 0
 
 -- | Update a SourcePos with an MToken
 updatePosMToken :: SourcePos -> MToken -> [MToken] -> SourcePos
-updatePosMToken _ (MToken p _) _ = lcp2sp p
+updatePosMToken _ (MToken p _) [] = lcp2sp p
+updatePosMToken _ _ ((MToken p _) : _) = lcp2sp p
 
 -- | Match a token
 pMTok :: Token -> AParser MToken
@@ -81,7 +82,7 @@ pInterleaved sep q = many sep *> many (q <* many sep)
 
 -- | Parse a return value
 parseReturn :: AParser AReturn
-parseReturn = AReturn <$> pPos <* pMTok Return <*> option [] parseExpressionList <* many (pMTok Semicolon)
+parseReturn = AReturn <$> pPos <* pMTok Return <*> option [] parseExpressionList <* many (pMTok Semicolon) <?> "return statement"
 
 -- | Label
 parseLabel :: AParser MToken
@@ -93,7 +94,57 @@ parseLabel = pMSatisfy isLabel <?> "label"
 
 -- | Parse a single statement
 parseStat :: AParser Stat
-parseStat = nope
+parseStat = ALabel <$> parseLabel <|>
+            ABreak <$ pMTok Break <|>
+            AContinue <$ pMTok Continue <|>
+            AGoto <$ pMTok Goto <*> pName <|>
+            ADo <$ pMTok Do <*> parseBlock <* pMTok End <|>
+            AWhile <$ pMTok While <*> parseExpression <* pMTok Do <*> parseBlock <* pMTok End <|>
+            ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseExpression <|>
+            parseIf <|>
+            parseFor <|>
+            parseDefinition
+
+-- | Global definition
+-- Note: Will not fail immediately when the statement is a function call.
+parseDefinition :: AParser Stat
+parseDefinition = def <$> parseVarList <* pMTok Equals <*> parseExpressionList
+    where
+        def :: [PrefixExp] -> [MExpr] -> Stat
+        def ps exs = Def $ zip ps (map Just exs ++ repeat Nothing)
+
+-- | Global function definition
+parseFunction :: AParser Stat
+parseFunction = AFunc <$ pMTok Function <*> parseFuncName <*>
+                between (pMTok LRound) (pMTok RRound) parseParList <*>
+                parseBlock <*
+                pMTok End
+
+-- | Parse if then elseif then else end expressions
+parseIf :: AParser Stat
+parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
+            parseBlock <*>
+            -- elseif
+            many ((,) <$ pMTok Elseif <*> parseExpression <* pMTok Then <*> parseBlock) <*>
+            -- else
+            optionMaybe (pMTok Else *> parseBlock) <*
+            pMTok End <?> "if statement"
+
+parseFor :: AParser Stat
+parseFor = try parseNFor <|> parseGFor
+
+-- | Parse numeric for loop
+parseNFor :: AParser Stat
+parseNFor = ANFor <$ pMTok For <*> pName <* pMTok Equals <*> parseExpression <* pMTok Comma <*> parseExpression <*> step <* pMTok Do <*>
+                parseBlock <*
+            pMTok End <?> "numeric for loop"
+    where
+        step :: AParser MExpr
+        step = pMTok Comma *> parseExpression <|> MExpr <$> pPos <*> return (ANumber "1")
+
+-- | Generic for loop
+parseGFor :: AParser Stat
+parseGFor = AGFor <$ pMTok For <*> parseNameList <* pMTok In <*> parseExpressionList <* pMTok Do <*> parseBlock <* pMTok End <?> "generic for loop"
 
 -- | Function name (includes dot indices and meta indices)
 parseFuncName :: AParser FuncName
@@ -286,7 +337,13 @@ parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly
 -- | A list of table entries
 -- Grammar: field {separator field} [separator]
 parseFieldList :: AParser [Field]
-parseFieldList = nope
+parseFieldList = sepEndBy parseField parseFieldSep <* many parseFieldSep
+
+-- | A field in a table
+parseField :: AParser Field
+parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <|>
+             try (NamedField <$> pName <* pMTok Equals <*> parseExpression) <|>
+             UnnamedField <$> parseExpression
 
 -- | Field separator
 parseFieldSep :: AParser MToken
