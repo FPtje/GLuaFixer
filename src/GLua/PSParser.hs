@@ -158,6 +158,7 @@ parseSubExpression = ANil <$ pMTok Nil <|>
                   APrefixExpr <$> parsePrefixExp <|>
                   ATableConstructor <$> parseTableConstructor
 
+
 -- | Separate parser for anonymous function subexpression
 parseAnonymFunc :: AParser Expr
 parseAnonymFunc = AnonymousFunc <$
@@ -165,6 +166,71 @@ parseAnonymFunc = AnonymousFunc <$
                    pMTok LRound <*> parseParList <* pMTok RRound <*>
                    parseBlock <*
                    pMTok End
+
+-- | Parse operators of the same precedence in a chain
+samePrioL :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
+samePrioL ops pr = chainl1 pr (choice (map f ops))
+  where
+    f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
+    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos <* pMTok t
+
+samePrioR :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
+samePrioR ops pr = chainl1 pr (choice (map f ops))
+  where
+    f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
+    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos <* pMTok t
+
+-- | Parse unary operator (-, not, #)
+parseUnOp :: AParser UnOp
+parseUnOp = UnMinus <$ pMTok Minus <|>
+            ANot    <$ pMTok Not   <|>
+            ANot    <$ pMTok CNot  <|>
+            AHash   <$ pMTok Hash
+
+-- | Parses a binary operator
+parseBinOp :: AParser BinOp
+parseBinOp = const AOr          <$> pMTok Or           <|>
+             const AOr          <$> pMTok COr          <|>
+             const AAnd         <$> pMTok And          <|>
+             const AAnd         <$> pMTok CAnd         <|>
+             const ALT          <$> pMTok TLT          <|>
+             const AGT          <$> pMTok TGT          <|>
+             const ALEQ         <$> pMTok TLEQ         <|>
+             const AGEQ         <$> pMTok TGEQ         <|>
+             const ANEq         <$> pMTok TNEq         <|>
+             const ANEq         <$> pMTok TCNEq        <|>
+             const AEq          <$> pMTok TEq          <|>
+             const AConcatenate <$> pMTok Concatenate  <|>
+             const APlus        <$> pMTok Plus         <|>
+             const BinMinus     <$> pMTok Minus        <|>
+             const AMultiply    <$> pMTok Multiply     <|>
+             const ADivide      <$> pMTok Divide       <|>
+             const AModulus     <$> pMTok Modulus      <|>
+             const APower       <$> pMTok Power
+
+-- | Operators, sorted by priority
+-- Priority from: http://www.lua.org/manual/5.2/manual.html#3.4.7
+lvl1, lvl2, lvl3, lvl4, lvl5, lvl6, lvl8 :: [(Token, BinOp)]
+lvl1 = [(Or, AOr), (COr, AOr)]
+lvl2 = [(And, AAnd), (CAnd, AAnd)]
+lvl3 = [(TLT, ALT), (TGT, AGT), (TLEQ, ALEQ), (TGEQ, AGEQ), (TNEq, ANEq), (TCNEq, ANEq), (TEq, AEq)]
+lvl4 = [(Concatenate, AConcatenate)]
+lvl5 = [(Plus, APlus), (Minus, BinMinus)]
+lvl6 = [(Multiply, AMultiply), (Divide, ADivide), (Modulus, AModulus)]
+-- lvl7 is unary operators
+lvl8 = [(Power, APower)]
+
+
+-- | Parse chains of binary and unary operators
+parseExpression :: AParser MExpr
+parseExpression = (samePrioL lvl1 $
+                   samePrioL lvl2 $
+                   samePrioL lvl3 $
+                   samePrioR lvl4 $
+                   samePrioL lvl5 $
+                   samePrioL lvl6 $
+                   MExpr <$> pPos <*> (UnOpExpr <$> parseUnOp <*> parseExpression) <|> -- lvl7
+                   samePrioR lvl8 (MExpr <$> pPos <*> parseSubExpression)) <?> "expression"
 
 -- | Prefix expressions
 -- can have any arbitrary list of expression suffixes
@@ -206,10 +272,6 @@ parseVar = pPrefixExp suffixes
     where
         suffixes = concat <$> many ((\c ix -> c ++ [ix]) <$> many1 pPFExprCallSuffix <*> pPFExprIndexSuffix <|>
                                     (:[])                <$> pPFExprIndexSuffix)
-
--- | Parse chains of binary and unary operators
-parseExpression :: AParser MExpr
-parseExpression = nope <?> "expression"
 
 -- | Arguments of a function call (including brackets)
 parseArgs :: AParser Args
