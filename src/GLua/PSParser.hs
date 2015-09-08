@@ -12,8 +12,6 @@ import Text.Parsec
 import Text.Parsec.Pos
 import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
 
-import Debug.Trace
-
 type AParser = Parsec [MToken] ()
 
 -- | Execute a parser
@@ -210,7 +208,7 @@ parseSubExpression = ANil <$ pMTok Nil <|>
                   AVarArg <$ pMTok VarArg <|>
                   parseAnonymFunc <|>
                   APrefixExpr <$> parsePrefixExp <|>
-                  ATableConstructor <$> parseTableConstructor
+                  ATableConstructor <$> parseTableConstructor <?> "expression"
 
 
 -- | Separate parser for anonymous function subexpression
@@ -304,12 +302,12 @@ pPFExprSuffix = pPFExprCallSuffix <|> pPFExprIndexSuffix
 -- | Parse an indexing expression suffix
 pPFExprCallSuffix :: AParser PFExprSuffix
 pPFExprCallSuffix = Call <$> parseArgs <|>
-                    MetaCall <$ pMTok Colon <*> pName <*> parseArgs
+                    MetaCall <$ pMTok Colon <*> pName <*> parseArgs <?> "function call"
 
 -- | Parse an indexing expression suffix
 pPFExprIndexSuffix :: AParser PFExprSuffix
 pPFExprIndexSuffix = ExprIndex <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <|>
-                     DotIndex <$ pMTok Dot <*> pName
+                     DotIndex <$ pMTok Dot <*> pName <?> "indexation"
 
 -- | Function calls are prefix expressions, but the last suffix MUST be either a function call or a metafunction call
 pFunctionCall :: AParser PrefixExp
@@ -351,3 +349,4 @@ parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* 
 -- | Field separator
 parseFieldSep :: AParser MToken
 parseFieldSep = pMTok Comma <|> pMTok Semicolon
+
