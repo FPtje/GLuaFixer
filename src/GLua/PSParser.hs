@@ -102,23 +102,29 @@ parseStat = ALabel <$> parseLabel <|>
             AWhile <$ pMTok While <*> parseExpression <* pMTok Do <*> parseBlock <* pMTok End <|>
             ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseExpression <|>
             parseIf <|>
+            parseFunction AFunc <|>
             parseFor <|>
-            parseDefinition
+            try (parseDefinition Def) <|>
+            AFuncCall <$> pFunctionCall <|>
+            pMTok Local *>
+                (try (parseDefinition LocDef) <|>
+                parseFunction ALocFunc)
+
 
 -- | Global definition
 -- Note: Will not fail immediately when the statement is a function call.
-parseDefinition :: AParser Stat
-parseDefinition = def <$> parseVarList <* pMTok Equals <*> parseExpressionList
+parseDefinition :: (VarsList -> Stat) -> AParser Stat
+parseDefinition stat = def <$> parseVarList <* pMTok Equals <*> parseExpressionList
     where
         def :: [PrefixExp] -> [MExpr] -> Stat
-        def ps exs = Def $ zip ps (map Just exs ++ repeat Nothing)
+        def ps exs = stat $ zip ps (map Just exs ++ repeat Nothing)
 
 -- | Global function definition
-parseFunction :: AParser Stat
-parseFunction = AFunc <$ pMTok Function <*> parseFuncName <*>
-                between (pMTok LRound) (pMTok RRound) parseParList <*>
-                parseBlock <*
-                pMTok End
+parseFunction :: (FuncName -> [MToken] -> Block -> Stat) -> AParser Stat
+parseFunction stat = stat <$ pMTok Function <*> parseFuncName <*>
+                     between (pMTok LRound) (pMTok RRound) parseParList <*>
+                     parseBlock <*
+                     pMTok End
 
 -- | Parse if then elseif then else end expressions
 parseIf :: AParser Stat
