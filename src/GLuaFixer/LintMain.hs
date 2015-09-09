@@ -9,7 +9,7 @@ import GLua.Parser
 import qualified GLua.PSParser as PS
 import GLuaFixer.AG.ASTLint
 import GLua.AG.PrettyPrint
-import System.FilePath.Posix
+import System.FilePath
 import GLuaFixer.LintSettings
 import System.Exit
 import qualified Data.ByteString.Lazy as BS
@@ -35,7 +35,8 @@ prettyPrint :: IO ()
 prettyPrint = do
                 lua <- getContents
 
-                lintsettings <- getSettings
+                cwd <- getCurrentDirectory
+                lintsettings <- getSettings cwd
                 let parsed = parseGLuaFromString lua
                 let ast = fst parsed
                 let ppconf = lint2ppSetting lintsettings
@@ -45,14 +46,17 @@ prettyPrint = do
 
 
 -- | Lint a set of files, uses parsec's parser library
-lint :: LintSettings -> [FilePath] -> IO ()
+lint :: Maybe LintSettings -> [FilePath] -> IO ()
 lint _ [] = return ()
 lint ls (f : fs) = do
+    settings <- getSettings f
+    let config = fromJust $ ls <|> Just settings
+
     contents <- doReadFile f
 
     let lexed = execParseTokens contents
     let tokens = fst lexed
-    let warnings = map ((++) (takeFileName f ++ ": ")) $ lintWarnings ls tokens
+    let warnings = map ((++) (takeFileName f ++ ": ")) $ lintWarnings config tokens
 
     -- Fixed for positions
     let fixedTokens = fixedLexPositions tokens
@@ -64,12 +68,12 @@ lint ls (f : fs) = do
             let parseError = takeFileName f ++ ": [Error] " ++ renderPSError err
 
             -- Print syntax errors
-            when (lint_syntaxErrors ls) $ do
+            when (lint_syntaxErrors config) $ do
                 mapM_ putStrLn lexErrors
                 putStrLn parseError
 
         Right ast -> do
-            let parserWarnings = map ((++) (takeFileName f ++ ": ")) $ astWarnings ls ast
+            let parserWarnings = map ((++) (takeFileName f ++ ": ")) $ astWarnings config ast
 
             -- Print all warnings
             mapM_ putStrLn warnings
@@ -106,8 +110,9 @@ homeSettingsFile = ".glualint" <.> "json"
 -- Search upwards in the file path until a settings file is found
 searchSettings :: FilePath -> IO (Maybe LintSettings)
 searchSettings f = do
-                        dirExists <- doesDirectoryExist f
                         let up = takeDirectory f
+                        dirExists <- doesDirectoryExist up
+
                         if not dirExists || up == takeDirectory up then
                             return Nothing
                         else do
@@ -127,10 +132,9 @@ searchHome = do
                 else
                     return Nothing
 
-getSettings :: IO LintSettings
-getSettings = do
-    cwd <- getCurrentDirectory
-    searchedSettings <- searchSettings cwd
+getSettings :: FilePath -> IO LintSettings
+getSettings f = do
+    searchedSettings <- searchSettings f
     homeSettings <- searchHome
     return . fromJust $ searchedSettings <|> homeSettings <|> Just defaultLintSettings
 
@@ -138,8 +142,5 @@ main :: IO ()
 main = do
     args <- getArgs
     (settings, files) <- parseCLArgs args
-    defaultSettings <- getSettings
 
-    let config = fromJust $ settings <|> Just defaultSettings
-
-    lint config files
+    lint settings files
