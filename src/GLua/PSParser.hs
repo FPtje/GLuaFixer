@@ -102,20 +102,28 @@ parseStat = ALabel <$> parseLabel <|>
             parseIf <|>
             parseFunction AFunc <|>
             parseFor <|>
-            try (parseDefinition Def) <|>
+            try parseDefinition <|>
             AFuncCall <$> pFunctionCall <|>
             pMTok Local *>
-                (try (parseDefinition LocDef) <|>
+                (try parseLocalDefinition <|>
                 parseFunction ALocFunc)
 
 
 -- | Global definition
 -- Note: Will not fail immediately when the statement is a function call.
-parseDefinition :: (VarsList -> Stat) -> AParser Stat
-parseDefinition stat = def <$> parseVarList <* pMTok Equals <*> parseExpressionList <?> "variable definition"
+parseDefinition :: AParser Stat
+parseDefinition = def <$> parseVarList <* pMTok Equals <*> parseExpressionList <?> "variable definition"
     where
         def :: [PrefixExp] -> [MExpr] -> Stat
-        def ps exs = stat $ zip ps (map Just exs ++ repeat Nothing)
+        def ps exs = Def $ zip ps (map Just exs ++ repeat Nothing)
+
+-- | Local definition
+-- Note: Will not fail immediately when the statement is a function call.
+parseLocalDefinition :: AParser Stat
+parseLocalDefinition = def <$> parseVarList <*> option [] (pMTok Equals *> parseExpressionList) <?> "variable definition"
+    where
+        def :: [PrefixExp] -> [MExpr] -> Stat
+        def ps exs = LocDef $ zip ps (map Just exs ++ repeat Nothing)
 
 -- | Global function definition
 parseFunction :: (FuncName -> [MToken] -> Block -> Stat) -> AParser Stat
