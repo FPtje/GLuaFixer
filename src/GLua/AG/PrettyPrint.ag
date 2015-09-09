@@ -7,6 +7,8 @@ import Text.PrettyPrint hiding (parens, brackets, braces)
 import GLua.TokenTypes
 import GLua.AG.Token
 import Data.Maybe
+import Text.Parsec
+import Text.Parsec.Error
 }
 
 include "AST.ag"
@@ -63,6 +65,9 @@ printEls (Just b) i = zeroWidthText "else" $+$ pp_block b i
 renderPos :: LineColPos -> String
 renderPos (LineColPos l c _) = "line " ++ show (succ l) ++ ", column " ++ show (succ c)
 
+renderSourcePos :: SourcePos -> String
+renderSourcePos sp = "line " ++ (show . succ . sourceLine $ sp) ++ ", column " ++ (show . succ . sourceColumn $ sp)
+
 getMStatPos :: MStat -> String
 getMStatPos (MStat p _) = renderPos p
 
@@ -86,6 +91,13 @@ render_expecting :: [String] -> String
 render_expecting [a]    = "Parser expected a " ++ a
 render_expecting (a:as) = "Parser expected one of [" ++ a ++ concat (map (", " ++) as) ++ "]"
 render_expecting []     = "Parser expected nothing"
+
+
+renderPSError :: ParseError -> String
+renderPSError ps = renderSourcePos (errorPos ps) ++ ": " ++ (map replNL . showErrorMessages "or" "unknown parse error" "expecting" "unexpected" "end of input" . errorMessages  $ ps)
+    where
+        replNL '\n' = ','
+        replNL c = c
 
 renderComments :: PrettyPrintConfig -> [MToken] -> Doc
 renderComments conf toks = foldl ($+$) empty . map (tok . convert) $ toks
@@ -155,8 +167,8 @@ attr Declaration VarsList
     syn varPretty  use {<>} {empty}  :: Doc
     syn exprPretty use {<>} {empty}  :: Doc
 
-attr MaybeMExpr Declaration
-    syn isDefined :: Bool
+attr MaybeMExpr Declaration VarsList
+    syn isDefined use {||} {False} :: Bool
 
 attr MStatList MExprList VarsList
     inh isHead :: Bool
@@ -233,7 +245,8 @@ sem Declaration
                 lhs.exprPretty = @x2.pretty
 
 sem VarsList
-    | Cons      lhs.pretty = @loc.varPretty <-> zchr '=' <-> @loc.exprPretty
+    | Cons      lhs.pretty = @loc.varPretty <-> if @loc.isDefined then zchr '=' <-> @loc.exprPretty else empty
+                loc.isDefined = @hd.isDefined || @tl.isDefined
                 loc.varPretty = (if @lhs.isHead then empty else zchr ',') <-> @hd.varPretty <> @tl.varPretty
                 loc.exprPretty = (if @lhs.isHead || not @hd.isDefined then empty else zchr ',') <-> @hd.exprPretty <> @tl.exprPretty
                 tl.isHead  = False

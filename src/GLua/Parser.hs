@@ -243,7 +243,7 @@ parseNumber :: AParser Expr
 parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pMSatisfy isNumber (TNumber "0") "Number"
     where
         isNumber :: MToken -> Bool
-        isNumber (MToken _ (TNumber str)) = True
+        isNumber (MToken _ (TNumber _)) = True
         isNumber _ = False
 
 -- | Parse any kind of string
@@ -251,9 +251,9 @@ parseString :: AParser MToken
 parseString = pMSatisfy isString (DQString "someString") "String"
     where
         isString :: MToken -> Bool
-        isString (MToken _ (DQString str)) = True
-        isString (MToken _ (SQString str)) = True
-        isString (MToken _ (MLString str)) = True
+        isString (MToken _ (DQString _)) = True
+        isString (MToken _ (SQString _)) = True
+        isString (MToken _ (MLString _)) = True
         isString _ = False
 
 -- | Parse an identifier
