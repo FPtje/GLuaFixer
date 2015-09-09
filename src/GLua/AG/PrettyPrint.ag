@@ -167,8 +167,8 @@ attr Declaration VarsList
     syn varPretty  use {<>} {empty}  :: Doc
     syn exprPretty use {<>} {empty}  :: Doc
 
-attr MaybeMExpr Declaration
-    syn isDefined :: Bool
+attr MaybeMExpr Declaration VarsList
+    syn isDefined use {||} {False} :: Bool
 
 attr MStatList MExprList VarsList
     inh isHead :: Bool
@@ -245,7 +245,8 @@ sem Declaration
                 lhs.exprPretty = @x2.pretty
 
 sem VarsList
-    | Cons      lhs.pretty = @loc.varPretty <-> zchr '=' <-> @loc.exprPretty
+    | Cons      lhs.pretty = @loc.varPretty <-> if @loc.isDefined then zchr '=' <-> @loc.exprPretty else empty
+                loc.isDefined = @hd.isDefined || @tl.isDefined
                 loc.varPretty = (if @lhs.isHead then empty else zchr ',') <-> @hd.varPretty <> @tl.varPretty
                 loc.exprPretty = (if @lhs.isHead || not @hd.isDefined then empty else zchr ',') <-> @hd.exprPretty <> @tl.exprPretty
                 tl.isHead  = False
