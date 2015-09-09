@@ -119,8 +119,10 @@ searchSettings f = do
                             exists <- doesFileExist (f </> settingsFile)
                             if exists then
                                 settingsFromFile (f </> settingsFile)
-                            else
-                                searchSettings up
+                            else do
+                                dotExists <- doesFileExist (f </> homeSettingsFile)
+                                if dotExists then settingsFromFile (f </> homeSettingsFile) else searchSettings up
+
 
 -- Look for the file in the home directory
 searchHome :: IO (Maybe LintSettings)
@@ -129,8 +131,9 @@ searchHome = do
                 exists <- doesFileExist (home </> homeSettingsFile)
                 if exists then
                     settingsFromFile (home </> homeSettingsFile)
-                else
-                    return Nothing
+                else do
+                    nonDotExists <- doesFileExist (home </> settingsFile)
+                    if nonDotExists then settingsFromFile (home </> settingsFile) else return Nothing
 
 getSettings :: FilePath -> IO LintSettings
 getSettings f = do
