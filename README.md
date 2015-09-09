@@ -11,14 +11,13 @@ glualint - Linter and pretty printer for Garry's Mod's variant of Lua.
 After performing these steps, you can run `glualint` from the terminal or let your text editor use it as your linter. **Failing to specifically perform the third step will make `glualint` very unlikely to work**.
 
 # Configuring glualint
-`glualint` Allows some configuration. This is done through a file called `glualint.json`. `glualint` looks for this file in three places (in order of priority)
+`glualint` Allows some configuration. This is done through a file called `glualint.json` or `.glualint.json`. `glualint` looks for this file in three places (in order of priority)
 
 - The file you give to the `--config` parameter (when using the terminal)
-- Any folder above the file you're working in
-- Your home folder, which is `C:\users\yourusername\.glualint.json` on Windows or `/users/yourusername/.glualint.json` on Unix.
+- Any folder above the file you're working in (e.g. the root of your project)
+- Your home folder, which is `C:\users\yourusername\.glualint.json` on Windows or `/home/yourusername/.glualint.json` on Unix.
 
-Note: Calling the file anything other than `glualint.json` will make `glualint` not read it.
-Note: The exception there is the home folder, in which the file is to be called `.glualint.json`, with a `.` at the start.
+Note: The file **must** either be called `glualint.json` or `.glualint.json`.
 
 Example `glualint.json` with the default options:
 ```json
