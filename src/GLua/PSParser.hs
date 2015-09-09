@@ -55,8 +55,11 @@ pMSatisfy cond = tokenPrim show updatePosMToken testMToken
         testMToken mt = if cond mt then Just mt else Nothing
 
 -- | Get the source position
+-- Simply gets the position of the next token
+-- Falls back on the collected position when there is no token left
 pPos :: AParser LineColPos
-pPos = sp2lcp <$> getPosition
+pPos = mpos <$> lookAhead anyToken <|> sp2lcp <$> getPosition
+    --
 
 -- | Parses the full AST
 -- Its first parameter contains all comments
