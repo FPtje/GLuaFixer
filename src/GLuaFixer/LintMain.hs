@@ -6,6 +6,7 @@ import Control.Monad
 import GLua.Lexer
 import GLuaFixer.AG.LexLint
 import GLua.Parser
+import qualified GLua.PSParser as PS
 import GLuaFixer.AG.ASTLint
 import GLua.AG.PrettyPrint
 import System.FilePath.Posix
@@ -29,7 +30,7 @@ doReadFile f = do
     contents <- hGetContents handle
     return contents
 
-
+-- | Pretty print, uses the uu-parsinglib library
 prettyPrint :: IO ()
 prettyPrint = do
                 lua <- getContents
@@ -43,7 +44,7 @@ prettyPrint = do
                 putStr pretty
 
 
--- | Lint a set of files
+-- | Lint a set of files, uses parsec's parser library
 lint :: LintSettings -> [FilePath] -> IO ()
 lint _ [] = return ()
 lint ls (f : fs) = do
@@ -55,19 +56,24 @@ lint ls (f : fs) = do
 
     -- Fixed for positions
     let fixedTokens = fixedLexPositions tokens
-    let parsed = parseGLua fixedTokens
-    let ast = fst parsed
-    let parserWarnings = map ((++) (takeFileName f ++ ": ")) $ astWarnings ls ast
+    let parsed = PS.parseGLua fixedTokens
 
-    let syntaxErrors = map ((++) (takeFileName f ++ ": [Error] ") . renderError) $ snd lexed ++ snd parsed
+    case parsed of
+        Left err -> do
+            let lexErrors = map ((++) (takeFileName f ++ ": [Error] ") . renderError) $ snd lexed
+            let parseError = takeFileName f ++ ": [Error] " ++ renderPSError err
 
-    -- Print syntax errors
-    when (lint_syntaxErrors ls) $
-        mapM_ putStrLn syntaxErrors
+            -- Print syntax errors
+            when (lint_syntaxErrors ls) $ do
+                mapM_ putStrLn lexErrors
+                putStrLn parseError
 
-    -- Print all warnings
-    mapM_ putStrLn warnings
-    mapM_ putStrLn parserWarnings
+        Right ast -> do
+            let parserWarnings = map ((++) (takeFileName f ++ ": ")) $ astWarnings ls ast
+
+            -- Print all warnings
+            mapM_ putStrLn warnings
+            mapM_ putStrLn parserWarnings
 
     -- Lint the other files
     lint ls fs
