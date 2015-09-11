@@ -101,6 +101,7 @@ parseCLArgs ind ("--config" : f : xs) = do
                                         (_, fps) <- parseCLArgs ind xs
                                         return (settings, fps)
 
+parseCLArgs _ (('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : '\'' : ind) : xs) = parseCLArgs (Just (init ind)) xs
 -- I didn't think this function would get this complex task...
 parseCLArgs _ (('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : ind) : xs) = parseCLArgs (Just ind) xs
 parseCLArgs ind (f : xs) = do (ls, fs) <- parseCLArgs ind xs
