@@ -29,6 +29,8 @@ data PrettyPrintConfig = PPConfig {
     spaceAfterParens :: Bool,
     spaceAfterBrackets :: Bool,
     spaceAfterBraces :: Bool,
+    spaceBeforeComma :: Bool,
+    spaceAfterComma :: Bool,
     semicolons :: Bool,
     cStyle :: Bool,
     indentation :: String
@@ -39,6 +41,8 @@ defaultPPConfig = PPConfig {
     spaceAfterParens = False,
     spaceAfterBrackets = False,
     spaceAfterBraces = False,
+    spaceBeforeComma = False,
+    spaceAfterComma = True,
     semicolons = False,
     cStyle = False,
     indentation = "    "
@@ -219,7 +223,8 @@ sem MStat
     | MStat      lhs.pos    = @pos
 
 sem MExprList
-    | Cons       lhs.pretty = (if @lhs.isHead then empty else zchr ',') <-> @hd.pretty <> @tl.pretty
+    | Cons       lhs.pretty = (if @lhs.isHead then empty else @loc.comma) <> @hd.pretty <> @tl.pretty
+                 loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  tl.isHead  = False
                  lhs.pos    = @hd.pos
     | Nil        lhs.pretty = empty
@@ -227,7 +232,9 @@ sem MExprList
 
 sem FieldList
     | Cons       lhs.pretty = @loc.prettyComments $+$ @loc.ind (@hd.pretty <> @loc.comma) `@loc.sep` @tl.pretty
-                 loc.comma = if @tl.isNil then empty else zchr ','
+                 loc.comma = if @tl.isNil then empty else
+                                (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <>
+                                (if spaceAfterComma @lhs.ppconf && not @loc.isMultiline then zchr ' ' else empty)
                  loc.sep = if @loc.isMultiline then ($+$) else (<->)
                  loc.ind = if @loc.isMultiline then indent @lhs.ppconf @lhs.indent else id
                  loc.isMultiline = @hd.isMultiline || @tl.isMultiline
@@ -255,8 +262,9 @@ sem Declaration
 sem VarsList
     | Cons      lhs.pretty = @loc.varPretty <-> if @loc.isDefined then zchr '=' <-> @loc.exprPretty else empty
                 loc.isDefined = @hd.isDefined || @tl.isDefined
-                loc.varPretty = (if @lhs.isHead then empty else zchr ',') <-> @hd.varPretty <> @tl.varPretty
-                loc.exprPretty = (if @lhs.isHead || not @hd.isDefined then empty else zchr ',') <-> @hd.exprPretty <> @tl.exprPretty
+                loc.varPretty = (if @lhs.isHead then empty else @loc.comma) <> @hd.varPretty <> @tl.varPretty
+                loc.exprPretty = (if @lhs.isHead || not @hd.isDefined then empty else @loc.comma) <> @hd.exprPretty <> @tl.exprPretty
+                loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                 tl.isHead  = False
     | Nil       lhs.pretty = empty
 
@@ -328,21 +336,25 @@ sem Stat
     | ANFor      lhs.isMultiline = True
                  loc.step = case @step.copy of
                                 MExpr _ (ANumber "1") -> empty
-                                otherwise -> zchr ',' <-> @step.pretty
-                 lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> zchr ',' <-> @to.pretty <> @loc.step <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                                otherwise -> @loc.comma <-> @step.pretty
+                 lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> @loc.comma <-> @to.pretty <> @loc.step <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 loc.comma = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
     | AGFor      lhs.isMultiline = True
-                 lhs.pretty = zeroWidthText "for" <-> printList tok ", " @vars <-> zeroWidthText "in" <-> @vals.pretty <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 lhs.pretty = zeroWidthText "for" <-> printList tok (render @loc.comma) @vars <-> zeroWidthText "in" <-> @vals.pretty <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  body.indent = @lhs.indent + 1
+                 loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  vals.isHead = True
                  lhs.hasBreaking = False
     | AFunc      lhs.isMultiline = True
-                 lhs.pretty = zeroWidthText "function" <-> @name.pretty <> parens @lhs.ppconf (printList tok ", " @args) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 lhs.pretty = zeroWidthText "function" <-> @name.pretty <> parens @lhs.ppconf (printList tok (render @loc.comma) @args) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
     | ALocFunc   lhs.isMultiline = True
-                 lhs.pretty = zeroWidthText "local function" <-> @name.pretty <> parens @lhs.ppconf (printList tok ", " @args) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 lhs.pretty = zeroWidthText "local function" <-> @name.pretty <> parens @lhs.ppconf (printList tok (render @loc.comma) @args) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
 
@@ -382,8 +394,9 @@ sem Expr
     | AString           lhs.pretty = tok @str
     | AVarArg           lhs.pretty = zeroWidthText "..."
     | AnonymousFunc     loc.isMultiline = @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking
-                        loc.singleLinePretty = zeroWidthText "function" <> parens @lhs.ppconf (printList tok ", " @pars) <-> @body.pretty <-> zeroWidthText "end"
-                        loc.multilinePretty = zeroWidthText "function" <> parens @lhs.ppconf (printList tok ", " @pars) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                        loc.singleLinePretty = zeroWidthText "function" <> parens @lhs.ppconf (printList tok (render @loc.comma) @pars) <-> @body.pretty <-> zeroWidthText "end"
+                        loc.multilinePretty = zeroWidthText "function" <> parens @lhs.ppconf (printList tok (render @loc.comma) @pars) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                        loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                         body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
                         lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
     | APrefixExpr       lhs.pretty = @pexpr.pretty
