@@ -80,8 +80,8 @@ getAReturnPos NoReturn = "<unknown>"
 getMExprPos :: MExpr -> String
 getMExprPos (MExpr p _) = renderPos p
 
-comesBefore :: LineColPos -> LineColPos -> Bool
-comesBefore (LineColPos _ _ l) (LineColPos a b r) = l <= r
+beforeOrOnLine :: LineColPos -> LineColPos -> Bool
+beforeOrOnLine (LineColPos l _ _) (LineColPos l' _ _) = l <= l'
 
 renderError :: Error LineColPos -> String
 renderError (Inserted str pos strs)       = renderPos pos ++ ": Inserted '" ++ str ++ "'." ++ render_expecting strs
@@ -182,7 +182,7 @@ attr MStatList
 attr MStat Stat
     inh isLastStatement :: Bool
 
-attr MStat MExprList MExpr
+attr MStat MExprList MExpr Field
     syn pos :: LineColPos
 
 attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList ElseIf ElseIfList Else Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
@@ -206,7 +206,7 @@ sem MStatList
                  loc.addNewline = if not @tl.isLast && (@hd.isMultiline || @tl.isMultiline) then zchr '\n' else empty
                  lhs.pretty = @loc.prettyComments $+$ indent @lhs.ppconf @lhs.indent @hd.pretty <> @loc.addNewline $+$ @tl.pretty
                  loc.prettyComments = renderComments @lhs.ppconf @lhs.indent @loc.commentsHere
-                 loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `comesBefore` @hd.pos]
+                 loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `beforeOrOnLine` @hd.pos]
                  hd.comments = drop (length @loc.commentsHere) @lhs.comments
                  tl.comments = @hd.comments
                  tl.isHead  = False
@@ -226,13 +226,17 @@ sem MExprList
                  lhs.pos    = LineColPos 0 0 0
 
 sem FieldList
-    | Cons       lhs.pretty = @loc.ind (@hd.pretty <> @loc.comma) `@loc.sep` @tl.pretty
+    | Cons       lhs.pretty = @loc.prettyComments $+$ @loc.ind (@hd.pretty <> @loc.comma) `@loc.sep` @tl.pretty
                  loc.comma = if @tl.isNil then empty else zchr ','
                  loc.sep = if @loc.isMultiline then ($+$) else (<->)
                  loc.ind = if @loc.isMultiline then indent @lhs.ppconf @lhs.indent else id
                  loc.isMultiline = @hd.isMultiline || @tl.isMultiline
                  lhs.isMultiline = @loc.isMultiline
                  lhs.isNil  = False
+
+                 loc.prettyComments = if @loc.isMultiline then renderComments @lhs.ppconf @lhs.indent (fst @loc.commentsHere) else empty
+                 loc.commentsHere = span (\(MToken pos _) -> pos `beforeOrOnLine` @hd.pos) @lhs.comments
+                 hd.comments = if @loc.isMultiline then snd @loc.commentsHere else @lhs.comments
     | Nil        lhs.pretty = empty
                  lhs.isNil  = True
 
@@ -346,7 +350,7 @@ sem AReturn
     | AReturn    lhs.pretty = @loc.prettyComments $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "return") <-> @values.pretty <> @loc.semicolon
                  loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  loc.prettyComments = renderComments @lhs.ppconf @lhs.indent @loc.commentsHere
-                 loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `comesBefore` @values.pos]
+                 loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `beforeOrOnLine` @values.pos]
                  values.comments = drop (length @loc.commentsHere) @lhs.comments
                  lhs.comments = @values.comments
                  values.isHead = True
