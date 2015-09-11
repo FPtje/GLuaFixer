@@ -42,7 +42,8 @@ Example `glualint.json` with the default options:
     "prettyprint_spaceAfterBrackets":   false,
     "prettyprint_spaceAfterBraces":     false,
     "prettyprint_semicolons":           false,
-    "prettyprint_cStyle":               false
+    "prettyprint_cStyle":               false,
+    "prettyprint_indentation":          "    "
 }
 ```
 
@@ -73,3 +74,4 @@ These options affect the pretty printing functionality of `glualint`.
 - `prettyprint_spaceAfterBraces`: Put a space between all curly braces
 - `prettyprint_semicolons`: Clutter the script with semicolons after every damn statement
 - `prettyprint_cStyle`: Use C style operators and comments everywhere
+- `prettyprint_indentation`: What to use for indentation. Any string is valid, but some amount of spaces or `"\t"` is recommended.
