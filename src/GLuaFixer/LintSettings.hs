@@ -25,6 +25,8 @@ data LintSettings = LintSettings {
                         prettyprint_spaceAfterParens :: Bool,
                         prettyprint_spaceAfterBrackets :: Bool,
                         prettyprint_spaceAfterBraces :: Bool,
+                        prettyprint_spaceBeforeComma :: Bool,
+                        prettyprint_spaceAfterComma :: Bool,
                         prettyprint_semicolons :: Bool,
                         prettyprint_cStyle :: Bool,
                         prettyprint_indentation :: String
@@ -51,6 +53,8 @@ defaultLintSettings =   LintSettings {
                             prettyprint_spaceAfterParens = False,
                             prettyprint_spaceAfterBrackets = False,
                             prettyprint_spaceAfterBraces = False,
+                            prettyprint_spaceBeforeComma = False,
+                            prettyprint_spaceAfterComma = True,
                             prettyprint_semicolons = False,
                             prettyprint_cStyle = False,
                             prettyprint_indentation = "    "
@@ -76,6 +80,8 @@ instance FromJSON LintSettings where
                                v .:? "prettyprint_spaceAfterParens" .!= (prettyprint_spaceAfterParens defaultLintSettings) <*>
                                v .:? "prettyprint_spaceAfterBrackets" .!= (prettyprint_spaceAfterBrackets defaultLintSettings) <*>
                                v .:? "prettyprint_spaceAfterBraces" .!= (prettyprint_spaceAfterBraces defaultLintSettings) <*>
+                               v .:? "prettyprint_spaceBeforeComma" .!= (prettyprint_spaceBeforeComma defaultLintSettings) <*>
+                               v .:? "prettyprint_spaceAfterComma" .!= (prettyprint_spaceAfterComma defaultLintSettings) <*>
                                v .:? "prettyprint_semicolons" .!= (prettyprint_semicolons defaultLintSettings) <*>
                                v .:? "prettyprint_cStyle" .!= (prettyprint_cStyle defaultLintSettings) <*>
                                v .:? "prettyprint_indentation" .!= (prettyprint_indentation defaultLintSettings)
@@ -87,6 +93,8 @@ lint2ppSetting ls = PPConfig{
   spaceAfterParens = prettyprint_spaceAfterParens ls,
   spaceAfterBrackets = prettyprint_spaceAfterBrackets ls,
   spaceAfterBraces = prettyprint_spaceAfterBraces ls,
+  spaceBeforeComma = prettyprint_spaceBeforeComma ls,
+  spaceAfterComma = prettyprint_spaceAfterComma ls,
   semicolons = prettyprint_semicolons ls,
   cStyle = prettyprint_cStyle ls,
   indentation = prettyprint_indentation ls
@@ -112,6 +120,8 @@ instance ToJSON LintSettings where
                         "prettyprint_spaceAfterParens" .= prettyprint_spaceAfterParens ls,
                         "prettyprint_spaceAfterBrackets" .= prettyprint_spaceAfterBrackets ls,
                         "prettyprint_spaceAfterBraces" .= prettyprint_spaceAfterBraces ls,
+                        "prettyprint_spaceBeforeComma" .= prettyprint_spaceBeforeComma ls,
+                        "prettyprint_spaceAfterComma" .= prettyprint_spaceAfterComma ls,
                         "prettyprint_semicolons" .= prettyprint_semicolons ls,
                         "prettyprint_cStyle" .= prettyprint_cStyle ls,
                         "prettyprint_indentation" .= prettyprint_indentation ls
