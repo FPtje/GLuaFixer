@@ -26,7 +26,8 @@ data LintSettings = LintSettings {
                         prettyprint_spaceAfterBrackets :: Bool,
                         prettyprint_spaceAfterBraces :: Bool,
                         prettyprint_semicolons :: Bool,
-                        prettyprint_cStyle :: Bool
+                        prettyprint_cStyle :: Bool,
+                        prettyprint_indentation :: String
                     } deriving (Show)
 
 defaultLintSettings :: LintSettings
@@ -51,7 +52,8 @@ defaultLintSettings =   LintSettings {
                             prettyprint_spaceAfterBrackets = False,
                             prettyprint_spaceAfterBraces = False,
                             prettyprint_semicolons = False,
-                            prettyprint_cStyle = False
+                            prettyprint_cStyle = False,
+                            prettyprint_indentation = "    "
                         }
 
 instance FromJSON LintSettings where
@@ -75,7 +77,8 @@ instance FromJSON LintSettings where
                                v .:? "prettyprint_spaceAfterBrackets" .!= (prettyprint_spaceAfterBrackets defaultLintSettings) <*>
                                v .:? "prettyprint_spaceAfterBraces" .!= (prettyprint_spaceAfterBraces defaultLintSettings) <*>
                                v .:? "prettyprint_semicolons" .!= (prettyprint_semicolons defaultLintSettings) <*>
-                               v .:? "prettyprint_cStyle" .!= (prettyprint_cStyle defaultLintSettings)
+                               v .:? "prettyprint_cStyle" .!= (prettyprint_cStyle defaultLintSettings) <*>
+                               v .:? "prettyprint_indentation" .!= (prettyprint_indentation defaultLintSettings)
 
     parseJSON _          = mzero
 
@@ -85,7 +88,8 @@ lint2ppSetting ls = PPConfig{
   spaceAfterBrackets = prettyprint_spaceAfterBrackets ls,
   spaceAfterBraces = prettyprint_spaceAfterBraces ls,
   semicolons = prettyprint_semicolons ls,
-  cStyle = prettyprint_cStyle ls
+  cStyle = prettyprint_cStyle ls,
+  indentation = prettyprint_indentation ls
 }
 
 instance ToJSON LintSettings where
@@ -109,5 +113,6 @@ instance ToJSON LintSettings where
                         "prettyprint_spaceAfterBrackets" .= prettyprint_spaceAfterBrackets ls,
                         "prettyprint_spaceAfterBraces" .= prettyprint_spaceAfterBraces ls,
                         "prettyprint_semicolons" .= prettyprint_semicolons ls,
-                        "prettyprint_cStyle" .= prettyprint_cStyle ls
+                        "prettyprint_cStyle" .= prettyprint_cStyle ls,
+                        "prettyprint_indentation" .= prettyprint_indentation ls
                        ]
