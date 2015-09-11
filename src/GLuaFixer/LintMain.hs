@@ -31,8 +31,8 @@ doReadFile f = do
     return contents
 
 -- | Pretty print, uses the uu-parsinglib library
-prettyPrint :: IO ()
-prettyPrint = do
+prettyPrint :: Maybe Indentation -> IO ()
+prettyPrint ind = do
                 lua <- getContents
 
                 cwd <- getCurrentDirectory
@@ -40,7 +40,8 @@ prettyPrint = do
                 let parsed = parseGLuaFromString lua
                 let ast = fst parsed
                 let ppconf = lint2ppSetting lintsettings
-                let pretty = prettyprintConf ppconf . fixOldDarkRPSyntax $ ast
+                let ppconf' = ppconf {indentation = fromMaybe (indentation ppconf) ind}
+                let pretty = prettyprintConf ppconf' . fixOldDarkRPSyntax $ ast
 
                 putStr pretty
 
@@ -89,17 +90,21 @@ settingsFromFile f = do
                         case jsonDecoded of Left err -> putStrLn (f ++ " [Error] Could not parse config file. " ++ err) >> exitWith (ExitFailure 1)
                                             Right ls -> return $ Just ls
 
-parseCLArgs :: [String] -> IO (Maybe LintSettings, [FilePath])
-parseCLArgs [] = return (Nothing, [])
-parseCLArgs ("--pretty-print" : _) = prettyPrint >> exitWith ExitSuccess
-parseCLArgs ("--version" : _) = putStrLn version >> exitWith ExitSuccess
-parseCLArgs ("--config" : []) = putStrLn "Well give me a config file then you twat" >> exitWith (ExitFailure 1)
-parseCLArgs ("--config" : f : xs) = do
+type Indentation = String
+parseCLArgs :: Maybe Indentation -> [String] -> IO (Maybe LintSettings, [FilePath])
+parseCLArgs _ [] = return (Nothing, [])
+parseCLArgs ind ("--pretty-print" : _) = prettyPrint ind >> exitWith ExitSuccess
+parseCLArgs _ ("--version" : _) = putStrLn version >> exitWith ExitSuccess
+parseCLArgs _ ("--config" : []) = putStrLn "Well give me a config file then you twat" >> exitWith (ExitFailure 1)
+parseCLArgs ind ("--config" : f : xs) = do
                                         settings <- settingsFromFile f
-                                        (_, fps) <- parseCLArgs xs
+                                        (_, fps) <- parseCLArgs ind xs
                                         return (settings, fps)
-parseCLArgs (f : xs) = do (ls, fs) <- parseCLArgs xs
-                          return (ls, f : fs)
+
+-- I didn't think this function would get this complex task...
+parseCLArgs _ (('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : ind) : xs) = parseCLArgs (Just ind) xs
+parseCLArgs ind (f : xs) = do (ls, fs) <- parseCLArgs ind xs
+                              return (ls, f : fs)
 
 settingsFile :: FilePath
 settingsFile = "glualint" <.> "json"
@@ -144,6 +149,6 @@ getSettings f = do
 main :: IO ()
 main = do
     args <- getArgs
-    (settings, files) <- parseCLArgs args
+    (settings, files) <- parseCLArgs Nothing args
 
     lint settings files
