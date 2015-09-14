@@ -236,18 +236,22 @@ sem Stat
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AFunc
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
-        loc.introduces          = M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
-        body.scopes             = @loc.introduces : (registerVariable @name.scopes @name.mtokenPos @name.identifier True)
+        loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $
+                                    M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
+        loc.funcname            = @loc.introduces : (registerVariable @name.scopes @name.mtokenPos @name.identifier True)
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
-        body.isMeta             = @name.isMeta || findSelf @args
+        loc.isMeta              = @name.isMeta || findSelf @args
+        body.isMeta             = @loc.isMeta
     | ALocFunc
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
-        loc.introduces          = M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
+        loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $
+                                    M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
         loc.funcname            = MToken @name.mtokenPos (Identifier @name.identifier)
         body.scopes             = @loc.introduces : @name.scopes
-        body.isMeta             = findSelf @args
+        loc.isMeta              = findSelf @args
+        body.isMeta             = @loc.isMeta
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
