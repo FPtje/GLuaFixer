@@ -160,8 +160,6 @@ badSequences = [
         (lint_beginnerMistakes, "Stupid", [(==) Semicolon, (==) Semicolon], "There's little fucking reason to use ';' in the first place, don't use it twice in a row"),
 
         (lint_beginnerMistakes, "Stupid", [ident "net", (==) Dot, ident "WriteEntity", (==) LRound, ident "LocalPlayer", (==) LRound, (==) RRound], "The server already knows who sent the net message, use the first parameter of net.Receive"),
-        (lint_beginnerMistakes, "Stupid", [ident "self", (==) Dot, ident "Weapon"], "That's the same as just 'self' in SWEPs"),
-        (lint_beginnerMistakes, "Stupid", [ident "self", (==) Dot,  ident "Entity"], "That's the same as just 'self' in SENTs"),
         (lint_beginnerMistakes, "Stupid", [(==) While, whitespace,  (==) TTrue, whitespace, (==) Do, whitespace, (==) End], "Jesus christ fuck off already"),
 
         -- Whitespace reasoning
