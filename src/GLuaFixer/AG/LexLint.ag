@@ -3,6 +3,7 @@ module {GLuaFixer.AG.LexLint}{}{}
 imports
 {
 import Data.Array.Unboxed
+import qualified Data.Vector.Unboxed as V
 import Data.List
 import GLua.TokenTypes
 import GLua.AG.Token
@@ -195,7 +196,7 @@ badSequences = [
         (lint_profanity, "Profanity", [ident "shit"], "Watch your profanity.")
     ]
 
-progress :: LintSettings -> [(LintSettings -> Bool, String, [Token -> Bool], String)] -> Int -> UArray Int Int -> Token -> ([String], UArray Int Int)
+progress :: LintSettings -> [(LintSettings -> Bool, String, [Token -> Bool], String)] -> Int -> V.Vector Int -> Token -> ([String], V.Vector Int)
 progress _ [] _ scan _ = ([], scan)
 progress ls ((isConfig, status, x, reason) : xs) i scan tok = (newWarnings, scanned)
     where
@@ -203,16 +204,16 @@ progress ls ((isConfig, status, x, reason) : xs) i scan tok = (newWarnings, scan
 
         -- Array that has the index of the scan for this deprecated
         -- thing updated
-        nextScan :: UArray Int Int
-        nextScan = scan // [(i, if not isDeprecated && matches then succ (scan ! i) else 0)]
+        nextScan :: V.Vector Int
+        nextScan = scan V.// [(i, if not isDeprecated && matches then succ (scan V.! i) else 0)]
 
         -- True when this single token of the sequence matches
         matches :: Bool
-        matches = isConfig ls && (x !! (scan ! i)) tok
+        matches = isConfig ls && (x !! (scan V.! i)) tok
 
         -- True when the sequence of tokens matches
         isDeprecated :: Bool
-        isDeprecated = matches && scan ! i >= length x - 1
+        isDeprecated = matches && scan V.! i >= length x - 1
 
         -- Adds the warning to the warnings list
         newWarnings :: [String]
@@ -254,7 +255,7 @@ attr MTokenList MToken
     -- How far each deprecation scan is going
     -- The index of the array is the nth element in the badSequences array
     -- The value is the progress
-    chn deprScan :: {UArray Int Int}
+    chn deprScan :: {V.Vector Int}
 
 ---------------------------------------
 --  Semantics
@@ -401,7 +402,7 @@ inh_MTokenList conf = Inh_MTokenList {
                     notSyntax_Inh_MTokenList                = mempty,
                     orSyntax_Inh_MTokenList                 = mempty,
                     strSyntax_Inh_MTokenList                = mempty,
-                    deprScan_Inh_MTokenList                 = array (0, length badSequences - 1) (zip [0..] (replicate (length badSequences - 1) 0)),
+                    deprScan_Inh_MTokenList                 = V.replicate (length badSequences) 0,
                     nextTokenPos_Inh_MTokenList             = LineColPos 0 0 0
                  }
 
