@@ -41,8 +41,8 @@ instance Monoid SyntaxUsed where
 syntaxInconsistency :: String -> String -> String
 syntaxInconsistency l c = "Inconsistent use of '" ++ l ++ "' and '" ++ c ++ "'"
 
-mTokenWarning :: MToken -> String -> String
-mTokenWarning (MToken pos _) str = "[Warning] " ++ renderPos pos ++ ": " ++ str
+mTokenWarning :: LineColPos -> String -> String
+mTokenWarning pos str = "[Warning] " ++ renderPos pos ++ ": " ++ str
 
 -- Whether a token is whitespace
 whitespace :: Token -> Bool
@@ -219,6 +219,12 @@ progress ls ((isConfig, status, x, reason) : xs) i scan tok = (newWarnings, scan
         newWarnings = if not isDeprecated then warnings else
                         (status ++ ": " ++ reason) : warnings
 
+-- Locate the exact position of trailing whitespace
+locateTrailingWhitespace :: LineColPos -> String -> LineColPos
+locateTrailingWhitespace pos (' ' : '\n' : xs) = pos
+locateTrailingWhitespace pos ('\t' : '\n' : xs) = pos
+locateTrailingWhitespace pos (x : xs) = locateTrailingWhitespace (customAdvanceChr pos x) xs
+locateTrailingWhitespace pos [] = pos
 
 }
 ----------------------------------------
@@ -241,6 +247,8 @@ attr MTokenList MToken Token TokenList
 
     chn nextTokenPos :: LineColPos
 
+attr Token
+    syn customWarnings use {++} {[]} :: {[String]} -- Warnings where the position is modified
 
 attr MTokenList MToken
     -- How far each deprecation scan is going
@@ -262,10 +270,9 @@ sem MToken
         loc.deprecation = progress @lhs.config badSequences 0 @lhs.deprScan @mtok.copy
         lhs.deprScan = snd @loc.deprecation
         loc.mpos = @lhs.nextTokenPos
-        loc.copy = MToken @loc.mpos @mtok.copy
 
         -- Warnings from tokens
-        lhs.warnings = map (mTokenWarning @loc.copy) (fst @loc.deprecation ++ @mtok.warnings)
+        lhs.warnings = @mtok.customWarnings ++ map (mTokenWarning @loc.mpos) (fst @loc.deprecation ++ @mtok.warnings)
 
 sem Token
     | Whitespace
@@ -274,8 +281,8 @@ sem Token
         loc.inconsistent = luaUsed @loc.whitespaceUsed && cUsed @loc.whitespaceUsed
         loc.indentation = if @loc.inconsistent then mempty else @loc.whitespaceUsed
 
-        +warnings = if not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space) then id else
-                        (:) "Trailing whitespace"
+        +customWarnings = if not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space) then id else
+                            (:) $ mTokenWarning (locateTrailingWhitespace @lhs.nextTokenPos @space) "Trailing whitespace"
 
         +warnings = if not @loc.inconsistent then id else
                         (:) "Inconsistent use of tabs and spaces for indentation"
