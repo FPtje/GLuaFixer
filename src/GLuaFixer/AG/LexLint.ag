@@ -57,7 +57,8 @@ isSingleChar _ = False
 
 -- Whether a token is a certain identifier
 ident :: String -> Token -> Bool
-ident = (==) . Identifier
+ident s (Identifier s') = s == s'
+ident _ _  = False
 
 ----------------------------------------
 --  Deprecated stuff
