@@ -64,156 +64,156 @@ ident _ _  = False
 ----------------------------------------
 --  Deprecated stuff
 ----------------------------------------
-badSequences :: [(LintSettings -> Bool, String, [Token -> Bool], String)]
+badSequences :: [(LintSettings -> Bool, [Token -> Bool], String)]
 badSequences = [
         -- Global/library functions
-        (lint_deprecated, "Deprecated", [ident "gcinfo"], "Use collectgarbage(\"count\") instead"),
-        (lint_deprecated, "Deprecated", [ident "GetConVarNumber"], "Use ConVar objects instead"),
-        (lint_deprecated, "Deprecated", [ident "GetConVarString"], "Use ConVar objects instead"),
-        (lint_deprecated, "Deprecated", [ident "IncludeCS"], "Use AddCSLuaFile in the file itself instead"),
-        (lint_deprecated, "Deprecated", [ident "SScale"], "Use ScreenScale instead"),
-        (lint_deprecated, "Deprecated", [ident "UTIL_IsUselessModel"], "Use IsUselessModel instead"),
-        (lint_deprecated, "Deprecated", [ident "ValidPanel"], "Use IsValid instead"),
+        (lint_deprecated, [ident "gcinfo"], "Deprecated: Use collectgarbage(\"count\") instead"),
+        (lint_deprecated, [ident "GetConVarNumber"], "Deprecated: Use ConVar objects instead"),
+        (lint_deprecated, [ident "GetConVarString"], "Deprecated: Use ConVar objects instead"),
+        (lint_deprecated, [ident "IncludeCS"], "Deprecated: Use AddCSLuaFile in the file itself instead"),
+        (lint_deprecated, [ident "SScale"], "Deprecated: Use ScreenScale instead"),
+        (lint_deprecated, [ident "UTIL_IsUselessModel"], "Deprecated: Use IsUselessModel instead"),
+        (lint_deprecated, [ident "ValidPanel"], "Deprecated: Use IsValid instead"),
 
-        (lint_deprecated, "Deprecated", [ident "ai", (==) Dot, ident "GetScheduleID"], "The function is broken"),
-        (lint_deprecated, "Deprecated", [ident "ai", (==) Dot, ident "GetTaskID"], "The function is broken"),
+        (lint_deprecated, [ident "ai", (==) Dot, ident "GetScheduleID"], "Deprecated: The function is broken"),
+        (lint_deprecated, [ident "ai", (==) Dot, ident "GetTaskID"], "Deprecated: The function is broken"),
 
-        (lint_deprecated, "Deprecated", [ident "math", (==) Dot, ident "Dist"], "Use math.Distance instead"),
-        (lint_deprecated, "Deprecated", [ident "math", (==) Dot, ident "mod"], "Use math.fmod instead"),
+        (lint_deprecated, [ident "math", (==) Dot, ident "Dist"], "Deprecated: Use math.Distance instead"),
+        (lint_deprecated, [ident "math", (==) Dot, ident "mod"], "Deprecated: Use math.fmod instead"),
 
-        (lint_deprecated, "Deprecated", [ident "spawnmenu", (==) Dot, ident "DoSaveToTextFiles"], "Use spawnmenu.SaveToTextFiles instead"),
-        (lint_deprecated, "Deprecated", [ident "spawnmenu", (==) Dot, ident "PopulateFromEngineTextFiles"], "Use spawnmenu.PopulateFromTextFiles instead"),
-        (lint_deprecated, "Deprecated", [ident "spawnmenu", (==) Dot, ident "SwitchToolTab"], "The function is broken"),
+        (lint_deprecated, [ident "spawnmenu", (==) Dot, ident "DoSaveToTextFiles"], "Deprecated: Use spawnmenu.SaveToTextFiles instead"),
+        (lint_deprecated, [ident "spawnmenu", (==) Dot, ident "PopulateFromEngineTextFiles"], "Deprecated: Use spawnmenu.PopulateFromTextFiles instead"),
+        (lint_deprecated, [ident "spawnmenu", (==) Dot, ident "SwitchToolTab"], "Deprecated: The function is broken"),
 
-        (lint_deprecated, "Deprecated", [ident "string", (==) Dot, ident "GetChar"], "Use either string.sub(str, index, index) or str[index]"),
-        (lint_deprecated, "Deprecated", [ident "string", (==) Dot, ident "gfind"], "Use string.gmatch instead"),
+        (lint_deprecated, [ident "string", (==) Dot, ident "GetChar"], "Deprecated: Use either string.sub(str, index, index) or str[index]"),
+        (lint_deprecated, [ident "string", (==) Dot, ident "gfind"], "Deprecated: Use string.gmatch instead"),
 
-        (lint_deprecated, "Deprecated", [ident "surface", (==) Dot, ident "ScreenHeight"], "Use ScrH instead"),
-        (lint_deprecated, "Deprecated", [ident "surface", (==) Dot, ident "ScreenWidth"], "Use ScrW instead"),
+        (lint_deprecated, [ident "surface", (==) Dot, ident "ScreenHeight"], "Deprecated: Use ScrH instead"),
+        (lint_deprecated, [ident "surface", (==) Dot, ident "ScreenWidth"], "Deprecated: Use ScrW instead"),
 
-        (lint_deprecated, "Deprecated", [ident "table", (==) Dot, ident "FindNext"], "Use ipairs or something instead"),
-        (lint_deprecated, "Deprecated", [ident "table", (==) Dot, ident "FindPrev"], "Use ipairs or something instead"),
-        (lint_deprecated, "Deprecated", [ident "table", (==) Dot, ident "foreach"], "Use pairs instead"),
-        (lint_deprecated, "Deprecated", [ident "table", (==) Dot, ident "ForEach"], "Use pairs instead"),
-        (lint_deprecated, "Deprecated", [ident "table", (==) Dot, ident "foreachi"], "Use ipairs instead"),
-        (lint_deprecated, "Deprecated", [ident "table", (==) Dot, ident "GetFirstKey"], "Use next instead"),
-        (lint_deprecated, "Deprecated", [ident "table", (==) Dot, ident "GetFirstValue"], "Use next instead"),
-        (lint_deprecated, "Deprecated", [ident "table", (==) Dot, ident "GetLastKey"], "Use #tbl instead"),
-        (lint_deprecated, "Deprecated", [ident "table", (==) Dot, ident "GetLastValue"], "Use tbl[#tbl] instead"),
-        (lint_deprecated, "Deprecated", [ident "table", (==) Dot, ident "getn"], "Use #tbl instead"),
+        (lint_deprecated, [ident "table", (==) Dot, ident "FindNext"], "Deprecated: Use ipairs or something instead"),
+        (lint_deprecated, [ident "table", (==) Dot, ident "FindPrev"], "Deprecated: Use ipairs or something instead"),
+        (lint_deprecated, [ident "table", (==) Dot, ident "foreach"], "Deprecated: Use pairs instead"),
+        (lint_deprecated, [ident "table", (==) Dot, ident "ForEach"], "Deprecated: Use pairs instead"),
+        (lint_deprecated, [ident "table", (==) Dot, ident "foreachi"], "Deprecated: Use ipairs instead"),
+        (lint_deprecated, [ident "table", (==) Dot, ident "GetFirstKey"], "Deprecated: Use next instead"),
+        (lint_deprecated, [ident "table", (==) Dot, ident "GetFirstValue"], "Deprecated: Use next instead"),
+        (lint_deprecated, [ident "table", (==) Dot, ident "GetLastKey"], "Deprecated: Use #tbl instead"),
+        (lint_deprecated, [ident "table", (==) Dot, ident "GetLastValue"], "Deprecated: Use tbl[#tbl] instead"),
+        (lint_deprecated, [ident "table", (==) Dot, ident "getn"], "Deprecated: Use #tbl instead"),
 
-        (lint_deprecated, "Deprecated", [ident "timer", (==) Dot, ident "Check"], "The function is broken"),
-        (lint_deprecated, "Deprecated", [ident "timer", (==) Dot, ident "Destroy"], "Use timer.Remove instead"),
+        (lint_deprecated, [ident "timer", (==) Dot, ident "Check"], "Deprecated: The function is broken"),
+        (lint_deprecated, [ident "timer", (==) Dot, ident "Destroy"], "Deprecated: Use timer.Remove instead"),
 
-        (lint_deprecated, "Deprecated", [ident "umsg", (==) Dot, ident "Start"], "Use net messages."),
-        (lint_deprecated, "Deprecated", [ident "SendUserMessage"], "Use net messages."),
+        (lint_deprecated, [ident "umsg", (==) Dot, ident "Start"], "Deprecated: Use net messages."),
+        (lint_deprecated, [ident "SendUserMessage"], "Deprecated: Use net messages."),
 
-        (lint_deprecated, "Deprecated", [ident "util", (==) Dot, ident "tobool"], "Use tobool, without the util bit"),
-        (lint_deprecated, "Deprecated", [ident "util", (==) Dot, ident "TraceEntityHull"], "The function is broken"),
+        (lint_deprecated, [ident "util", (==) Dot, ident "tobool"], "Deprecated: Use tobool, without the util bit"),
+        (lint_deprecated, [ident "util", (==) Dot, ident "TraceEntityHull"], "Deprecated: The function is broken"),
 
         -- CLuaLocomotion functions
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "IsAscendingOrDescendingLadder"], "Use :IsUsingLadder instead"),
+        (lint_deprecated, [(==) Colon, ident "IsAscendingOrDescendingLadder"], "Deprecated: Use :IsUsingLadder instead"),
 
         -- Panel functions
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetDrawBackground"], "Use :GetPaintBackground instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetDrawBackground"], "Use :SetPaintBackground instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "AddText"], "The function is broken"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "PostMessage"], "Only used by deprecated Derma controls"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "Refresh"], "The function is broken"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetActionFunction"], "Only used in deprecated Derma controls"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetKeyBoardInputEnabled"], "Use :SetKeyboardInputEnabled instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetPaintFunction"], "The function is broken"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetToolTip"], "Use :SetTooltip instead, notice the lowercase fucking t"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetToolTipPanel"], "use :SetTooltipPanel instead, notice the lowercase fucking t"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "Valid"], "Use :IsValid instead"),
+        (lint_deprecated, [(==) Colon, ident "GetDrawBackground"], "Deprecated: Use :GetPaintBackground instead"),
+        (lint_deprecated, [(==) Colon, ident "SetDrawBackground"], "Deprecated: Use :SetPaintBackground instead"),
+        (lint_deprecated, [(==) Colon, ident "AddText"], "Deprecated: The function is broken"),
+        (lint_deprecated, [(==) Colon, ident "PostMessage"], "Deprecated: Only used by deprecated Derma controls"),
+        (lint_deprecated, [(==) Colon, ident "Refresh"], "Deprecated: The function is broken"),
+        (lint_deprecated, [(==) Colon, ident "SetActionFunction"], "Deprecated: Only used in deprecated Derma controls"),
+        (lint_deprecated, [(==) Colon, ident "SetKeyBoardInputEnabled"], "Deprecated: Use :SetKeyboardInputEnabled instead"),
+        (lint_deprecated, [(==) Colon, ident "SetPaintFunction"], "Deprecated: The function is broken"),
+        (lint_deprecated, [(==) Colon, ident "SetToolTip"], "Deprecated: Use :SetTooltip instead, notice the lowercase fucking t"),
+        (lint_deprecated, [(==) Colon, ident "SetToolTipPanel"], "Deprecated: use :SetTooltipPanel instead, notice the lowercase fucking t"),
+        (lint_deprecated, [(==) Colon, ident "Valid"], "Deprecated: Use :IsValid instead"),
 
         -- Entity functions
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetHitboxBone"], "Use :GetHitBoxBone instead, note the capital fucking B"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetNetworkedAngle"], "Use :GetNWAngle instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetNetworkedBool"], "Use :GetNWBool instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetNetworkedEntity"], "Use :GetNWEntity instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetNetworkedFloat"], "Use :GetNWFloat instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetNetworkedInt"], "Use :GetNWInt instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetNetworkedString"], "Use :GetNWString instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetNetworkedVarProxy"], "Use :GetNWVarProxy instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetNetworkedVarTable"], "Use :GetNWVarTable instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetNetworkedVector"], "Use :GetNWVector instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetWorkshopID"], "The function is broken"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetAttachment"], "Use :SetParent instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetNetworkedAngle"], "Use :SetNWAngle instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetNetworkedBool"], "Use :SetNWBool instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetNetworkedEntity"], "Use :SetNWEntity instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetNetworkedFloat"], "Use :SetNWFloat instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetNetworkedInt"], "Use :SetNWInt instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetNetworkedString"], "Use :SetNWString instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetNetworkedVarProxy"], "Use :SetNWVarProxy instead"),
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetNetworkedVector"], "Use :SetNWVector instead"),
+        (lint_deprecated, [(==) Colon, ident "GetHitboxBone"], "Deprecated: Use :GetHitBoxBone instead, note the capital fucking B"),
+        (lint_deprecated, [(==) Colon, ident "GetNetworkedAngle"], "Deprecated: Use :GetNWAngle instead"),
+        (lint_deprecated, [(==) Colon, ident "GetNetworkedBool"], "Deprecated: Use :GetNWBool instead"),
+        (lint_deprecated, [(==) Colon, ident "GetNetworkedEntity"], "Deprecated: Use :GetNWEntity instead"),
+        (lint_deprecated, [(==) Colon, ident "GetNetworkedFloat"], "Deprecated: Use :GetNWFloat instead"),
+        (lint_deprecated, [(==) Colon, ident "GetNetworkedInt"], "Deprecated: Use :GetNWInt instead"),
+        (lint_deprecated, [(==) Colon, ident "GetNetworkedString"], "Deprecated: Use :GetNWString instead"),
+        (lint_deprecated, [(==) Colon, ident "GetNetworkedVarProxy"], "Deprecated: Use :GetNWVarProxy instead"),
+        (lint_deprecated, [(==) Colon, ident "GetNetworkedVarTable"], "Deprecated: Use :GetNWVarTable instead"),
+        (lint_deprecated, [(==) Colon, ident "GetNetworkedVector"], "Deprecated: Use :GetNWVector instead"),
+        (lint_deprecated, [(==) Colon, ident "GetWorkshopID"], "Deprecated: The function is broken"),
+        (lint_deprecated, [(==) Colon, ident "SetAttachment"], "Deprecated: Use :SetParent instead"),
+        (lint_deprecated, [(==) Colon, ident "SetNetworkedAngle"], "Deprecated: Use :SetNWAngle instead"),
+        (lint_deprecated, [(==) Colon, ident "SetNetworkedBool"], "Deprecated: Use :SetNWBool instead"),
+        (lint_deprecated, [(==) Colon, ident "SetNetworkedEntity"], "Deprecated: Use :SetNWEntity instead"),
+        (lint_deprecated, [(==) Colon, ident "SetNetworkedFloat"], "Deprecated: Use :SetNWFloat instead"),
+        (lint_deprecated, [(==) Colon, ident "SetNetworkedInt"], "Deprecated: Use :SetNWInt instead"),
+        (lint_deprecated, [(==) Colon, ident "SetNetworkedString"], "Deprecated: Use :SetNWString instead"),
+        (lint_deprecated, [(==) Colon, ident "SetNetworkedVarProxy"], "Deprecated: Use :SetNWVarProxy instead"),
+        (lint_deprecated, [(==) Colon, ident "SetNetworkedVector"], "Deprecated: Use :SetNWVector instead"),
 
         -- Player functions
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "GetPunchAngle"], "Use :GetViewPunchAngles instead"),
+        (lint_deprecated, [(==) Colon, ident "GetPunchAngle"], "Deprecated: Use :GetViewPunchAngles instead"),
 
         -- Material functions
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "SetShader"], "The function is broken"),
+        (lint_deprecated, [(==) Colon, ident "SetShader"], "Deprecated: The function is broken"),
 
         -- Vector functions
-        (lint_deprecated, "Deprecated", [(==) Colon, ident "DotProduct"], "Use :Dot instead"),
+        (lint_deprecated, [(==) Colon, ident "DotProduct"], "Deprecated: Use :Dot instead"),
 
         -- Stupid shit
-        (lint_beginnerMistakes, "Stupid", [(==) Semicolon, (==) Semicolon], "There's little fucking reason to use ';' in the first place, don't use it twice in a row"),
+        (lint_beginnerMistakes, [(==) Semicolon, (==) Semicolon], "There's little fucking reason to use ';' in the first place, don't use it twice in a row"),
 
-        (lint_beginnerMistakes, "Stupid", [ident "net", (==) Dot, ident "WriteEntity", (==) LRound, ident "LocalPlayer", (==) LRound, (==) RRound], "The server already knows who sent the net message, use the first parameter of net.Receive"),
-        (lint_beginnerMistakes, "Stupid", [(==) While, whitespace,  (==) TTrue, whitespace, (==) Do, whitespace, (==) End], "Jesus christ fuck off already"),
+        (lint_beginnerMistakes, [ident "net", (==) Dot, ident "WriteEntity", (==) LRound, ident "LocalPlayer", (==) LRound, (==) RRound], "The server already knows who sent the net message, use the first parameter of net.Receive"),
+        (lint_beginnerMistakes, [(==) While, whitespace,  (==) TTrue, whitespace, (==) Do, whitespace, (==) End], "Jesus christ fuck off already"),
 
         -- Whitespace reasoning
-        (lint_whitespaceStyle, "Style", [(==) If, not . whitespace], "Please put some whitespace after 'if'"),
-        (lint_whitespaceStyle, "Style", [(==) Elseif, not . whitespace], "Please put some whitespace after 'elseif'"),
-        (lint_whitespaceStyle, "Style", [(==) While, not . whitespace], "Please put some whitespace after 'while'"),
-        (lint_whitespaceStyle, "Style", [(==) Until, not . whitespace], "Please put some whitespace after 'until'"),
+        (lint_whitespaceStyle, [(==) If, not . whitespace], "Style: Please put some whitespace after 'if'"),
+        (lint_whitespaceStyle, [(==) Elseif, not . whitespace], "Style: Please put some whitespace after 'elseif'"),
+        (lint_whitespaceStyle, [(==) While, not . whitespace], "Style: Please put some whitespace after 'while'"),
+        (lint_whitespaceStyle, [(==) Until, not . whitespace], "Style: Please put some whitespace after 'until'"),
 
-        (lint_whitespaceStyle, "Style", [(==) RRound, \t -> not (elem t [RRound, LRound, LSquare, RSquare, LCurly, RCurly, Colon, Comma, Dot, Semicolon]) && not (whitespace t)], "Please put some whitespace after ')'"),
-        (lint_whitespaceStyle, "Style", [not . whitespace, (`elem` [Plus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr])], "Please put some whitespace before the operator"),
-        (lint_whitespaceStyle, "Style", [(`elem` [Plus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr]), not . whitespace], "Please put some whitespace after the operator"),
+        (lint_whitespaceStyle, [(==) RRound, \t -> not (elem t [RRound, LRound, LSquare, RSquare, LCurly, RCurly, Colon, Comma, Dot, Semicolon]) && not (whitespace t)], "Style: Please put some whitespace after ')'"),
+        (lint_whitespaceStyle, [not . whitespace, (`elem` [Plus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr])], "Style: Please put some whitespace before the operator"),
+        (lint_whitespaceStyle, [(`elem` [Plus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr]), not . whitespace], "Style: Please put some whitespace after the operator"),
 
         -- Profanity. Not because I hate bad words in code, but because
         -- it's very useful to have your temporary debug variables marked by the linter
-        (lint_profanity, "Profanity", [ident "anus"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "bitch"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "cock"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "cocks"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "cunt"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "dick"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "dicks"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "fuck"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "fucking"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "goddamnit"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "knob"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "knobs"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "motherfucker"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "nigger"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "niggers"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "niggertits"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "nipple"], "Watch your profanity."),
-        (lint_profanity, "Profanity", [ident "shit"], "Watch your profanity.")
+        (lint_profanity, [ident "anus"], "Watch your profanity."),
+        (lint_profanity, [ident "bitch"], "Watch your profanity."),
+        (lint_profanity, [ident "cock"], "Watch your profanity."),
+        (lint_profanity, [ident "cocks"], "Watch your profanity."),
+        (lint_profanity, [ident "cunt"], "Watch your profanity."),
+        (lint_profanity, [ident "dick"], "Watch your profanity."),
+        (lint_profanity, [ident "dicks"], "Watch your profanity."),
+        (lint_profanity, [ident "fuck"], "Watch your profanity."),
+        (lint_profanity, [ident "fucking"], "Watch your profanity."),
+        (lint_profanity, [ident "goddamnit"], "Watch your profanity."),
+        (lint_profanity, [ident "knob"], "Watch your profanity."),
+        (lint_profanity, [ident "knobs"], "Watch your profanity."),
+        (lint_profanity, [ident "motherfucker"], "Watch your profanity."),
+        (lint_profanity, [ident "nigger"], "Watch your profanity."),
+        (lint_profanity, [ident "niggers"], "Watch your profanity."),
+        (lint_profanity, [ident "niggertits"], "Watch your profanity."),
+        (lint_profanity, [ident "nipple"], "Watch your profanity."),
+        (lint_profanity, [ident "shit"], "Watch your profanity.")
     ]
 
 -- Only the lint settings that are applicable
-applicableBadSequences :: LintSettings -> [(Int, String, [Token -> Bool], String)]
+applicableBadSequences :: LintSettings -> [(Int, [Token -> Bool], String)]
 applicableBadSequences ls = map removeCondition . filter applies $ badSequences
     where
-        removeCondition :: (LintSettings -> Bool, String, [Token -> Bool], String) -> (Int, String, [Token -> Bool], String)
-        removeCondition (_, name, sequence, warning) = (length sequence, name, sequence, warning)
+        removeCondition :: (LintSettings -> Bool, [Token -> Bool], String) -> (Int, [Token -> Bool], String)
+        removeCondition (_, sequence, warning) = (length sequence, sequence, warning)
 
-        applies :: (LintSettings -> Bool, String, [Token -> Bool], String) -> Bool
-        applies (f, _, _, _) = f ls
+        applies :: (LintSettings -> Bool, [Token -> Bool], String) -> Bool
+        applies (f, _, _) = f ls
 
-progressScan :: [(Int, String, [Token -> Bool], String)] -> Token -> V.Vector Int -> ([String], V.Vector Int)
+progressScan :: [(Int, [Token -> Bool], String)] -> Token -> V.Vector Int -> ([String], V.Vector Int)
 progressScan badSeq tok vec = (warnings, progressed)
     where
         warnings :: [String]
         warnings = snd $ foldl checkWarning (0, []) badSeq
 
-        checkWarning :: (Int, [String]) -> (Int, String, [Token -> Bool], String) -> (Int, [String])
-        checkWarning (i, xs) (len, name, _, warning) = if vec V.! i /= len then (succ i, xs) else (succ i, (name ++ ": " ++ warning) : xs)
+        checkWarning :: (Int, [String]) -> (Int, [Token -> Bool], String) -> (Int, [String])
+        checkWarning (i, xs) (len, _, warning) = if vec V.! i /= len then (succ i, xs) else (succ i, warning : xs)
 
         progressed :: V.Vector Int
         progressed = vec V.// replacements
@@ -223,14 +223,14 @@ progressScan badSeq tok vec = (warnings, progressed)
         replacements = foldl prog [] badSeq
 
         -- Progress a single bad sequence
-        prog :: [(Int, Int)] -> (Int, String, [Token -> Bool], String) -> [(Int, Int)]
-        prog [] (len, _, x, _) = let    pos = vec V.! 0
-                                        pos' = if pos == len then 0 else pos in -- when a previous iteration found a warning
-                                        if (x !! pos') tok then [(0, pos' + 1)] else [(0, 0)]
-        prog xs@((k, _) : _) (len, _, x, _) = let key = succ k
-                                                  pos = vec V.! key
-                                                  pos' = if pos == len then 0 else pos in
-                                                  if (x !! pos') tok then (key, pos' + 1) : xs else (key, 0) : xs
+        prog :: [(Int, Int)] -> (Int, [Token -> Bool], String) -> [(Int, Int)]
+        prog [] (len, x, _) = let   pos = vec V.! 0
+                                    pos' = if pos == len then 0 else pos in -- when a previous iteration found a warning
+                                    if (x !! pos') tok then [(0, pos' + 1)] else [(0, 0)]
+        prog xs@((k, _) : _) (len, x, _) = let key = succ k
+                                               pos = vec V.! key
+                                               pos' = if pos == len then 0 else pos in
+                                               if (x !! pos') tok then (key, pos' + 1) : xs else (key, 0) : xs
 
 
 
@@ -248,7 +248,7 @@ locateTrailingWhitespace pos [] = pos
 attr MTokenList MToken Token TokenList
     syn copy :: self
     inh config :: LintSettings
-    inh badSequences :: {[(Int, String, [Token -> Bool], String)]}
+    inh badSequences :: {[(Int, [Token -> Bool], String)]}
 
     syn warnings use {++} {[]} :: {[String]}
 
