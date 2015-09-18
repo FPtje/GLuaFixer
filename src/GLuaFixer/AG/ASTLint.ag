@@ -236,7 +236,7 @@ sem Stat
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AFunc
-        loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
+        loc.argIdentifiers      = filter (/= MToken (LineColPos 0 0 0) VarArg) $ @args
         loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $
                                     M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
         body.scopes             = @loc.introduces : (registerVariable @name.scopes @name.mtokenPos @name.identifier True)
@@ -247,7 +247,7 @@ sem Stat
         body.isMeta             = @loc.isMeta
         body.funcName           = @name.identifier
     | ALocFunc
-        loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
+        loc.argIdentifiers      = filter (/= MToken (LineColPos 0 0 0) VarArg) $ @args
         loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $
                                     M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
         loc.funcname            = MToken @name.mtokenPos (Identifier @name.identifier)
@@ -333,7 +333,7 @@ sem Expr
         loc.introduces          = M.fromList $ map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) @pars
         body.scopes             = @loc.introduces : @lhs.scopes
         body.isMeta             = @lhs.isMeta || findSelf @pars
-        loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @pars
+        loc.argIdentifiers      = filter (/= MToken (LineColPos 0 0 0) VarArg) $ @pars
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
