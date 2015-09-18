@@ -74,6 +74,7 @@ attr AllStuff MToken MTokenList
 
     chn scopes :: {[M.Map String (Bool, LineColPos)]} -- Scopes of variables and parameters
     inh isMeta :: Bool -- whether the current piece of code is within a metafunction definition
+    inh funcName :: String -- The last base function name in which a subtree exists
 
 attr AllStuff MToken MTokenList Token TokenList
     syn copy :: self
@@ -244,6 +245,7 @@ sem Stat
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
         loc.isMeta              = @name.isMeta || findSelf @args
         body.isMeta             = @loc.isMeta
+        body.funcName           = @name.identifier
     | ALocFunc
         loc.argIdentifiers      = filter (/= MToken undefined VarArg) $ @args
         loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $
@@ -252,6 +254,7 @@ sem Stat
         body.scopes             = @loc.introduces : @name.scopes
         loc.isMeta              = findSelf @args
         body.isMeta             = @loc.isMeta
+        body.funcName           = @name.identifier
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
@@ -292,9 +295,16 @@ sem PrefixExp
         -- When using variables, register them. Find out more about the global scope
         -- Also register the usage of variables when this prefixExpr is not part of a declaration
         loc.foundVars           = registerVariable @lhs.scopes @name.mtokenPos (show @name.mtok) @lhs.registerVarUse
+        loc.name                = tokenLabel @name.copy
         name.scopes             = @loc.foundVars
-        +warnings               = if not (lint_beginnerMistakes @lhs.config) || @lhs.isMeta || tokenLabel @name.copy /= "self" then id else
+        +warnings               = if not (lint_beginnerMistakes @lhs.config) || @lhs.isMeta || @loc.name /= "self" then id else
                                     (:) $ warn @name.mtokenPos "Don't use self in a non-metafunction"
+        +warnings               = if not (lint_beginnerMistakes @lhs.config) || not @lhs.isMeta || @loc.name /= "self" ||
+                                  @lhs.funcName /= "ENT" || @suffixes.identifier /= "Entity" then id else
+                                    (:) $ warn @name.mtokenPos "'self.Entity' is the same as just 'self' in SENTs"
+        +warnings               = if not (lint_beginnerMistakes @lhs.config) || not @lhs.isMeta || @loc.name /= "self" ||
+                                  @lhs.funcName /= "SWEP" || @suffixes.identifier /= "Weapon" then id else
+                                    (:) $ warn @name.mtokenPos "'self.Weapon' is the same as just 'self' in SWEPs"
     | ExprVar
         lhs.mtokenPos           = @expr.mtokenPos
         lhs.varName             = Nothing
@@ -380,7 +390,8 @@ inh_AST conf = Inh_AST {
                 loopLevel_Inh_AST               = 0,
                 mtokenPos_Inh_AST               = LineColPos 0 0 0,
                 scopeLevel_Inh_AST              = 0,
-                scopes_Inh_AST                  = [M.empty]
+                scopes_Inh_AST                  = [M.empty],
+                funcName_Inh_AST                = ""
                }
 
 astWarnings :: LintSettings -> AST -> [String]
