@@ -95,13 +95,13 @@ parseStat :: AParser Stat
 parseStat = ALabel <$> parseLabel <|>
             ABreak <$ pMTok Break <|>
             AContinue <$ pMTok Continue <|>
-            AGoto <$ pMTok Goto <*> pName <|>
             ADo <$ pMTok Do <*> parseBlock <* pMTok End <|>
             AWhile <$ pMTok While <*> parseExpression <* pMTok Do <*> parseBlock <* pMTok End <|>
             ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseExpression <|>
             parseIf <|>
             parseFunction AFunc <|>
             parseFor <|>
+            try (AGoto <$ pMTok (Identifier "goto") <*> pName) <|>
             try parseDefinition <|>
             AFuncCall <$> pFunctionCall <|>
             pMTok Local *>

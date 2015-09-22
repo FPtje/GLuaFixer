@@ -115,8 +115,10 @@ pInterleaved sep q = pMany sep *> pMany (q <* pMany sep)
 -- hotten.totten["tenten"], tentoonstelling = 1, 2 -- This is also a declaration.
 -- One may find an arbitrary amount of expression suffixes (indexations/calls) before
 -- finding a comma or equals sign that proves that it is a declaration.
+-- Also, goto can be an identifier
 parseCallDef :: AParser Stat
-parseCallDef = (PFVar <$> pName <<|> -- Statemens begin with either a simple name or parenthesised expression
+parseCallDef = parseGoto <<|>
+               (PFVar <$> pName <<|> -- Statemens begin with either a simple name or parenthesised expression
                 ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound) <**> (
                   -- Either there are more suffixes yet to be found (contSearch)
                   -- or there aren't and we will find either a comma or =-sign (varDecl namedVarDecl)
@@ -124,6 +126,13 @@ parseCallDef = (PFVar <$> pName <<|> -- Statemens begin with either a simple nam
                   varDecl namedVarDecl
                 )
   where
+    -- Try to parse a goto statement
+    parseGoto :: AParser Stat
+    parseGoto = (PFVar <$> pMTok (Identifier "goto")) <**>
+                  ((\n _ -> AGoto n) <$> pName <<|>
+                    contSearch <<|>
+                    varDecl namedVarDecl)
+
     -- Simple direct declaration: varName, ... = 1, ...
     namedVarDecl :: [PrefixExp] -> LineColPos -> [MExpr] -> (ExprSuffixList -> PrefixExp) -> Stat
     namedVarDecl vars pos exprs pfe = let pfes = (pfe []) : vars in Def (zip pfes $ map Just exprs ++ repeat Nothing)
@@ -164,7 +173,7 @@ parseStat = parseCallDef <<|>
             ALabel <$> parseLabel <<|>
             ABreak <$ pMTok Break <<|>
             AContinue <$ pMTok Continue <<|>
-            AGoto <$ pMTok Goto <*> pName <<|>
+            --AGoto <$ pMTok (Identifier "goto") <*> pName <|>
             ADo <$ pMTok Do <*> parseBlock <* pMTok End <<|>
             AWhile <$ pMTok While <*> parseExpression <* pMTok Do <*> parseBlock <* pMTok End <<|>
             ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseExpression <<|>

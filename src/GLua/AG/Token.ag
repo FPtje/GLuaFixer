@@ -72,7 +72,6 @@ data Token
     | Break
     | Return
     | End
-    | Goto
 
     | LRound                         -- ^ (
     | RRound                         -- ^ )

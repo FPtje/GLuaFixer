@@ -99,8 +99,7 @@ type TokenAlgebra token = (
         token,              -- Continue
         token,              -- Break
         token,              -- Return
-        token,              -- End
-        token               -- Goto
+        token               -- End
     ),
     ( -- Brackets
         token,              -- LRound
@@ -118,7 +117,7 @@ type TokenAlgebra token = (
 
 -- | Fold over token definition
 foldToken :: TokenAlgebra t -> Token -> t
-foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tSemicolon), (tTNumber, tDQString, tSQString, tMLString, tTTrue, tTFalse, tNil, tVarArg), (tPlus, tMinus, tMultiply, tDivide, tModulus, tPower, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tConcatenate, tColon, tDot, tComma, tHash, tNot, tCNot, tAnd, tCAnd, tOr, tCOr), (tFunction, tLocal, tIf, tThen, tElseif, tElse, tFor, tIn, tDo, tWhile, tUntil, tRepeat, tContinue, tBreak, tReturn, tEnd, tGoto), (tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare), (tLabel, tIdentifier)) = fold
+foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashBlockComment, tSemicolon), (tTNumber, tDQString, tSQString, tMLString, tTTrue, tTFalse, tNil, tVarArg), (tPlus, tMinus, tMultiply, tDivide, tModulus, tPower, tTEq, tTNEq, tTCNEq, tTLEQ, tTGEQ, tTLT, tTGT, tEquals, tConcatenate, tColon, tDot, tComma, tHash, tNot, tCNot, tAnd, tCAnd, tOr, tCOr), (tFunction, tLocal, tIf, tThen, tElseif, tElse, tFor, tIn, tDo, tWhile, tUntil, tRepeat, tContinue, tBreak, tReturn, tEnd), (tLRound, tRRound, tLCurly, tRCurly, tLSquare, tRSquare), (tLabel, tIdentifier)) = fold
     where
         fold (Whitespace str) = tWhitespace str
         fold (DashComment str) = tDashComment str
@@ -141,7 +140,6 @@ foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashB
         fold TFalse = tTFalse
         fold For = tFor
         fold Function = tFunction
-        fold Goto = tGoto
         fold If = tIf
         fold In = tIn
         fold Local = tLocal
@@ -248,8 +246,7 @@ instance Show Token where
         "continue", -- Continue
         "break", -- Break
         "return", -- Return
-        "end", -- End
-        "goto" -- Goto
+        "end" -- End
         ),
         (
         "(", -- LRound
@@ -267,18 +264,18 @@ instance Show Token where
 
 -- | Whether an mtoken is a comment
 isWhitespace :: MToken -> Bool
-isWhitespace = mFold ((const True,const False,\_ _ -> False,const False,const False,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+isWhitespace = mFold ((const True,const False,\_ _ -> False,const False,const False,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
 -- | Whether an mtoken is a comment
 isComment :: MToken -> Bool
-isComment = mFold ((const False,const True,\_ _ -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
+isComment = mFold ((const False,const True,\_ _ -> True,const True,const True,False),(const False,const False,const False,const False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False,False,False,False,False,False,False,False,False,False,False),(False,False,False,False,False,False),(const False,const False))
 
 -- | Split the tokens by comments and other tokens
 splitComments :: [MToken] -> ([MToken], [MToken])
 splitComments = partition isComment
 
 tokenLabel :: MToken -> String
-tokenLabel = mFold ((const "", const "",\_ _ -> "",const "",const "",""),(const "",const "",const "",const "","","","",""),("","","","","","","","","","","","","","","","","","","","","","","","",""),("","","","","","","","","","","","","","","","",""),("","","","","",""),(id, id))
+tokenLabel = mFold ((const "", const "",\_ _ -> "",const "",const "",""),(const "",const "",const "",const "","","","",""),("","","","","","","","","","","","","","","","","","","","","","","","",""),("","","","","","","","","","","","","","","",""),("","","","","",""),(id, id))
 
 -- | The size of a token in characters
 tokenSize :: Token -> Int
@@ -343,8 +340,7 @@ tokenSize = foldToken ((
     8, -- Continue
     5, -- Break
     6, -- Return
-    3, -- End
-    4 -- Goto
+    3 -- End
     ),
     (
     1, -- LRound
