@@ -192,7 +192,6 @@ parseToken =    parseComment                                 <<|>
                 parseKeyword Break "break"                   <<|>
                 parseKeyword Return "return"                 <<|>
                 parseKeyword End "end"                       <<|>
-                parseKeyword Goto "goto"                     <<|>
 
                 Identifier <$> parseIdentifier               <<|>
 
