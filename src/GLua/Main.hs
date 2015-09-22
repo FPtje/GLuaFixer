@@ -66,8 +66,9 @@ main = do
     let ast = PS.parseGLua tokens
 
     either printErrors printAST ast
+    -- -}
 
-    {-
+    {-let ast = parseGLua tokens
     putStrLn "Errors:"
     mapM_ (putStrLn . renderError) . snd $ ast
 
