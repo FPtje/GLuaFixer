@@ -334,7 +334,7 @@ sem Token
         +warnings = if @loc.consistent then id else
                         (:) $ syntaxInconsistency "/* */" "--[[ ]]"
 
-    | Semicolon TNumber DQString SQString TTrue TFalse Nil VarArg Plus Minus Multiply Divide Modulus Power TEq TNEq TCNEq TLEQ TGEQ TLT TGT Equals Concatenate Colon Dot Comma Hash Not CNot And CAnd Or COr Function Local If Then Elseif Else For In Do While Until Repeat Continue Break Return End Goto LRound RRound LCurly RCurly LSquare RSquare Identifier
+    | Semicolon TNumber DQString SQString TTrue TFalse Nil VarArg Plus Minus Multiply Divide Modulus Power TEq TNEq TCNEq TLEQ TGEQ TLT TGT Equals Concatenate Colon Dot Comma Hash Not CNot And CAnd Or COr Function Local If Then Elseif Else For In Do While Until Repeat Continue Break Return End LRound RRound LCurly RCurly LSquare RSquare Identifier
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
 
     | DQString

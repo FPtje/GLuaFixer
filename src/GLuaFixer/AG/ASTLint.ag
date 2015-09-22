@@ -64,7 +64,6 @@ findSelf _ = False
 
 attr AllStuff
     inh config :: LintSettings
-    syn warnings use {++} {[]} :: {[String]}
 
     inh scopeLevel :: Int
     inh loopLevel :: Int -- In how many scopes of loops we are. Used in checking labels
@@ -77,6 +76,7 @@ attr AllStuff MToken MTokenList
     inh funcName :: String -- The last base function name in which a subtree exists
 
 attr AllStuff MToken MTokenList Token TokenList
+    syn warnings use {++} {[]} :: {[String]}
     syn copy :: self
     syn identifier use {const} {"Unknown identifier"} :: String -- identifier of the first token
 
@@ -114,11 +114,14 @@ sem Token
         lhs.identifier          = @lbl
     | Identifier
         lhs.identifier          = @ident
+        +warnings               = if @ident /= "goto" then id else
+                                    (:) "Don't use 'goto', it will cause a syntax error in future versions of Lua."
 
 sem MToken
     | MToken
         lhs.mtokenPos           = @mpos
         lhs.mtok                = @mtok.copy
+        lhs.warnings            = map (warn @mpos) @mtok.warnings
 
 sem MTokenList MStatList MExprList FieldList VarsList
     | Cons
