@@ -57,7 +57,12 @@ lint ls (f : fs) = do
 
     let lexed = execParseTokens contents
     let tokens = fst lexed
+    let lexErrors = map ((++) (takeFileName f ++ ": [Error] ") . renderError) $ snd lexed
     let warnings = map ((++) (takeFileName f ++ ": ")) $ lintWarnings config tokens
+
+    -- Show lex errors
+    when (lint_syntaxErrors config) $
+        mapM_ putStrLn lexErrors
 
     -- Fixed for positions
     let fixedTokens = fixedLexPositions tokens
@@ -65,12 +70,11 @@ lint ls (f : fs) = do
 
     case parsed of
         Left err -> do
-            let lexErrors = map ((++) (takeFileName f ++ ": [Error] ") . renderError) $ snd lexed
+
             let parseError = takeFileName f ++ ": [Error] " ++ renderPSError err
 
             -- Print syntax errors
-            when (lint_syntaxErrors config) $ do
-                mapM_ putStrLn lexErrors
+            when (lint_syntaxErrors config) $
                 putStrLn parseError
 
         Right ast -> do
