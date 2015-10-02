@@ -336,8 +336,8 @@ sem Stat
     | ANFor      lhs.isMultiline = True
                  loc.step = case @step.copy of
                                 MExpr _ (ANumber "1") -> empty
-                                otherwise -> @loc.comma <-> @step.pretty
-                 lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> @loc.comma <-> @to.pretty <> @loc.step <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                                otherwise -> @loc.comma <> @step.pretty
+                 lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> @loc.comma <> @to.pretty <> @loc.step <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  loc.comma = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
