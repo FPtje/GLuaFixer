@@ -213,7 +213,7 @@ progressScan badSeq tok vec = (warnings, progressed)
         warnings = snd $ foldl checkWarning (0, []) badSeq
 
         checkWarning :: (Int, [String]) -> (Int, [Token -> Bool], String) -> (Int, [String])
-        checkWarning (i, xs) (len, _, warning) = if vec V.! i /= len then (succ i, xs) else (succ i, warning : xs)
+        checkWarning (i, xs) (len, _, warning) = if progressed V.! i /= len then (succ i, xs) else (succ i, warning : xs)
 
         progressed :: V.Vector Int
         progressed = vec V.// replacements
