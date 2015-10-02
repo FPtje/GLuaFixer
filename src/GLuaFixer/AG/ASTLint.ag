@@ -251,10 +251,12 @@ sem Stat
         body.funcName           = @name.identifier
     | ALocFunc
         loc.argIdentifiers      = filter (/= MToken (LineColPos 0 0 0) VarArg) $ @args
-        loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $
+        loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $ -- self
+                                    -- parameters
                                     M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
         loc.funcname            = MToken @name.mtokenPos (Identifier @name.identifier)
-        body.scopes             = @loc.introduces : @name.scopes
+        loc.passedScopes        = M.insert @name.identifier (False, @name.mtokenPos) (head @name.scopes) : tail @name.scopes
+        body.scopes             = @loc.introduces : @loc.passedScopes
         loc.isMeta              = findSelf @args
         body.isMeta             = @loc.isMeta
         body.funcName           = @name.identifier
