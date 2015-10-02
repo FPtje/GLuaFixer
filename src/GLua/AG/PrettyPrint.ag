@@ -84,6 +84,9 @@ getAReturnPos NoReturn = "<unknown>"
 getMExprPos :: MExpr -> String
 getMExprPos (MExpr p _) = renderPos p
 
+before :: LineColPos -> LineColPos -> Bool
+before (LineColPos _ _ p) (LineColPos _ _ p') = p < p'
+
 beforeOrOnLine :: LineColPos -> LineColPos -> Bool
 beforeOrOnLine (LineColPos l _ _) (LineColPos l' _ _) = l <= l'
 
@@ -105,12 +108,17 @@ renderPSError ps = renderSourcePos (errorPos ps) ++ ":" ++ (map replNL . showErr
         replNL '\n' = ' '
         replNL c = c
 
-renderComments :: PrettyPrintConfig -> Int -> [MToken] -> Doc
-renderComments conf ind toks = foldl ($+$) empty . map (indent conf ind . tok . convert) $ toks
-    where
-        convert :: MToken -> MToken
-        convert (MToken p t) = MToken p $ convert' t
+-- | Render multiline comments
+renderMLComments :: PrettyPrintConfig -> Int -> [MToken] -> Doc
+renderMLComments conf ind toks = foldl ($+$) empty . map (indent conf ind . tok . convertComment conf) $ toks
 
+-- | Render single line comments
+renderSLComments :: PrettyPrintConfig -> [MToken] -> Doc
+renderSLComments conf toks = foldl (<->) empty . map (tok . convertComment conf) $ toks
+
+convertComment :: PrettyPrintConfig -> MToken -> MToken
+convertComment conf (MToken p t) = MToken p $ convert' t
+    where
         convert' :: Token -> Token
         convert' = if cStyle conf then cComment else luaComment
 
@@ -208,11 +216,15 @@ sem MStatList
     | Cons
                  lhs.isMultiline = @hd.isMultiline
                  loc.addNewline = if not @tl.isLast && (@hd.isMultiline || @tl.isMultiline) then zchr '\n' else empty
-                 lhs.pretty = @loc.prettyComments $+$ indent @lhs.ppconf @lhs.indent @hd.pretty <> @loc.addNewline $+$ @tl.pretty
-                 loc.prettyComments = renderComments @lhs.ppconf @lhs.indent @loc.commentsHere
-                 loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `beforeOrOnLine` @hd.pos]
-                 hd.comments = drop (length @loc.commentsHere) @lhs.comments
+                 lhs.pretty = @loc.prettyCommentsBefore $+$ indent @lhs.ppconf @lhs.indent @hd.pretty <-> @loc.prettyCommentsAfter <> @loc.addNewline $+$ @tl.pretty
+
+                 loc.prettyCommentsBefore = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
+                 loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
+                 loc.commentsBefore = span (\(MToken pos _) -> pos `before` @hd.pos) @lhs.comments
+                 loc.commentsAfter  = span (\(MToken pos _) -> pos `beforeOrOnLine` @hd.pos) (snd @loc.commentsBefore)
+                 hd.comments = snd @loc.commentsAfter
                  tl.comments = @hd.comments
+
                  tl.isHead  = False
                  hd.isLastStatement = @tl.isLast
                  lhs.isLast = False
@@ -231,7 +243,7 @@ sem MExprList
                  lhs.pos    = LineColPos 0 0 0
 
 sem FieldList
-    | Cons       lhs.pretty = @loc.prettyComments $+$ @loc.ind (@hd.pretty <> @loc.comma) `@loc.sep` @tl.pretty
+    | Cons       lhs.pretty = @loc.prettyCommentsBefore `@loc.sep` @loc.ind (@hd.pretty <> @loc.comma <-> @loc.prettyCommentsAfter) `@loc.sep` @tl.pretty
                  loc.comma = if @tl.isNil then empty else
                                 (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <>
                                 (if spaceAfterComma @lhs.ppconf && not @loc.isMultiline then zchr ' ' else empty)
@@ -241,9 +253,14 @@ sem FieldList
                  lhs.isMultiline = @loc.isMultiline
                  lhs.isNil  = False
 
-                 loc.prettyComments = if @loc.isMultiline then renderComments @lhs.ppconf @lhs.indent (fst @loc.commentsHere) else empty
-                 loc.commentsHere = span (\(MToken pos _) -> pos `beforeOrOnLine` @hd.pos) @lhs.comments
-                 hd.comments = if @loc.isMultiline then snd @loc.commentsHere else @lhs.comments
+                 loc.prettyCommentsBefore = if @loc.isMultiline then
+                                                renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
+                                            else
+                                                renderSLComments @lhs.ppconf (fst @loc.commentsBefore)
+                 loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
+                 loc.commentsBefore = span (\(MToken pos _) -> pos `before` @hd.pos) @lhs.comments
+                 loc.commentsAfter  = span (\(MToken pos _) -> pos `beforeOrOnLine` @hd.pos) (snd @loc.commentsBefore)
+                 hd.comments = snd @loc.commentsAfter
     | Nil        lhs.pretty = empty
                  lhs.isNil  = True
 
@@ -289,7 +306,7 @@ sem ExprSuffixList
 
 sem AST
     | AST       lhs.pretty = @chunk.pretty $+$ @loc.prettyComments
-                loc.prettyComments = renderComments @lhs.ppconf @lhs.indent @chunk.comments
+                loc.prettyComments = renderMLComments @lhs.ppconf @lhs.indent @chunk.comments
                 chunk.comments = @comments
 
 sem Block
@@ -359,11 +376,13 @@ sem Stat
                  lhs.hasBreaking = False
 
 sem AReturn
-    | AReturn    lhs.pretty = @loc.prettyComments $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "return") <-> @values.pretty <> @loc.semicolon
+    | AReturn    lhs.pretty = @loc.prettyCommentsBefore $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "return") <-> @values.pretty <> @loc.semicolon <-> @loc.prettyCommentsAfter
                  loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
-                 loc.prettyComments = renderComments @lhs.ppconf @lhs.indent @loc.commentsHere
-                 loc.commentsHere = [mt | mt@(MToken pos s) <- @lhs.comments, pos `beforeOrOnLine` @values.pos]
-                 values.comments = drop (length @loc.commentsHere) @lhs.comments
+                 loc.prettyCommentsBefore = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
+                 loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
+                 loc.commentsBefore = span (\(MToken pos _) -> pos `before` @values.pos) @lhs.comments
+                 loc.commentsAfter  = span (\(MToken pos _) -> pos `beforeOrOnLine` @values.pos) (snd @loc.commentsBefore)
+                 values.comments = snd @loc.commentsAfter
                  lhs.comments = @values.comments
                  values.isHead = True
                  lhs.hasBreaking = True
