@@ -247,7 +247,7 @@ sem FieldList
                  loc.comma = if @tl.isNil then empty else
                                 (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <>
                                 (if spaceAfterComma @lhs.ppconf && not @loc.isMultiline then zchr ' ' else empty)
-                 loc.sep = if @loc.isMultiline then ($+$) else (if spaceAfterComma @lhs.ppconf then (<->) else (<>))
+                 loc.sep = if @loc.isMultiline then ($+$) else (<>)
                  loc.ind = if @loc.isMultiline then indent @lhs.ppconf @lhs.indent else id
                  loc.isMultiline = @hd.isMultiline || @tl.isMultiline
                  lhs.isMultiline = @loc.isMultiline
