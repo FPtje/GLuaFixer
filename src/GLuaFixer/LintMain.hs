@@ -69,9 +69,7 @@ lint ls (f : fs) = do
         Right tokens -> do
             let warnings = map ((takeFileName f ++ ": ") ++) $ lintWarnings config tokens
 
-            -- Fixed for positions
-            let fixedTokens = fixedLexPositions tokens
-            let parsed = PSP.parseGLua fixedTokens
+            let parsed = PSP.parseGLua tokens
 
             case parsed of
                 Left err -> do
