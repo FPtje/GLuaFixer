@@ -13,6 +13,8 @@ import Text.ParserCombinators.UU
 import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.BasicInstances
 
+import GLua.TokenTypes
+
 -- | String parser that maintains positions.
 type LParser a = P (Str Char String LineColPos) a
 
@@ -122,7 +124,7 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber) <*> opt parseNum
         pDecimal = (:) <$> pSym '.' <*> pSome pDigit
 
         pHexadecimal :: LParser String
-        pHexadecimal = (++) <$> pToken "0x" <*> pSome pHex
+        pHexadecimal = (++) <$> pToken "0x" <*> ((++) <$> pSome pHex <*> opt pDecimal "")
 
         pHex :: LParser Char
         pHex = pDigit <<|> pSym 'a' <<|> pSym 'b' <<|> pSym 'c' <<|> pSym 'd' <<|> pSym 'e' <<|> pSym 'f'
