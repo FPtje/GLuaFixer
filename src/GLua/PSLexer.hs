@@ -151,7 +151,7 @@ parseDots = do
 
         -- try to parse a number that starts with a .
         try (do
-            nums <- many digit
+            nums <- many1 digit
             suffix <- option "" parseNumberSuffix
             return $ TNumber ('.' : (nums ++ suffix))
             ) <|>
