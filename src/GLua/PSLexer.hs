@@ -30,7 +30,7 @@ underscore = char '_'
 
 -- | Parse the string until the end. Used in parseLineComment among others.
 pUntilEnd :: Parser String
-pUntilEnd = manyTill anyChar (endOfLine <|> const '\n' <$> eof)
+pUntilEnd = manyTill anyChar (lookAhead (endOfLine <|> const '\n' <$> eof))
 
 -- | Whitespace parser.
 parseWhitespace :: Parser String
