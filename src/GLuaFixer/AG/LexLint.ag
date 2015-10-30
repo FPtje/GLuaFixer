@@ -120,7 +120,7 @@ badSequences = [
         (lint_deprecated, VB.fromList [(==) Colon, ident "SetDrawBackground"], "Deprecated: Use :SetPaintBackground instead"),
         (lint_deprecated, VB.fromList [(==) Colon, ident "AddText"], "Deprecated: The function is broken"),
         (lint_deprecated, VB.fromList [(==) Colon, ident "PostMessage"], "Deprecated: Only used by deprecated Derma controls"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "Refresh"], "Deprecated: The function is broken"),
+        -- (lint_deprecated, VB.fromList [(==) Colon, ident "Refresh"], "Deprecated: The function is broken"),
         (lint_deprecated, VB.fromList [(==) Colon, ident "SetActionFunction"], "Deprecated: Only used in deprecated Derma controls"),
         (lint_deprecated, VB.fromList [(==) Colon, ident "SetKeyBoardInputEnabled"], "Deprecated: Use :SetKeyboardInputEnabled instead"),
         (lint_deprecated, VB.fromList [(==) Colon, ident "SetPaintFunction"], "Deprecated: The function is broken"),
