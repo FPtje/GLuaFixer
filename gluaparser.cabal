@@ -25,7 +25,7 @@ executable gluaparser
   default-language:    Haskell2010
 
 library
-  exposed-modules:     GLua.Lexer, GLua.Parser, GLua.TokenTypes, GLua.AG.PrettyPrint, GLua.PSParser
+  exposed-modules:     GLua.Lexer, GLua.PSLexer, GLua.Parser, GLua.TokenTypes, GLua.AG.PrettyPrint, GLua.PSParser
   other-modules:       GLua.AG.AST, GLua.AG.Token
   other-extensions:    FlexibleInstances, TypeSynonymInstances, MultiParamTypeClasses, Rank2Types, FlexibleContexts, NoMonomorphismRestriction, CPP
   build-depends:       base, filepath >=1.3, uu-parsinglib >=2.8, ListLike >=4.1, uuagc >= 0.9.40.3, uuagc-cabal >= 1.0.3.0, pretty, parsec

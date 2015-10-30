@@ -32,6 +32,7 @@ parseGLua mts = let (cms, ts) = splitComments . filter (not . isWhitespace) $ mt
 lcp2sp :: LineColPos -> SourcePos
 lcp2sp (LineColPos l c _) = newPos "source.lua" l c
 
+-- | SourcePos to LineColPos
 sp2lcp :: SourcePos -> LineColPos
 sp2lcp pos = LineColPos (sourceLine pos) (sourceColumn pos) 0
 

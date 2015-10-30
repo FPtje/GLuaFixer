@@ -13,6 +13,8 @@ import Text.ParserCombinators.UU
 import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.BasicInstances
 
+import GLua.TokenTypes
+
 -- | String parser that maintains positions.
 type LParser a = P (Str Char String LineColPos) a
 
