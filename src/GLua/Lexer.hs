@@ -122,7 +122,7 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber) <*> opt parseNum
         pDecimal = (:) <$> pSym '.' <*> pSome pDigit
 
         pHexadecimal :: LParser String
-        pHexadecimal = (++) <$> pToken "0x" <*> pSome pHex
+        pHexadecimal = (++) <$> pToken "0x" <*> ((++) <$> pSome pHex <*> opt pDecimal "")
 
         pHex :: LParser Char
         pHex = pDigit <<|> pSym 'a' <<|> pSym 'b' <<|> pSym 'c' <<|> pSym 'd' <<|> pSym 'e' <<|> pSym 'f'
