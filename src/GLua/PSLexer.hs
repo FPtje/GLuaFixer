@@ -1,10 +1,10 @@
 {-# LANGUAGE FlexibleInstances,
-             MultiParamTypeClasses #-}
+             MultiParamTypeClasses,
+             BangPatterns #-}
 
 module GLua.PSLexer where
 
 import GLua.AG.Token
-import GLua.TokenTypes
 
 import Text.Parsec
 import Text.Parsec.String
@@ -18,7 +18,7 @@ lcp2sp (LineColPos l c _) = newPos "source.lua" l c
 
 -- | SourcePos to LineColPos
 sp2lcp :: SourcePos -> LineColPos
-sp2lcp pos = LineColPos (sourceLine pos - 1) (sourceColumn pos - 1) 0
+sp2lcp !pos = LineColPos (sourceLine pos - 1) (sourceColumn pos - 1) 0
 
 -- | Get the source position
 pPos :: Parser LineColPos
@@ -124,17 +124,15 @@ parseNumberSuffix = (\e s d -> e : s ++ d) <$> oneOf ['e', 'E', 'p', 'P']
 parseKeyword :: Token -> String -> Parser Token
 parseKeyword tok str = try (do
     string str
-    let identChars = underscore <|> alphaNum
-
-    try ((\s -> Identifier (str ++ s)) <$> many1 identChars) <|>
+    (\s -> Identifier (str ++ s)) <$> many1 (underscore <|> alphaNum) <|>
         return tok
     <?> "Keyword " ++ str)
 
 -- | Parse just an identifier.
 parseIdentifier :: Parser String
-parseIdentifier = (:) <$> (underscore <|> letter) <*> many allowed <?> "Identifier"
+parseIdentifier = (:) <$> (letter <|> underscore) <*> many allowed <?> "Identifier"
     where
-        allowed = underscore <|> letter <|> digit
+        allowed = letter <|> digit <|> underscore
 
 -- | Parse a label.
 parseLabel :: Parser String
