@@ -3,10 +3,10 @@ module Main where
 import System.Environment
 import System.IO
 import Control.Monad
-import GLua.Lexer
 import GLuaFixer.AG.LexLint
 import GLua.Parser
-import qualified GLua.PSParser as PS
+import qualified GLua.PSParser as PSP
+import qualified GLua.PSLexer as PSL
 import GLuaFixer.AG.ASTLint
 import GLua.AG.PrettyPrint
 import System.FilePath
@@ -27,8 +27,7 @@ doReadFile :: FilePath -> IO String
 doReadFile f = do
     handle <- openFile f ReadMode
     hSetEncoding handle utf8_bom
-    contents <- hGetContents handle
-    return contents
+    hGetContents handle
 
 -- | Pretty print, uses the uu-parsinglib library
 prettyPrint :: Maybe Indentation -> IO ()
@@ -55,37 +54,43 @@ lint ls (f : fs) = do
 
     contents <- doReadFile f
 
-    let lexed = execParseTokens contents
-    let tokens = fst lexed
-    let lexErrors = map ((++) (takeFileName f ++ ": [Error] ") . renderError) $ snd lexed
-    let warnings = map ((++) (takeFileName f ++ ": ")) $ lintWarnings config tokens
+    let lexed = PSL.execParseTokens contents
 
-    -- Show lex errors
-    when (lint_syntaxErrors config) $
-        mapM_ putStrLn lexErrors
+    case lexed of
+        Left lexErr -> do
+            let lexError = takeFileName f ++ ": [Error] " ++ renderPSError lexErr
 
-    -- Fixed for positions
-    let fixedTokens = fixedLexPositions tokens
-    let parsed = PS.parseGLua fixedTokens
-
-    case parsed of
-        Left err -> do
-
-            let parseError = takeFileName f ++ ": [Error] " ++ renderPSError err
-
-            -- Print syntax errors
+            -- Show lex errors
             when (lint_syntaxErrors config) $
-                putStrLn parseError
+                putStrLn lexError
 
-        Right ast -> do
-            let parserWarnings = map ((++) (takeFileName f ++ ": ")) $ astWarnings config ast
+            -- Lint the other files
+            lint ls fs
+        Right tokens -> do
+            let warnings = map ((takeFileName f ++ ": ") ++) $ lintWarnings config tokens
 
-            -- Print all warnings
-            mapM_ putStrLn warnings
-            mapM_ putStrLn parserWarnings
+            -- Fixed for positions
+            let fixedTokens = fixedLexPositions tokens
+            let parsed = PSP.parseGLua fixedTokens
 
-    -- Lint the other files
-    lint ls fs
+            case parsed of
+                Left err -> do
+
+                    let parseError = takeFileName f ++ ": [Error] " ++ renderPSError err
+
+                    -- Print syntax errors
+                    when (lint_syntaxErrors config) $
+                        putStrLn parseError
+
+                Right ast -> do
+                    let parserWarnings = map ((takeFileName f ++ ": ") ++) $ astWarnings config ast
+
+                    -- Print all warnings
+                    mapM_ putStrLn warnings
+                    mapM_ putStrLn parserWarnings
+
+            -- Lint the other files
+            lint ls fs
 
 settingsFromFile :: FilePath -> IO (Maybe LintSettings)
 settingsFromFile f = do
@@ -97,9 +102,9 @@ settingsFromFile f = do
 type Indentation = String
 parseCLArgs :: Maybe Indentation -> [String] -> IO (Maybe LintSettings, [FilePath])
 parseCLArgs _ [] = return (Nothing, [])
-parseCLArgs ind ("--pretty-print" : _) = prettyPrint ind >> exitWith ExitSuccess
-parseCLArgs _ ("--version" : _) = putStrLn version >> exitWith ExitSuccess
-parseCLArgs _ ("--config" : []) = putStrLn "Well give me a config file then you twat" >> exitWith (ExitFailure 1)
+parseCLArgs ind ("--pretty-print" : _) = prettyPrint ind >> exitSuccess
+parseCLArgs _ ("--version" : _) = putStrLn version >> exitSuccess
+parseCLArgs _ ["--config"] = putStrLn "Well give me a config file then you twat" >> exitWith (ExitFailure 1)
 parseCLArgs ind ("--config" : f : xs) = do
                                         settings <- settingsFromFile f
                                         (_, fps) <- parseCLArgs ind xs
