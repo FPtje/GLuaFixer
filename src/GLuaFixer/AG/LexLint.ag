@@ -225,10 +225,13 @@ progressScan badSeq tok vec = (warnings, progressed)
 
         -- Progress a single bad sequence
         prog :: [(Int, Int)] -> (Int, VB.Vector (Token -> Bool), String) -> [(Int, Int)]
-        prog [] (len, x, _) = let   pos = vec V.! 0
+        prog [] (len, x, _) = let
+                                    pos, pos' :: Int
+                                    pos = vec V.! 0
                                     pos' = if pos == len then 0 else pos in -- when a previous iteration found a warning
                                     if (x VB.! pos') tok then [(0, pos' + 1)] else [(0, 0)]
-        prog xs@((k, _) : _) (len, x, _) = let key = succ k
+        prog xs@((k, _) : _) (len, x, _) = let key, pos, pos' :: Int
+                                               key = succ k
                                                pos = vec V.! key
                                                pos' = if pos == len then 0 else pos in
                                                if (x VB.! pos') tok then (key, pos' + 1) : xs else (key, 0) : xs
