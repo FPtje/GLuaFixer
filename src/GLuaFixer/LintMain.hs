@@ -8,6 +8,7 @@ import GLua.Parser
 import qualified GLua.PSParser as PSP
 import qualified GLua.PSLexer as PSL
 import GLuaFixer.AG.ASTLint
+import GLuaFixer.BadSequenceFinder
 import GLua.AG.PrettyPrint
 import System.FilePath
 import GLuaFixer.LintSettings
@@ -67,7 +68,7 @@ lint ls (f : fs) = do
             -- Lint the other files
             lint ls fs
         Right tokens -> do
-            let warnings = map ((takeFileName f ++ ": ") ++) $ lintWarnings config tokens
+            let warnings = map ((takeFileName f ++ ": ") ++) (lintWarnings config tokens ++ sequenceWarnings config tokens)
 
             let parsed = PSP.parseGLua tokens
 
