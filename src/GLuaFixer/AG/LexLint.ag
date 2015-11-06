@@ -1,4 +1,9 @@
-module {GLuaFixer.AG.LexLint}{}{}
+module {GLuaFixer.AG.LexLint}
+{
+    lintWarnings,
+    fixedLexPositions
+}
+{}
 
 imports
 {
