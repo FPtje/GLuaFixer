@@ -51,197 +51,11 @@ syntaxInconsistency l c = "Inconsistent use of '" ++ l ++ "' and '" ++ c ++ "'"
 mTokenWarning :: LineColPos -> String -> String
 mTokenWarning pos str = "[Warning] " ++ renderPos pos ++ ": " ++ str
 
--- Whether a token is whitespace
-whitespace :: Token -> Bool
-whitespace (Whitespace _) = True
-whitespace _ = False
-
 isSingleChar :: String -> Bool
 isSingleChar [] = True
 isSingleChar ('\\' : xs) = length xs == 1
 isSingleChar (_ : []) = True
 isSingleChar _ = False
-
--- Whether a token is a certain identifier
-ident :: String -> Token -> Bool
-ident s (Identifier s') = s == s'
-ident _ _  = False
-
-----------------------------------------
---  Deprecated stuff
-----------------------------------------
-badSequences :: [(LintSettings -> Bool, VB.Vector (Token -> Bool), String)]
-badSequences = [
-        -- Global/library functions
-        (lint_deprecated, VB.fromList [ident "gcinfo"], "Deprecated: Use collectgarbage(\"count\") instead"),
-        (lint_deprecated, VB.fromList [ident "GetConVarNumber"], "Deprecated: Use ConVar objects instead"),
-        (lint_deprecated, VB.fromList [ident "GetConVarString"], "Deprecated: Use ConVar objects instead"),
-        (lint_deprecated, VB.fromList [ident "IncludeCS"], "Deprecated: Use AddCSLuaFile in the file itself instead"),
-        (lint_deprecated, VB.fromList [ident "SScale"], "Deprecated: Use ScreenScale instead"),
-        (lint_deprecated, VB.fromList [ident "UTIL_IsUselessModel"], "Deprecated: Use IsUselessModel instead"),
-        (lint_deprecated, VB.fromList [ident "ValidPanel"], "Deprecated: Use IsValid instead"),
-
-        (lint_deprecated, VB.fromList [ident "ai", (==) Dot, ident "GetScheduleID"], "Deprecated: The function is broken"),
-        (lint_deprecated, VB.fromList [ident "ai", (==) Dot, ident "GetTaskID"], "Deprecated: The function is broken"),
-
-        (lint_deprecated, VB.fromList [ident "math", (==) Dot, ident "Dist"], "Deprecated: Use math.Distance instead"),
-        (lint_deprecated, VB.fromList [ident "math", (==) Dot, ident "mod"], "Deprecated: Use math.fmod instead"),
-
-        (lint_deprecated, VB.fromList [ident "spawnmenu", (==) Dot, ident "DoSaveToTextFiles"], "Deprecated: Use spawnmenu.SaveToTextFiles instead"),
-        (lint_deprecated, VB.fromList [ident "spawnmenu", (==) Dot, ident "PopulateFromEngineTextFiles"], "Deprecated: Use spawnmenu.PopulateFromTextFiles instead"),
-        (lint_deprecated, VB.fromList [ident "spawnmenu", (==) Dot, ident "SwitchToolTab"], "Deprecated: The function is broken"),
-
-        (lint_deprecated, VB.fromList [ident "string", (==) Dot, ident "GetChar"], "Deprecated: Use either string.sub(str, index, index) or str[index]"),
-        (lint_deprecated, VB.fromList [ident "string", (==) Dot, ident "gfind"], "Deprecated: Use string.gmatch instead"),
-
-        (lint_deprecated, VB.fromList [ident "surface", (==) Dot, ident "ScreenHeight"], "Deprecated: Use ScrH instead"),
-        (lint_deprecated, VB.fromList [ident "surface", (==) Dot, ident "ScreenWidth"], "Deprecated: Use ScrW instead"),
-
-        (lint_deprecated, VB.fromList [ident "table", (==) Dot, ident "FindNext"], "Deprecated: Use ipairs or something instead"),
-        (lint_deprecated, VB.fromList [ident "table", (==) Dot, ident "FindPrev"], "Deprecated: Use ipairs or something instead"),
-        (lint_deprecated, VB.fromList [ident "table", (==) Dot, ident "foreach"], "Deprecated: Use pairs instead"),
-        (lint_deprecated, VB.fromList [ident "table", (==) Dot, ident "ForEach"], "Deprecated: Use pairs instead"),
-        (lint_deprecated, VB.fromList [ident "table", (==) Dot, ident "foreachi"], "Deprecated: Use ipairs instead"),
-        (lint_deprecated, VB.fromList [ident "table", (==) Dot, ident "GetFirstKey"], "Deprecated: Use next instead"),
-        (lint_deprecated, VB.fromList [ident "table", (==) Dot, ident "GetFirstValue"], "Deprecated: Use next instead"),
-        (lint_deprecated, VB.fromList [ident "table", (==) Dot, ident "GetLastKey"], "Deprecated: Use #tbl instead"),
-        (lint_deprecated, VB.fromList [ident "table", (==) Dot, ident "GetLastValue"], "Deprecated: Use tbl[#tbl] instead"),
-        (lint_deprecated, VB.fromList [ident "table", (==) Dot, ident "getn"], "Deprecated: Use #tbl instead"),
-
-        (lint_deprecated, VB.fromList [ident "timer", (==) Dot, ident "Check"], "Deprecated: The function is broken"),
-        (lint_deprecated, VB.fromList [ident "timer", (==) Dot, ident "Destroy"], "Deprecated: Use timer.Remove instead"),
-
-        (lint_deprecated, VB.fromList [ident "umsg", (==) Dot, ident "Start"], "Deprecated: Use net messages."),
-        (lint_deprecated, VB.fromList [ident "SendUserMessage"], "Deprecated: Use net messages."),
-
-        (lint_deprecated, VB.fromList [ident "util", (==) Dot, ident "tobool"], "Deprecated: Use tobool, without the util bit"),
-        (lint_deprecated, VB.fromList [ident "util", (==) Dot, ident "TraceEntityHull"], "Deprecated: The function is broken"),
-
-        -- CLuaLocomotion functions
-        (lint_deprecated, VB.fromList [(==) Colon, ident "IsAscendingOrDescendingLadder"], "Deprecated: Use :IsUsingLadder instead"),
-
-        -- Panel functions
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetDrawBackground"], "Deprecated: Use :GetPaintBackground instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetDrawBackground"], "Deprecated: Use :SetPaintBackground instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "AddText"], "Deprecated: The function is broken"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "PostMessage"], "Deprecated: Only used by deprecated Derma controls"),
-        -- (lint_deprecated, VB.fromList [(==) Colon, ident "Refresh"], "Deprecated: The function is broken"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetActionFunction"], "Deprecated: Only used in deprecated Derma controls"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetKeyBoardInputEnabled"], "Deprecated: Use :SetKeyboardInputEnabled instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetPaintFunction"], "Deprecated: The function is broken"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetToolTip"], "Deprecated: Use :SetTooltip instead, notice the lowercase fucking t"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetToolTipPanel"], "Deprecated: use :SetTooltipPanel instead, notice the lowercase fucking t"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "Valid"], "Deprecated: Use :IsValid instead"),
-
-        -- Entity functions
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetHitboxBone"], "Deprecated: Use :GetHitBoxBone instead, note the capital fucking B"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetNetworkedAngle"], "Deprecated: Use :GetNWAngle instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetNetworkedBool"], "Deprecated: Use :GetNWBool instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetNetworkedEntity"], "Deprecated: Use :GetNWEntity instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetNetworkedFloat"], "Deprecated: Use :GetNWFloat instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetNetworkedInt"], "Deprecated: Use :GetNWInt instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetNetworkedString"], "Deprecated: Use :GetNWString instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetNetworkedVarProxy"], "Deprecated: Use :GetNWVarProxy instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetNetworkedVarTable"], "Deprecated: Use :GetNWVarTable instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetNetworkedVector"], "Deprecated: Use :GetNWVector instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetWorkshopID"], "Deprecated: The function is broken"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetAttachment"], "Deprecated: Use :SetParent instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetNetworkedAngle"], "Deprecated: Use :SetNWAngle instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetNetworkedBool"], "Deprecated: Use :SetNWBool instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetNetworkedEntity"], "Deprecated: Use :SetNWEntity instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetNetworkedFloat"], "Deprecated: Use :SetNWFloat instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetNetworkedInt"], "Deprecated: Use :SetNWInt instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetNetworkedString"], "Deprecated: Use :SetNWString instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetNetworkedVarProxy"], "Deprecated: Use :SetNWVarProxy instead"),
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetNetworkedVector"], "Deprecated: Use :SetNWVector instead"),
-
-        -- Player functions
-        (lint_deprecated, VB.fromList [(==) Colon, ident "GetPunchAngle"], "Deprecated: Use :GetViewPunchAngles instead"),
-
-        -- Material functions
-        (lint_deprecated, VB.fromList [(==) Colon, ident "SetShader"], "Deprecated: The function is broken"),
-
-        -- Vector functions
-        (lint_deprecated, VB.fromList [(==) Colon, ident "DotProduct"], "Deprecated: Use :Dot instead"),
-
-        -- Stupid shit
-        (lint_beginnerMistakes, VB.fromList [(==) Semicolon, (==) Semicolon], "There's little fucking reason to use ';' in the first place, don't use it twice in a row"),
-
-        (lint_beginnerMistakes, VB.fromList [ident "net", (==) Dot, ident "WriteEntity", (==) LRound, ident "LocalPlayer", (==) LRound, (==) RRound], "The server already knows who sent the net message, use the first parameter of net.Receive"),
-        (lint_beginnerMistakes, VB.fromList [(==) While, whitespace,  (==) TTrue, whitespace, (==) Do, whitespace, (==) End], "Jesus christ fuck off already"),
-
-        -- Whitespace reasoning
-        (lint_whitespaceStyle, VB.fromList [(==) If, not . whitespace], "Style: Please put some whitespace after 'if'"),
-        (lint_whitespaceStyle, VB.fromList [(==) Elseif, not . whitespace], "Style: Please put some whitespace after 'elseif'"),
-        (lint_whitespaceStyle, VB.fromList [(==) While, not . whitespace], "Style: Please put some whitespace after 'while'"),
-        (lint_whitespaceStyle, VB.fromList [(==) Until, not . whitespace], "Style: Please put some whitespace after 'until'"),
-
-        (lint_whitespaceStyle, VB.fromList [(==) RRound, \t -> not (elem t [RRound, LRound, LSquare, RSquare, LCurly, RCurly, Colon, Comma, Dot, Semicolon]) && not (whitespace t)], "Style: Please put some whitespace after ')'"),
-        (lint_whitespaceStyle, VB.fromList [not . whitespace, (`elem` [Plus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr])], "Style: Please put some whitespace before the operator"),
-        (lint_whitespaceStyle, VB.fromList [(`elem` [Plus, Multiply, Divide, Modulus, TEq, TNEq, TCNEq, TLEQ, TGEQ, TLT, TGT, Equals, Concatenate, And, CAnd, Or, COr]), not . whitespace], "Style: Please put some whitespace after the operator"),
-
-        -- Profanity. Not because I hate bad words in code, but because
-        -- it's very useful to have your temporary debug variables marked by the linter
-        (lint_profanity, VB.fromList [ident "anus"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "bitch"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "cock"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "cocks"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "cunt"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "dick"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "dicks"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "fuck"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "fucking"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "goddamnit"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "knob"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "knobs"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "motherfucker"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "nigger"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "niggers"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "niggertits"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "nipple"], "Watch your profanity."),
-        (lint_profanity, VB.fromList [ident "shit"], "Watch your profanity.")
-    ]
-
--- Only the lint settings that are applicable
-applicableBadSequences :: LintSettings -> [(Int, VB.Vector (Token -> Bool), String)]
-applicableBadSequences ls = map removeCondition . filter applies $ badSequences
-    where
-        removeCondition :: (LintSettings -> Bool, VB.Vector (Token -> Bool), String) -> (Int, VB.Vector (Token -> Bool), String)
-        removeCondition (_, sequence, warning) = (length sequence, sequence, warning)
-
-        applies :: (LintSettings -> Bool, VB.Vector (Token -> Bool), String) -> Bool
-        applies (f, _, _) = f ls
-
-progressScan :: [(Int, VB.Vector (Token -> Bool), String)] -> Token -> V.Vector Int -> ([String], V.Vector Int)
-progressScan badSeq tok vec = (warnings, progressed)
-    where
-        warnings :: [String]
-        warnings = snd $ foldl checkWarning (0, []) badSeq
-
-        checkWarning :: (Int, [String]) -> (Int, VB.Vector (Token -> Bool), String) -> (Int, [String])
-        checkWarning (i, xs) (len, _, warning) = if progressed V.! i /= len then (succ i, xs) else (succ i, warning : xs)
-
-        progressed :: V.Vector Int
-        progressed = vec V.// replacements
-
-        -- The replacements in the vector to progress
-        replacements :: [(Int, Int)]
-        replacements = foldl prog [] badSeq
-
-        -- Progress a single bad sequence
-        prog :: [(Int, Int)] -> (Int, VB.Vector (Token -> Bool), String) -> [(Int, Int)]
-        prog [] (len, x, _) = let
-                                    pos, pos' :: Int
-                                    pos = vec V.! 0
-                                    pos' = if pos == len then 0 else pos in -- when a previous iteration found a warning
-                                    if (x VB.! pos') tok then [(0, pos' + 1)] else [(0, 0)]
-        prog xs@((k, _) : _) (len, x, _) = let key, pos, pos' :: Int
-                                               key = succ k
-                                               pos = vec V.! key
-                                               pos' = if pos == len then 0 else pos in
-                                               if (x VB.! pos') tok then (key, pos' + 1) : xs else (key, 0) : xs
-
-
 
 -- Locate the exact position of trailing whitespace
 locateTrailingWhitespace :: LineColPos -> String -> LineColPos
@@ -257,7 +71,6 @@ locateTrailingWhitespace pos [] = pos
 attr MTokenList MToken Token TokenList
     syn copy :: self
     inh config :: LintSettings
-    inh badSequences :: {[(Int, VB.Vector (Token -> Bool), String)]}
 
     syn warnings use {++} {[]} :: {[String]}
 
@@ -275,12 +88,6 @@ attr MTokenList MToken Token TokenList
 attr Token
     syn customWarnings use {++} {[]} :: {[String]} -- Warnings where the position is modified
 
-attr MTokenList MToken
-    -- How far each deprecation scan is going
-    -- The index of the array is the nth element in the badSequences array
-    -- The value is the progress
-    chn deprScan :: {V.Vector Int}
-
 ---------------------------------------
 --  Semantics
 ---------------------------------------
@@ -292,12 +99,10 @@ sem MTokenList
 
 sem MToken
     | MToken
-        loc.deprecation = progressScan @lhs.badSequences @mtok.copy @lhs.deprScan
-        lhs.deprScan = snd @loc.deprecation
         loc.mpos = @lhs.nextTokenPos
 
         -- Warnings from tokens
-        lhs.warnings = @mtok.customWarnings ++ map (mTokenWarning @loc.mpos) (fst @loc.deprecation ++ @mtok.warnings)
+        lhs.warnings = @mtok.customWarnings ++ map (mTokenWarning @loc.mpos) @mtok.warnings
 
 sem Token
     | Whitespace
@@ -416,7 +221,7 @@ sem Token
 
 
 inh_MTokenList :: LintSettings -> Inh_MTokenList
-inh_MTokenList conf = let applicable = applicableBadSequences conf in
+inh_MTokenList conf =
                  Inh_MTokenList {
                     config_Inh_MTokenList                   = conf,
                     andSyntax_Inh_MTokenList                = mempty,
@@ -427,8 +232,6 @@ inh_MTokenList conf = let applicable = applicableBadSequences conf in
                     notSyntax_Inh_MTokenList                = mempty,
                     orSyntax_Inh_MTokenList                 = mempty,
                     strSyntax_Inh_MTokenList                = mempty,
-                    badSequences_Inh_MTokenList             = applicable,
-                    deprScan_Inh_MTokenList                 = V.replicate (length applicable) 0,
                     nextTokenPos_Inh_MTokenList             = LineColPos 0 0 0
                  }
 
