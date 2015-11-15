@@ -11,6 +11,7 @@ import GLuaFixer.AG.ASTLint
 import GLuaFixer.BadSequenceFinder
 import GLua.AG.PrettyPrint
 import System.FilePath
+import System.FilePath.Find
 import GLuaFixer.LintSettings
 import System.Exit
 import qualified Data.ByteString.Lazy as BS
@@ -91,6 +92,7 @@ lint ls (f : fs) = do
             -- Lint the other files
             lint ls fs
 
+-- | Read the settings from a file
 settingsFromFile :: FilePath -> IO (Maybe LintSettings)
 settingsFromFile f = do
                         configContents <- BS.readFile f
@@ -99,6 +101,8 @@ settingsFromFile f = do
                                             Right ls -> return $ Just ls
 
 type Indentation = String
+
+-- | Simple argument parser
 parseCLArgs :: Maybe Indentation -> [String] -> IO (Maybe LintSettings, [FilePath])
 parseCLArgs _ [] = return (Nothing, [])
 parseCLArgs ind ("--pretty-print" : _) = prettyPrint ind >> exitSuccess
@@ -149,12 +153,14 @@ searchHome = do
                     nonDotExists <- doesFileExist (home </> settingsFile)
                     if nonDotExists then settingsFromFile (home </> settingsFile) else return Nothing
 
+-- | Search the various known places for settings files
 getSettings :: FilePath -> IO LintSettings
 getSettings f = do
     searchedSettings <- searchSettings f
     homeSettings <- searchHome
     return . fromJust $ searchedSettings <|> homeSettings <|> Just defaultLintSettings
 
+-- | Main function
 main :: IO ()
 main = do
     args <- getArgs
