@@ -59,7 +59,7 @@ lint ls (f : fs) = do
 
     case lexed of
         Left lexErr -> do
-            let lexError = takeFileName f ++ ": [Error] " ++ renderPSError lexErr
+            let lexError = f ++ ": [Error] " ++ renderPSError lexErr
 
             -- Show lex errors
             when (lint_syntaxErrors config) $
@@ -68,21 +68,21 @@ lint ls (f : fs) = do
             -- Lint the other files
             lint ls fs
         Right tokens -> do
-            let warnings = map ((takeFileName f ++ ": ") ++) (lintWarnings config tokens ++ sequenceWarnings config tokens)
+            let warnings = map ((f ++ ": ") ++) (lintWarnings config tokens ++ sequenceWarnings config tokens)
 
             let parsed = PSP.parseGLua tokens
 
             case parsed of
                 Left err -> do
 
-                    let parseError = takeFileName f ++ ": [Error] " ++ renderPSError err
+                    let parseError = f ++ ": [Error] " ++ renderPSError err
 
                     -- Print syntax errors
                     when (lint_syntaxErrors config) $
                         putStrLn parseError
 
                 Right ast -> do
-                    let parserWarnings = map ((takeFileName f ++ ": ") ++) $ astWarnings config ast
+                    let parserWarnings = map ((f ++ ": ") ++) $ astWarnings config ast
 
                     -- Print all warnings
                     mapM_ putStrLn warnings
