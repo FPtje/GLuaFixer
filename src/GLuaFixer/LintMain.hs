@@ -47,6 +47,30 @@ prettyPrint ind = do
                 putStr pretty
 
 
+-- | Lint a single file, using parsec
+lintFile :: LintSettings -> FilePath -> String -> [String]
+lintFile config f contents =
+    case PSL.execParseTokens contents of
+        Left lexErr ->
+            [f ++ ": [Error] " ++ renderPSError lexErr | lint_syntaxErrors config]
+
+        Right tokens -> do
+            let lexWarnings = map ((f ++ ": ") ++) (lintWarnings config tokens ++ sequenceWarnings config tokens)
+            let parsed = PSP.parseGLua tokens
+
+            case parsed of
+                Left err ->
+                    -- Return syntax errors
+                    [f ++ ": [Error] " ++ renderPSError err | lint_syntaxErrors config]
+
+                Right ast -> do
+                    let parserWarnings = map ((f ++ ": ") ++) $ astWarnings config ast
+
+                    -- Print all warnings
+                    lexWarnings ++ parserWarnings
+
+
+
 -- | Lint a set of files, uses parsec's parser library
 lint :: Maybe LintSettings -> [FilePath] -> IO ()
 lint _ [] = return ()
@@ -56,41 +80,10 @@ lint ls (f : fs) = do
 
     contents <- doReadFile f
 
-    let lexed = PSL.execParseTokens contents
+    mapM_ putStrLn (lintFile config f contents)
 
-    case lexed of
-        Left lexErr -> do
-            let lexError = f ++ ": [Error] " ++ renderPSError lexErr
-
-            -- Show lex errors
-            when (lint_syntaxErrors config) $
-                putStrLn lexError
-
-            -- Lint the other files
-            lint ls fs
-        Right tokens -> do
-            let warnings = map ((f ++ ": ") ++) (lintWarnings config tokens ++ sequenceWarnings config tokens)
-
-            let parsed = PSP.parseGLua tokens
-
-            case parsed of
-                Left err -> do
-
-                    let parseError = f ++ ": [Error] " ++ renderPSError err
-
-                    -- Print syntax errors
-                    when (lint_syntaxErrors config) $
-                        putStrLn parseError
-
-                Right ast -> do
-                    let parserWarnings = map ((f ++ ": ") ++) $ astWarnings config ast
-
-                    -- Print all warnings
-                    mapM_ putStrLn warnings
-                    mapM_ putStrLn parserWarnings
-
-            -- Lint the other files
-            lint ls fs
+    -- Lint the other files
+    lint ls fs
 
 -- | Read the settings from a file
 settingsFromFile :: FilePath -> IO (Maybe LintSettings)
