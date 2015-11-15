@@ -70,6 +70,9 @@ lintFile config f contents =
                     lexWarnings ++ parserWarnings
 
 
+-- | Finds all Lua files
+findLuaFiles :: FilePath -> IO [FilePath]
+findLuaFiles = find always (fileName ~~? "*.lua")
 
 -- | Lint a set of files, uses parsec's parser library
 lint :: Maybe LintSettings -> [FilePath] -> IO ()
@@ -78,9 +81,16 @@ lint ls (f : fs) = do
     settings <- getSettings f
     let config = fromJust $ ls <|> Just settings
 
-    contents <- doReadFile f
+    -- When we're dealing with a directory, lint all the files in it recursively.
+    isDirectory <- doesDirectoryExist f
 
-    mapM_ putStrLn (lintFile config f contents)
+    if isDirectory then do
+        luaFiles <- findLuaFiles f
+        lint ls luaFiles
+    else do
+        contents <- doReadFile f
+
+        mapM_ putStrLn (lintFile config f contents)
 
     -- Lint the other files
     lint ls fs
