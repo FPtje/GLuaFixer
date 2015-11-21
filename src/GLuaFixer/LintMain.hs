@@ -2,7 +2,6 @@ module Main where
 
 import System.Environment
 import System.IO
-import Control.Monad
 import GLuaFixer.AG.LexLint
 import GLua.Parser
 import qualified GLua.PSParser as PSP
