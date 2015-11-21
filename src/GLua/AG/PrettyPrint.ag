@@ -259,7 +259,10 @@ sem FieldList
                                                 renderSLComments @lhs.ppconf (fst @loc.commentsBefore)
                  loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
                  loc.commentsBefore = span (\(MToken pos _) -> pos `before` @hd.pos) @lhs.comments
-                 loc.commentsAfter  = span (\(MToken pos _) -> pos `beforeOrOnLine` @hd.pos) (snd @loc.commentsBefore)
+                 loc.commentsAfter  = if @loc.isMultiline then
+                                        span (\(MToken pos _) -> pos `beforeOrOnLine` @hd.pos) (snd @loc.commentsBefore)
+                                      else
+                                        @loc.commentsBefore
                  hd.comments = snd @loc.commentsAfter
     | Nil        lhs.pretty = empty
                  lhs.isNil  = True
