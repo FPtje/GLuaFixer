@@ -123,13 +123,19 @@ convertComment conf (MToken p t) = MToken p $ convert' t
         convert' = if cStyle conf then cComment else luaComment
 
         luaComment :: Token -> Token
-        luaComment (SlashComment s) = (DashComment s)
-        luaComment (SlashBlockComment s) = (DashBlockComment 0 s)
+        luaComment (SlashComment s) = DashComment s
+        luaComment (SlashBlockComment s) = DashBlockComment (lastBracket s) s
         luaComment t = t
 
+        -- converting /*]*/ would end up in --[[]]] when plainly converted
+        -- Deepen the block comment by 1 if that's the case
+        lastBracket :: String -> Int
+        lastBracket [] = 0
+        lastBracket s = if last s == ']' then 1 else 0
+
         cComment :: Token -> Token
-        cComment (DashComment s) = (SlashComment s)
-        cComment (DashBlockComment _ s) = (SlashBlockComment s)
+        cComment (DashComment s) = SlashComment s
+        cComment (DashBlockComment _ s) = SlashBlockComment s
         cComment t = t
 
 
