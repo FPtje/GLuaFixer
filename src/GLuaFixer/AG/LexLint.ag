@@ -111,7 +111,7 @@ sem Token
         loc.inconsistent = luaUsed @loc.whitespaceUsed && cUsed @loc.whitespaceUsed
         loc.indentation = if @loc.inconsistent then mempty else @loc.whitespaceUsed
 
-        +customWarnings = if not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space) then id else
+        +customWarnings = if not (lint_whitespaceStyle @lhs.config) || (not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space)) then id else
                             (:) $ mTokenWarning (locateTrailingWhitespace @lhs.nextTokenPos @space) "Trailing whitespace"
 
         +warnings = if not @loc.inconsistent then id else
