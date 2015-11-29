@@ -54,8 +54,9 @@ lintFile config f contents =
             [f ++ ": [Error] " ++ renderPSError lexErr | lint_syntaxErrors config]
 
         Right tokens -> do
-            let lexWarnings = map ((f ++ ": ") ++) (lintWarnings config tokens ++ sequenceWarnings config tokens)
-            let parsed = PSP.parseGLua tokens
+            let fixedTokens = fixedLexPositions tokens
+            let lexWarnings = map ((f ++ ": ") ++) (lintWarnings config fixedTokens ++ sequenceWarnings config fixedTokens)
+            let parsed = PSP.parseGLua fixedTokens
 
             case parsed of
                 Left err ->
