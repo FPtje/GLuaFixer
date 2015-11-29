@@ -21,7 +21,7 @@ import Control.Applicative
 import GLuaFixer.AG.DarkRPRewrite
 
 version :: String
-version = "1.6.2"
+version = "1.6.3"
 
 -- | Read file in utf8_bom because that seems to work better
 doReadFile :: FilePath -> IO String
