@@ -33,17 +33,17 @@ doReadFile f = do
 -- | Pretty print, uses the uu-parsinglib library
 prettyPrint :: Maybe Indentation -> IO ()
 prettyPrint ind = do
-                lua <- getContents
+    lua <- getContents
 
-                cwd <- getCurrentDirectory
-                lintsettings <- getSettings cwd
-                let parsed = parseGLuaFromString lua
-                let ast = fst parsed
-                let ppconf = lint2ppSetting lintsettings
-                let ppconf' = ppconf {indentation = fromMaybe (indentation ppconf) ind}
-                let pretty = prettyprintConf ppconf' . fixOldDarkRPSyntax $ ast
+    cwd <- getCurrentDirectory
+    lintsettings <- getSettings cwd
+    let parsed = parseGLuaFromString lua
+    let ast = fst parsed
+    let ppconf = lint2ppSetting lintsettings
+    let ppconf' = ppconf {indentation = fromMaybe (indentation ppconf) ind}
+    let pretty = prettyprintConf ppconf' . fixOldDarkRPSyntax $ ast
 
-                putStr pretty
+    putStr pretty
 
 
 -- | Lint a single file, using parsec
