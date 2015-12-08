@@ -150,7 +150,7 @@ metaFuncWarnings = do
      const "Use :GetNWVarTable instead"                                     <$> ident "GetNetworkedVarTable"                <|>
      const "Use :GetNWVector instead"                                       <$> ident "GetNetworkedVector"                  <|>
      const "The function is broken"                                         <$> ident "GetWorkshopID"                       <|>
-     const "Use :SetParent instead"                                         <$> ident "SetAttachment"                       <|>
+     --const "Use :SetParent instead"                                         <$> ident "SetAttachment"                       <|>
      const "Use :SetNWAngle instead"                                        <$> ident "SetNetworkedAngle"                   <|>
      const "Use :SetNWBool instead"                                         <$> ident "SetNetworkedBool"                    <|>
      const "Use :SetNWEntity instead"                                       <$> ident "SetNetworkedEntity"                  <|>
