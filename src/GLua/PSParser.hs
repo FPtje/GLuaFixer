@@ -144,13 +144,27 @@ parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
             pMTok End <?> "if statement"
 
 parseFor :: AParser Stat
-parseFor = try parseNFor <|> parseGFor
+parseFor = parseNFor <|> parseGFor
 
 -- | Parse numeric for loop
 parseNFor :: AParser Stat
-parseNFor = ANFor <$ pMTok For <*> pName <* pMTok Equals <*> parseExpression <* pMTok Comma <*> parseExpression <*> step <* pMTok Do <*>
-                parseBlock <*
-            pMTok End <?> "numeric for loop"
+parseNFor = flip (<?>) "numeric for loop" $
+    do
+        name <- try $ do
+            pMTok For
+            n <- pName
+            pMTok Equals
+            return n
+
+        start <- parseExpression
+        pMTok Comma
+        to <- parseExpression
+        st <- step
+        pMTok Do
+        blk <- parseBlock
+        pMTok End
+
+        return $ ANFor name start to st blk
     where
         step :: AParser MExpr
         step = pMTok Comma *> parseExpression <|> MExpr <$> pPos <*> return (ANumber "1")
