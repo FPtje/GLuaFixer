@@ -16,7 +16,7 @@ type AParser = Parsec [MToken] ()
 
 -- | Execute a parser
 execAParser :: SourceName -> AParser a -> [MToken] -> Either ParseError a
-execAParser name p mts = parse p name mts
+execAParser name p = parse p name
 
 -- | Parse a string directly
 parseFromString :: AParser a -> String -> Either ParseError a
@@ -39,7 +39,7 @@ sp2lcp pos = LineColPos (sourceLine pos) (sourceColumn pos) 0
 -- | Update a SourcePos with an MToken
 updatePosMToken :: SourcePos -> MToken -> [MToken] -> SourcePos
 updatePosMToken _ (MToken p tok) [] = incSourceColumn (lcp2sp p) (tokenSize tok)
-updatePosMToken _ _ ((MToken p _) : _) = lcp2sp p
+updatePosMToken _ _ (MToken p _ : _) = lcp2sp p
 
 -- | Match a token
 pMTok :: Token -> AParser MToken
