@@ -366,10 +366,23 @@ parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly <?> "tabl
 parseFieldList :: AParser [Field]
 parseFieldList = sepEndBy parseField parseFieldSep <* many parseFieldSep
 
+-- | Parse a named field (e.g. {named = field})
+-- Contains try to avoid conflict with unnamed fields
+parseNamedField :: AParser Field
+parseNamedField = do
+    name <- try $ do
+        n <- pName
+        pMTok Equals
+        return n
+
+    expr <- parseExpression
+
+    return $ NamedField name expr
+
 -- | A field in a table
 parseField :: AParser Field
 parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <|>
-             try (NamedField <$> pName <* pMTok Equals <*> parseExpression) <|>
+             parseNamedField <|>
              UnnamedField <$> parseExpression <?> "field"
 
 -- | Field separator
