@@ -156,9 +156,9 @@ parseNFor = flip (<?>) "numeric for loop" $
     do
         name <- try $ do
             pMTok For
-            n <- pName
+            name <- pName
             pMTok Equals
-            return n
+            return name
 
         start <- parseExpression
         pMTok Comma
@@ -305,8 +305,8 @@ lvl8 = [(Power, APower)]
 
 -- | Parse chains of binary and unary operators
 parseExpression :: AParser MExpr
-parseExpression = (samePrioL lvl1 $
-                   samePrioL lvl2 $
+parseExpression =  samePrioL lvl1
+                  (samePrioL lvl2 $
                    samePrioL lvl3 $
                    samePrioR lvl4 $
                    samePrioL lvl5 $
