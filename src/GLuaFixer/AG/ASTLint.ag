@@ -246,7 +246,7 @@ sem Stat
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
-        loc.isMeta              = @name.isMeta || findSelf @args
+        loc.isMeta              = @name.isMeta || findSelf @args || @lhs.isMeta
         body.isMeta             = @loc.isMeta
         body.funcName           = @name.identifier
     | ALocFunc
@@ -257,7 +257,7 @@ sem Stat
         loc.funcname            = MToken @name.mtokenPos (Identifier @name.identifier)
         loc.passedScopes        = M.insert @name.identifier (False, @name.mtokenPos) (head @name.scopes) : tail @name.scopes
         body.scopes             = @loc.introduces : @loc.passedScopes
-        loc.isMeta              = findSelf @args
+        loc.isMeta              = findSelf @args || @lhs.isMeta
         body.isMeta             = @loc.isMeta
         body.funcName           = @name.identifier
         -- Parameter shadowing
