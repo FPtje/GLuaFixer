@@ -10,6 +10,15 @@ glualint - Linter and pretty printer for Garry's Mod's variant of Lua.
 
 After performing these steps, you can run `glualint` from the terminal or let your text editor use it as your linter. **Failing to specifically perform the third step will make `glualint` very unlikely to work**.
 
+# Command line parameters
+
+Parameter | Description
+----------|------------
+`--version` | Returns the version of glualint
+`--config` | Set to a `glualing.json` file for glualint configuration. See "Configuring glualint"
+`--pretty-print` | Will pretty-print (re-structure/re-indent) all code given in stdin. When entering code in terminal, press Ctrl+D to finish the input.
+`--indentation='something' | For pretty-print: indents all pretty-printed code with the given string. Four spaces by default, should probably some amount of tabs or spaces.
+
 # Configuring glualint
 `glualint` Allows some configuration. This is done through a file called `glualint.json` or `.glualint.json`. `glualint` looks for this file in three places (in order of priority)
 
@@ -68,7 +77,7 @@ Example `glualint.json` with the default options:
 - `lint_unusedParameters`: Warn for function parameters that are never used. *NOTE:* Only has effect when `lint_unusedVars` is enabled!
 - `lint_unusedLoopVars`: Warn for loop variables that are never used (`for k,v in ...`). *NOTE:* Only has effect when `lint_unusedVars` is enabled!
 
-# Pretty print options
+## Pretty print options
 These options affect the pretty printing functionality of `glualint`.
 
 - `prettyprint_spaceAfterParens`: Put a space between all parentheses
