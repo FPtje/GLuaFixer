@@ -17,7 +17,7 @@ Parameter | Description
 `--version` | Returns the version of glualint
 `--config` | Set to a `glualing.json` file for glualint configuration. See "Configuring glualint"
 `--pretty-print` | Will pretty-print (re-structure/re-indent) all code given in stdin. When entering code in terminal, press Ctrl+D to finish the input.
-`--indentation='something' | For pretty-print: indents all pretty-printed code with the given string. Four spaces by default, should probably some amount of tabs or spaces.
+`--indentation='something'` | For pretty-print: indents all pretty-printed code with the given string. Four spaces by default, should probably some amount of tabs or spaces.
 
 # Configuring glualint
 `glualint` Allows some configuration. This is done through a file called `glualint.json` or `.glualint.json`. `glualint` looks for this file in three places (in order of priority)
