@@ -75,6 +75,9 @@ attr AllStuff MToken MTokenList
     inh isMeta :: Bool -- whether the current piece of code is within a metafunction definition
     inh funcName :: String -- The last base function name in which a subtree exists
 
+attr Block
+    inh isRepeat :: Bool -- Scopes should not be popped and certain errors are not to be thrown when this is the body of a repeat
+
 attr AllStuff MToken MTokenList Token TokenList
     syn warnings use {++} {[]} :: {[String]}
     syn copy :: self
@@ -162,6 +165,7 @@ sem Declaration
 sem AST
     | AST
         chunk.scopes            = M.empty : @lhs.scopes
+        chunk.isRepeat          = False
 
 sem Block
     | Block
@@ -170,9 +174,9 @@ sem Block
         +warnings               = if @loc.maxScopeDepth == 0 || @lhs.scopeLevel /= @loc.maxScopeDepth then id else
                                     (:) $ warn @stats.mtokenPos "Are you Egyptian? What's with these fucking scope pyramids!?"
         loc.deadVars            = M.filterWithKey (\k (b, _) -> not (null k) && head k /= '_' && not b) (head @ret.scopes)
-        +warnings               = if not (lint_unusedVars @lhs.config) then id else
+        +warnings               = if not (lint_unusedVars @lhs.config) || @lhs.isRepeat then id else
                                     (++) $ M.foldrWithKey (\k (_, pos) ls -> warn pos ("Unused variable: " ++ k) : ls) [] @loc.deadVars
-        lhs.scopes              = tail @ret.scopes
+        lhs.scopes              = if @lhs.isRepeat then @ret.scopes else tail @ret.scopes
 
 sem MStat
     | MStat
@@ -197,23 +201,32 @@ sem Stat
                                     (:) $ warn @lbl.mtokenPos "Don't use labels and gotos unless you're jumping out of multiple loops."
     | ADo
         body.scopes             = M.empty : @lhs.scopes
+        body.isRepeat           = False
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty do block"
     | AWhile
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
+        body.isRepeat           = False
         body.scopes             = M.empty : @cond.scopes
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty while loop"
     | ARepeat
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
+        body.isRepeat           = True
         body.scopes             = M.empty : @lhs.scopes
+        lhs.scopes              = tail @cond.scopes -- Manually pop off a scope after the condition
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty repeat statement"
+        loc.deadVars            = M.filterWithKey (\k (b, _) -> not (null k) && head k /= '_' && not b) (head @cond.scopes)
+        -- +warnings               = if not (lint_unusedVars @lhs.config) then id else
+         --                           (++) $ M.foldrWithKey (\k (_, pos) ls -> warn pos ("Unused variable: " ++ k) : ls) [] @loc.deadVars
+
     | AIf
         cond.isNegation         = False
         body.scopes             = M.empty : @cond.scopes
+        body.isRepeat           = False
         elifs.mtokenPos         = @lhs.mtokenPos
         els.mtokenPos           = @lhs.mtokenPos
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
@@ -222,6 +235,7 @@ sem Stat
         body.loopLevel          = @lhs.loopLevel + 1
         val.isNegation          = False
         to.isNegation           = False
+        body.isRepeat           = False
         step.isNegation         = False
         body.scopes             = M.singleton @var.identifier (not (lint_unusedLoopVars @lhs.config), @var.mtokenPos) : @step.scopes
         loc.shadowWarning       = checkShadows @lhs.scopes @var.copy
@@ -231,6 +245,7 @@ sem Stat
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AGFor
         body.loopLevel          = @lhs.loopLevel + 1
+        body.isRepeat           = False
         -- The variables the for loop introduces
         loc.introduces          = M.fromList $ map (\mt -> (tokenLabel mt, (not (lint_unusedLoopVars @lhs.config), mpos mt))) @vars
         body.scopes             = @loc.introduces : @vals.scopes
@@ -240,6 +255,7 @@ sem Stat
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AFunc
         loc.argIdentifiers      = filter (/= MToken (LineColPos 0 0 0) VarArg) $ @args
+        body.isRepeat           = False
         loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $
                                     M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
         body.scopes             = @loc.introduces : (registerVariable @name.scopes @name.mtokenPos @name.identifier True)
@@ -251,6 +267,7 @@ sem Stat
         body.funcName           = @name.identifier
     | ALocFunc
         loc.argIdentifiers      = filter (/= MToken (LineColPos 0 0 0) VarArg) $ @args
+        body.isRepeat           = False
         loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $ -- self
                                     -- parameters
                                     M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
@@ -272,12 +289,14 @@ sem ElseIf
     | Tuple
         x1.isNegation           = False
         x2.scopes               = M.empty : @x1.scopes
+        x2.isRepeat             = False
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @x2.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty elseif statement"
 
 sem Else
     | Just
         just.scopes             = M.empty : @lhs.scopes
+        just.isRepeat           = False
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @just.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty else statement"
 sem AReturn
@@ -337,6 +356,7 @@ sem Expr
     | AnonymousFunc
         loc.introduces          = M.fromList $ map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) @pars
         body.scopes             = @loc.introduces : @lhs.scopes
+        body.isRepeat           = False
         body.isMeta             = @lhs.isMeta || findSelf @pars
         loc.argIdentifiers      = filter (/= MToken (LineColPos 0 0 0) VarArg) $ @pars
         -- Parameter shadowing
