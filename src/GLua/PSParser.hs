@@ -100,7 +100,7 @@ parseStat = ALabel <$> parseLabel <|>
             AWhile <$ pMTok While <*> parseExpression <* pMTok Do <*> parseBlock <* pMTok End <|>
             ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseExpression <|>
             parseIf <|>
-            parseFunction  <|>
+            parseFunction <|>
             parseFor <|>
             try (AGoto <$ pMTok (Identifier "goto") <*> pName) <|>
             parseDefinition <|>
