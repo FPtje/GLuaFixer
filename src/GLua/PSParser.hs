@@ -125,7 +125,7 @@ parseDefinition = flip (<?>) "variable definition" $ do
 
 -- | Local definition
 parseLocalDefinition :: AParser Stat
-parseLocalDefinition = def <$> parseVarList <*> option [] (pMTok Equals *> parseExpressionList) <?> "variable declaration"
+parseLocalDefinition = def <$> parseLocalVarList <*> option [] (pMTok Equals *> parseExpressionList) <?> "variable declaration"
     where
         def :: [PrefixExp] -> [MExpr] -> Stat
         def ps exs = LocDef $ zip ps (map Just exs ++ repeat Nothing)
@@ -226,6 +226,10 @@ parseNameList = sepBy1 pName (pMTok Comma)
 -- | Parse variable list (var1, var2, var3)
 parseVarList :: AParser [PrefixExp]
 parseVarList = sepBy1 parseVar (pMTok Comma)
+
+-- | Parse local variable list (var1, var2, var3)
+parseLocalVarList :: AParser [PrefixExp]
+parseLocalVarList = sepBy1 (PFVar <$> pName <*> pure []) (pMTok Comma)
 
 -- | Parse list of function parameters
 parseParList :: AParser [MToken]

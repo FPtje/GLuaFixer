@@ -190,7 +190,7 @@ parseStat = parseCallDef <<|>
                 pMTok Function <*> parseLocFuncName <*> pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
                 parseBlock <* pMTok End <<|>
               -- local variables
-              (\v (p,e) l -> LocDef (zip v $ map Just e ++ repeat Nothing)) <$> parseVarList <*> ((,) <$ pMTok Equals <*> pPos <*> parseExpressionList <<|> (,) <$> pPos <*> pReturn [])
+              (\v (p,e) l -> LocDef (zip v $ map Just e ++ repeat Nothing)) <$> parseLocalVarList <*> ((,) <$ pMTok Equals <*> pPos <*> parseExpressionList <<|> (,) <$> pPos <*> pReturn [])
             )
 
 
@@ -280,6 +280,10 @@ pName = pMSatisfy isName (Identifier "someVariable") "Variable"
 -- | Parse variable list (var1, var2, var3)
 parseVarList :: AParser [PrefixExp]
 parseVarList = pList1Sep (pMTok Comma) parseVar
+
+-- | Parse local variable list (var1, var2, var3), without suffixes
+parseLocalVarList :: AParser [PrefixExp]
+parseLocalVarList = pList1Sep (pMTok Comma) (PFVar <$> pName <*> pure [])
 
 -- | list of expressions
 parseExpressionList :: AParser [MExpr]
