@@ -187,7 +187,7 @@ parseStat = parseCallDef <<|>
             pMTok Local <**> (
               -- local function
               (\n p b l -> ALocFunc n p b) <$
-                pMTok Function <*> parseFuncName <*> pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
+                pMTok Function <*> parseLocFuncName <*> pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
                 parseBlock <* pMTok End <<|>
               -- local variables
               (\v (p,e) l -> LocDef (zip v $ map Just e ++ repeat Nothing)) <$> parseVarList <*> ((,) <$ pMTok Equals <*> pPos <*> parseExpressionList <<|> (,) <$> pPos <*> pReturn [])
@@ -246,6 +246,10 @@ parseLabel = pMSatisfy isLabel (Label "someLabel") "Some label"
 parseFuncName :: AParser FuncName
 parseFuncName = (\a b c -> FuncName (a:b) c) <$> pName <*> pMany (pMTok Dot *> pName) <*>
                 opt (Just <$ pMTok Colon <*> pName) Nothing
+
+-- | Local function name. Does not include dot and meta indices, since they're not allowed in meta functions
+parseLocFuncName :: AParser FuncName
+parseLocFuncName = (\a -> FuncName [a] Nothing) <$> pName
 
 -- | Parse a number into an expression
 parseNumber :: AParser Expr

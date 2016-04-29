@@ -100,14 +100,14 @@ parseStat = ALabel <$> parseLabel <|>
             AWhile <$ pMTok While <*> parseExpression <* pMTok Do <*> parseBlock <* pMTok End <|>
             ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseExpression <|>
             parseIf <|>
-            parseFunction AFunc <|>
+            parseFunction  <|>
             parseFor <|>
             try (AGoto <$ pMTok (Identifier "goto") <*> pName) <|>
             parseDefinition <|>
             AFuncCall <$> pFunctionCall <|>
             pMTok Local *>
                 (parseLocalDefinition <|>
-                parseFunction ALocFunc)
+                parseLocalFunction)
 
 
 -- | Global definition
@@ -131,11 +131,18 @@ parseLocalDefinition = def <$> parseVarList <*> option [] (pMTok Equals *> parse
         def ps exs = LocDef $ zip ps (map Just exs ++ repeat Nothing)
 
 -- | Global function definition
-parseFunction :: (FuncName -> [MToken] -> Block -> Stat) -> AParser Stat
-parseFunction stat = stat <$ pMTok Function <*> parseFuncName <*>
+parseFunction :: AParser Stat
+parseFunction = AFunc <$ pMTok Function <*> parseFuncName <*>
                      between (pMTok LRound) (pMTok RRound) parseParList <*>
                      parseBlock <*
                      pMTok End <?> "function definition"
+
+-- | Local function definition
+parseLocalFunction :: AParser Stat
+parseLocalFunction = ALocFunc <$ pMTok Function <*> parseLocFuncName <*>
+                     between (pMTok LRound) (pMTok RRound) parseParList <*>
+                     parseBlock <*
+                     pMTok End <?> "local function definition"
 
 -- | Parse if then elseif then else end expressions
 parseIf :: AParser Stat
@@ -181,6 +188,10 @@ parseGFor = AGFor <$ pMTok For <*> parseNameList <* pMTok In <*> parseExpression
 parseFuncName :: AParser FuncName
 parseFuncName = (\a b c -> FuncName (a:b) c) <$> pName <*> many (pMTok Dot *> pName) <*>
                 option Nothing (Just <$ pMTok Colon <*> pName) <?> "function name"
+
+-- | Local function name: cannot be a meta function nor indexed
+parseLocFuncName :: AParser FuncName
+parseLocFuncName = (\name -> FuncName [name] Nothing) <$> pName <?> "function name"
 
 -- | Parse a number into an expression
 parseNumber :: AParser Expr
