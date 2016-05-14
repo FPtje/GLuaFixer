@@ -106,7 +106,7 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pNumber) <*> option "" par
         pNumber = (++) <$> many1 digit <*> option "" pDecimal
 
         pDecimal :: Parser String
-        pDecimal = (:) <$> char '.' <*> many1 digit
+        pDecimal = (:) <$> char '.' <*> many digit
 
         pHexadecimal :: Parser String
         pHexadecimal = (++) <$> try (string "0x") <*> ((++) <$> many1 pHex <*> option "" pDecimal)
