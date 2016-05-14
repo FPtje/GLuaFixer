@@ -87,6 +87,10 @@ lint ls (f : fs) = do
     if isDirectory then do
         luaFiles <- findLuaFiles f
         lint ls luaFiles
+    else if f == "stdin" then do
+        contents <- getContents
+
+        mapM_ putStrLn (lintFile config f contents)
     else do
         contents <- doReadFile f
 
@@ -110,6 +114,9 @@ parseCLArgs :: Maybe Indentation -> [String] -> IO (Maybe LintSettings, [FilePat
 parseCLArgs _ [] = return (Nothing, [])
 parseCLArgs ind ("--pretty-print" : _) = prettyPrint ind >> exitSuccess
 parseCLArgs _ ("--version" : _) = putStrLn version >> exitSuccess
+parseCLArgs ind ("--stdin" : xs) = do
+                                 (sets, pths) <- parseCLArgs ind xs
+                                 return (sets, "stdin" : pths)
 parseCLArgs _ ["--config"] = putStrLn "Well give me a config file then you twat" >> exitWith (ExitFailure 1)
 parseCLArgs ind ("--config" : f : xs) = do
                                         settings <- settingsFromFile f
