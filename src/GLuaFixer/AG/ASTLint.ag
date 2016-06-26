@@ -98,6 +98,9 @@ attr UnOp
 attr MExpr Expr PrefixExp MaybeMExpr
     inh isNegation :: Bool
 
+attr MExpr Expr PrefixExp
+    inh inParentheses :: Bool -- Whether an expression is directly between parentheses (used to check double parentheses)
+
 attr VarsList Declaration
     inh localDefinition :: Bool
 
@@ -139,13 +142,20 @@ sem MStatList
 sem MExprList
     | Cons
         hd.isNegation           = False
+        hd.inParentheses        = False
     | Nil
+
+sem MaybeMExpr
+    | Just
+        just.inParentheses      = True
+
 
 sem Declaration
     | Tuple
         lhs.mtokenPos           = @x1.mtokenPos
         x1.isNegation           = False
         x1.registerVarUse       = False
+        x1.inParentheses        = False
         x2.isNegation           = False
 
         loc.var                 = tokenLabel . fromJust $ @x1.varName
@@ -193,6 +203,7 @@ sem Stat
     | AFuncCall
         fn.isNegation           = False
         fn.registerVarUse       = True
+        fn.inParentheses        = False
     | ALabel
     | ABreak
     | AContinue
@@ -207,6 +218,7 @@ sem Stat
     | AWhile
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
+        cond.inParentheses      = False
         body.isRepeat           = False
         body.scopes             = M.empty : @cond.scopes
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
@@ -214,6 +226,7 @@ sem Stat
     | ARepeat
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
+        cond.inParentheses      = False
         body.isRepeat           = True
         body.scopes             = M.empty : @lhs.scopes
         lhs.scopes              = tail @cond.scopes -- Manually pop off a scope after the condition
@@ -225,6 +238,7 @@ sem Stat
 
     | AIf
         cond.isNegation         = False
+        cond.inParentheses      = False
         body.scopes             = M.empty : @cond.scopes
         body.isRepeat           = False
         elifs.mtokenPos         = @lhs.mtokenPos
@@ -234,9 +248,12 @@ sem Stat
     | ANFor
         body.loopLevel          = @lhs.loopLevel + 1
         val.isNegation          = False
+        val.inParentheses       = False
         to.isNegation           = False
+        to.inParentheses        = False
         body.isRepeat           = False
         step.isNegation         = False
+        step.inParentheses      = False
         body.scopes             = M.singleton @var.identifier (not (lint_unusedLoopVars @lhs.config), @var.mtokenPos) : @step.scopes
         loc.shadowWarning       = checkShadows @lhs.scopes @var.copy
         +warnings               = if not (lint_shadowing @lhs.config) || isNothing @loc.shadowWarning then id else
@@ -288,6 +305,7 @@ sem Stat
 sem ElseIf
     | Tuple
         x1.isNegation           = False
+        x1.inParentheses        = False
         x2.scopes               = M.empty : @x1.scopes
         x2.isRepeat             = False
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @x2.statementCount > 0 then id else
@@ -333,12 +351,17 @@ sem PrefixExp
         lhs.mtokenPos           = @expr.mtokenPos
         lhs.varName             = Nothing
         lhs.hasSuffixes         = False
+        expr.inParentheses      = True
+
+        +warnings               = if not (null @suffixes.copy) || not @lhs.inParentheses then id else
+                                    (:) $ warn @lhs.mtokenPos "Unnecessary parentheses"
 
 sem PFExprSuffix
     | Call
     | MetaCall
     | ExprIndex
         index.isNegation        = False
+        index.inParentheses     = False
     | DotIndex
 
 sem MExpr
@@ -368,7 +391,9 @@ sem Expr
         fields.fieldNames       = S.empty
     | BinOpExpr
         left.isNegation         = False
+        left.inParentheses      = False
         right.isNegation        = False
+        right.inParentheses     = False
 
         -- Wheter someone is doing "not (a == b)" or "not (a ~= b)"
         loc.stupidNegation      = oppositeBinOp @op.copy
@@ -376,6 +401,7 @@ sem Expr
                                     (:) $ warn @lhs.mtokenPos "Silly negation. Use '" ++ fromJust @loc.stupidNegation ++ "'"
     | UnOpExpr
         right.isNegation        = @op.isNegation
+        right.inParentheses     = @op.isNegation
 
 sem Args
     | ListArgs
@@ -387,15 +413,19 @@ sem Field
     | ExprField
         lhs.mtokenPos           = @key.mtokenPos
         key.isNegation          = False
+        key.inParentheses       = False
         value.isNegation        = False
+        value.inParentheses     = False
     | NamedField
         loc.mtokenPos           = @key.mtokenPos
         lhs.fieldNames          = S.insert @key.mtok @lhs.fieldNames
         value.isNegation        = False
+        value.inParentheses     = False
         +warnings               = if not (lint_duplicateTableKeys @lhs.config) || not (S.member @key.mtok @lhs.fieldNames) then id else
                                     (:) $ warn @key.mtokenPos "Duplicate key in table: '" ++ show @key.mtok ++ "'."
     | UnnamedField
         value.isNegation        = False
+        value.inParentheses     = False
 
 sem UnOp
     | UnMinus
