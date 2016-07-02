@@ -58,11 +58,17 @@ isSingleChar (_ : []) = True
 isSingleChar _ = False
 
 -- Locate the exact position of trailing whitespace
-locateTrailingWhitespace :: LineColPos -> String -> LineColPos
-locateTrailingWhitespace pos (' ' : '\n' : xs) = pos
-locateTrailingWhitespace pos ('\t' : '\n' : xs) = pos
+locateTrailingWhitespace :: LineColPos -> String -> (LineColPos, String)
+locateTrailingWhitespace pos (' ' : xs) = (pos, xs)
+locateTrailingWhitespace pos ('\t' : xs) = (pos, xs)
 locateTrailingWhitespace pos (x : xs) = locateTrailingWhitespace (customAdvanceChr pos x) xs
-locateTrailingWhitespace pos [] = pos
+locateTrailingWhitespace pos [] = (pos, "")
+
+endOfTrailingWhitespace :: (LineColPos, String) -> LineColPos
+endOfTrailingWhitespace (pos, ('\n' : xs)) = pos
+endOfTrailingWhitespace (pos, (x : xs)) = endOfTrailingWhitespace (customAdvanceChr pos x, xs)
+endOfTrailingWhitespace (pos, []) = pos
+
 
 }
 ----------------------------------------
@@ -110,9 +116,11 @@ sem Token
         loc.whitespaceUsed = mappend @lhs.indentation $ SyntaxUsed (isInfixOf "\n " @space) (isInfixOf "\n\t" @space)
         loc.inconsistent = luaUsed @loc.whitespaceUsed && cUsed @loc.whitespaceUsed
         loc.indentation = if @loc.inconsistent then mempty else @loc.whitespaceUsed
+        loc.whitespaceStart = locateTrailingWhitespace @lhs.nextTokenPos @space
+        loc.whitespaceEnd = endOfTrailingWhitespace @loc.whitespaceStart
 
         +customWarnings = if not (lint_whitespaceStyle @lhs.config) || (not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space)) then id else
-                            (:) $ mTokenWarning (Region @lhs.nextTokenPos (customAdvanceStr @lhs.nextTokenPos @space)) "Trailing whitespace"
+                            (:) $ mTokenWarning (Region (fst @loc.whitespaceStart) @loc.whitespaceEnd) "Trailing whitespace"
 
         +warnings = if not @loc.inconsistent then id else
                         (:) "Inconsistent use of tabs and spaces for indentation"
