@@ -11,13 +11,14 @@ import qualified GLua.Lexer as Lex
 import Text.Parsec
 import Text.Parsec.Pos
 import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
+import Control.Monad.State
 
-type AParser = Parsec [MToken] ()
+type AParser = Parsec [MToken] LineColPos
 
 
 -- | Execute a parser
 execAParser :: SourceName -> AParser a -> [MToken] -> Either ParseError a
-execAParser name p = parse p name
+execAParser name p = runParser p (LineColPos 0 0 0) name
 
 -- | Parse a string directly
 parseFromString :: AParser a -> String -> Either ParseError a
@@ -56,17 +57,30 @@ updatePosMToken _ _ (MToken p _ : _) = rgStart2sp p
 
 -- | Match a token
 pMTok :: Token -> AParser MToken
-pMTok tok = tokenPrim show updatePosMToken testMToken
-    where
-        testMToken :: MToken -> Maybe MToken
+pMTok tok =
+  do
+    let testMToken :: MToken -> Maybe MToken
         testMToken mt@(MToken _ t) = if t == tok then Just mt else Nothing
+
+    mt@(MToken pos _) <- tokenPrim show updatePosMToken testMToken
+
+    putState (rgEnd pos)
+
+    return mt
+
 
 -- Tokens that satisfy a condition
 pMSatisfy :: (MToken -> Bool) -> AParser MToken
-pMSatisfy cond = tokenPrim show updatePosMToken testMToken
-    where
-        testMToken :: MToken -> Maybe MToken
+pMSatisfy cond =
+  do
+    let testMToken :: MToken -> Maybe MToken
         testMToken mt = if cond mt then Just mt else Nothing
+
+    mt@(MToken pos _) <- tokenPrim show updatePosMToken testMToken
+
+    putState (rgEnd pos)
+
+    return mt
 
 -- | Get the source position
 -- Simply gets the position of the next token
@@ -74,9 +88,14 @@ pMSatisfy cond = tokenPrim show updatePosMToken testMToken
 pPos :: AParser LineColPos
 pPos = rgStart . mpos <$> lookAhead anyToken <|> sp2lcp <$> getPosition
 
+-- | Get the source position
+-- Simply gets the end position of the last parsed token
+pEndPos :: AParser LineColPos
+pEndPos = getState
+
 -- | A thing of which the region is to be parsed
 annotated :: (Region -> a -> b) -> AParser a -> AParser b
-annotated f p = (\s t e -> f (Region s e) t) <$> pPos <*> p <*> pPos
+annotated f p = (\s t e -> f (Region s e) t) <$> pPos <*> p <*> pEndPos
 
 -- | Parses the full AST
 -- Its first parameter contains all comments
