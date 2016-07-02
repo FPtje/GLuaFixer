@@ -13,8 +13,6 @@ import Text.ParserCombinators.UU
 import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.BasicInstances
 
-import GLua.TokenTypes
-
 -- | String parser that maintains positions.
 type LParser a = P (Str Char String LineColPos) a
 
@@ -230,9 +228,18 @@ parseToken =    parseComment                                 <<|>
                 RSquare <$ pToken "]"                        <<|>
                 Whitespace <$> parseWhitespace
 
+
+-- | A thing of which the region is to be parsed
+annotated :: (Region -> a -> b) -> LParser a -> LParser b
+annotated f p = (\s t e -> f (Region s e) t) <$> pPos <*> p <*> pPos
+
+-- | parse located MToken
+parseMToken :: LParser MToken
+parseMToken = annotated MToken parseToken
+
 -- | Parse a list of tokens and turn them into MTokens.
 parseTokens :: LParser [MToken]
-parseTokens = pMany (MToken <$> pPos <*> parseToken)
+parseTokens = pMany parseMToken
 
 -- | Parse the potential #!comment on the first line
 -- Lua ignores the first line if it starts with #

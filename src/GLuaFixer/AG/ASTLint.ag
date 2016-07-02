@@ -20,8 +20,8 @@ include "../../GLua/AG/Token.ag"
 --  Helper functions
 ----------------------------------------
 {
-warn :: LineColPos -> String -> String
-warn pos str = "[Warning] " ++ PP.renderPos pos ++ ": " ++ str
+warn :: Region -> String -> String
+warn pos str = "[Warning] " ++ PP.renderRegion pos ++ ": " ++ str
 
 -- Used in detecting "not (a == b)" kind of things
 oppositeBinOp :: BinOp -> Maybe String
@@ -34,7 +34,7 @@ oppositeBinOp AEq = Just "~="
 oppositeBinOp _ = Nothing
 
 -- Checks whether a variable shadows existing variables
-checkShadows :: [M.Map String (Bool, LineColPos)] -> MToken -> Maybe String
+checkShadows :: [M.Map String (Bool, Region)] -> MToken -> Maybe String
 checkShadows [] _ = Nothing
 checkShadows _ (MToken _ (Identifier "_")) = Nothing -- Exception for vars named '_'
 checkShadows (scope : scs) mtok = if M.member lbl scope then
@@ -46,7 +46,7 @@ checkShadows (scope : scs) mtok = if M.member lbl scope then
 
 -- Registers a variable as global variable when it hasn't been
 -- introduced in any of the visible scopes
-registerVariable :: [M.Map String (Bool, LineColPos)] -> LineColPos -> String -> Bool -> [M.Map String (Bool, LineColPos)]
+registerVariable :: [M.Map String (Bool, Region)] -> Region -> String -> Bool -> [M.Map String (Bool, Region)]
 registerVariable (scope : []) pos var used = [M.insert var (used, pos) scope] -- global scope
 registerVariable (scope : scs) pos var used = case M.lookup var scope of
                                                 Just (True, pos) -> scope : scs
@@ -69,16 +69,16 @@ attr AllStuff
     inh loopLevel :: Int -- In how many scopes of loops we are. Used in checking labels
 
 attr AllStuff MToken MTokenList
-    chn mtokenPos :: {LineColPos} -- The location of the warning
+    chn mtokenPos :: {Region} -- The location of the warning
 
-    chn scopes :: {[M.Map String (Bool, LineColPos)]} -- Scopes of variables and parameters
+    chn scopes :: {[M.Map String (Bool, Region)]} -- Scopes of variables and parameters
     inh isMeta :: Bool -- whether the current piece of code is within a metafunction definition
     inh funcName :: String -- The last base function name in which a subtree exists
 
 attr Block
     inh isRepeat :: Bool -- Scopes should not be popped and certain errors are not to be thrown when this is the body of a repeat
 
-attr AllStuff MToken MTokenList Token TokenList
+attr AllStuff MToken MTokenList Token TokenList Region
     syn warnings use {++} {[]} :: {[String]}
     syn copy :: self
     syn identifier use {const} {"Unknown identifier"} :: String -- identifier of the first token
@@ -125,9 +125,9 @@ sem Token
 
 sem MToken
     | MToken
-        lhs.mtokenPos           = @mpos
+        lhs.mtokenPos           = @mpos.copy
         lhs.mtok                = @mtok.copy
-        lhs.warnings            = map (warn @mpos) @mtok.warnings
+        lhs.warnings            = map (warn @mpos.copy) @mtok.warnings
 
 sem MTokenList MStatList MExprList FieldList VarsList
     | Cons
@@ -190,8 +190,8 @@ sem Block
 
 sem MStat
     | MStat
-        lhs.mtokenPos           = @pos
-        stat.mtokenPos          = @pos
+        lhs.mtokenPos           = @pos.copy
+        stat.mtokenPos          = @pos.copy
 
 sem Stat
     | Def
@@ -271,7 +271,7 @@ sem Stat
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AFunc
-        loc.argIdentifiers      = filter (/= MToken (LineColPos 0 0 0) VarArg) $ @args
+        loc.argIdentifiers      = filter (/= MToken emptyRg VarArg) $ @args
         body.isRepeat           = False
         loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $
                                     M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
@@ -283,7 +283,7 @@ sem Stat
         body.isMeta             = @loc.isMeta
         body.funcName           = @name.identifier
     | ALocFunc
-        loc.argIdentifiers      = filter (/= MToken (LineColPos 0 0 0) VarArg) $ @args
+        loc.argIdentifiers      = filter (/= MToken emptyRg VarArg) $ @args
         body.isRepeat           = False
         loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $ -- self
                                     -- parameters
@@ -319,7 +319,7 @@ sem Else
                                     (:) $ warn @lhs.mtokenPos "Empty else statement"
 sem AReturn
     | AReturn
-        lhs.mtokenPos           = @pos
+        lhs.mtokenPos           = @pos.copy
     | NoReturn
         lhs.statementCount      = 0
 
@@ -366,8 +366,8 @@ sem PFExprSuffix
 
 sem MExpr
     | MExpr
-        lhs.mtokenPos           = @pos
-        expr.mtokenPos          = @pos
+        lhs.mtokenPos           = @pos.copy
+        expr.mtokenPos          = @pos.copy
 
 sem Expr
     | ANil
@@ -381,7 +381,7 @@ sem Expr
         body.scopes             = @loc.introduces : @lhs.scopes
         body.isRepeat           = False
         body.isMeta             = @lhs.isMeta || findSelf @pars
-        loc.argIdentifiers      = filter (/= MToken (LineColPos 0 0 0) VarArg) $ @pars
+        loc.argIdentifiers      = filter (/= MToken emptyRg VarArg) $ @pars
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
@@ -443,7 +443,7 @@ inh_AST conf = Inh_AST {
                 config_Inh_AST                  = conf,
                 isMeta_Inh_AST                  = False,
                 loopLevel_Inh_AST               = 0,
-                mtokenPos_Inh_AST               = LineColPos 0 0 0,
+                mtokenPos_Inh_AST               = emptyRg,
                 scopeLevel_Inh_AST              = 0,
                 scopes_Inh_AST                  = [M.empty],
                 funcName_Inh_AST                = ""

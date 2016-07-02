@@ -48,8 +48,8 @@ instance Monoid SyntaxUsed where
 syntaxInconsistency :: String -> String -> String
 syntaxInconsistency l c = "Inconsistent use of '" ++ l ++ "' and '" ++ c ++ "'"
 
-mTokenWarning :: LineColPos -> String -> String
-mTokenWarning pos str = "[Warning] " ++ renderPos pos ++ ": " ++ str
+mTokenWarning :: Region -> String -> String
+mTokenWarning pos str = "[Warning] " ++ renderRegion pos ++ ": " ++ str
 
 isSingleChar :: String -> Bool
 isSingleChar [] = True
@@ -68,7 +68,7 @@ locateTrailingWhitespace pos [] = pos
 ----------------------------------------
 --  Attributes
 ----------------------------------------
-attr MTokenList MToken Token TokenList
+attr MTokenList MToken Token TokenList Region
     syn copy :: self
     inh config :: LintSettings
 
@@ -99,7 +99,7 @@ sem MTokenList
 
 sem MToken
     | MToken
-        loc.mpos = @lhs.nextTokenPos
+        loc.mpos = Region @lhs.nextTokenPos (customAdvanceToken @lhs.nextTokenPos @mtok.copy)
 
         -- Warnings from tokens
         lhs.warnings = @mtok.customWarnings ++ map (mTokenWarning @loc.mpos) @mtok.warnings
@@ -112,7 +112,7 @@ sem Token
         loc.indentation = if @loc.inconsistent then mempty else @loc.whitespaceUsed
 
         +customWarnings = if not (lint_whitespaceStyle @lhs.config) || (not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space)) then id else
-                            (:) $ mTokenWarning (locateTrailingWhitespace @lhs.nextTokenPos @space) "Trailing whitespace"
+                            (:) $ mTokenWarning (Region @lhs.nextTokenPos (customAdvanceStr @lhs.nextTokenPos @space)) "Trailing whitespace"
 
         +warnings = if not @loc.inconsistent then id else
                         (:) "Inconsistent use of tabs and spaces for indentation"

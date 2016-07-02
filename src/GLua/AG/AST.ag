@@ -25,7 +25,7 @@ data AST          | AST comments :: {[MToken]} chunk :: Block
 -- Block of code
 data Block        | Block  stats :: MStatList    ret :: AReturn
 
-data MStat        | MStat    pos :: LineColPos  stat :: Stat
+data MStat        | MStat    pos :: Region  stat :: Stat
 
 -- Statement
 data Stat         -- a, b, c = ...
@@ -60,7 +60,7 @@ data Stat         -- a, b, c = ...
                   | ALocFunc name :: FuncName   args :: {[MToken]} body :: Block
 
 -- Return [values]
-data AReturn      | AReturn             pos    :: LineColPos values :: MExprList
+data AReturn      | AReturn             pos    :: Region values :: MExprList
                   | NoReturn
 
 -- Function names
@@ -77,7 +77,7 @@ data PFExprSuffix | Call                args   :: Args
                   | DotIndex            index  :: MToken
 
 -- Expressions
-data MExpr        | MExpr               pos    :: LineColPos expr   :: Expr
+data MExpr        | MExpr               pos    :: Region expr   :: Expr
 
 data Expr         | ANil
                   | AFalse

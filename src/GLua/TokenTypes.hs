@@ -18,13 +18,22 @@ instance Ord MToken where
     compare (MToken _ t1) (MToken _ t2) = compare t1 t2
 
 -- | Metatoken algebra
-type MTokenAlgebra mtok = LineColPos -> Token -> mtok
+type MTokenAlgebra mtok = Region -> Token -> mtok
 
-mpos :: MToken -> LineColPos
+mpos :: MToken -> Region
 mpos (MToken p _) = p
 
 mtok :: MToken -> Token
 mtok (MToken _ t) = t
+
+emptyRg :: Region
+emptyRg = Region (LineColPos 0 0 0) (LineColPos 0 0 0)
+
+rgStart :: Region -> LineColPos
+rgStart (Region s _) = s
+
+rgEnd :: Region -> LineColPos
+rgEnd (Region _ e) = e
 
 -- | Fold over metatoken
 foldMToken :: MTokenAlgebra t -> MToken -> t

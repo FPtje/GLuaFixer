@@ -17,38 +17,38 @@ import Text.ParserCombinators.UU.BasicInstances
 import qualified Data.ListLike as LL
 
 -- | MTokens with the positions of the next MToken (used in the advance of parser)
-data MTokenPos = MTokenPos MToken LineColPos
+data MTokenPos = MTokenPos MToken Region
 
 instance Show MTokenPos where
   show (MTokenPos tok _) = show tok
 
 -- | Custom parser that parses MTokens
-type AParser a = forall state. (IsLocationUpdatedBy LineColPos MTokenPos, LL.ListLike state MTokenPos) => P (Str MTokenPos state LineColPos) a
+type AParser a = forall state. (IsLocationUpdatedBy Region MTokenPos, LL.ListLike state MTokenPos) => P (Str MTokenPos state Region) a
 
--- | LineColPos is a location that can be updated by MTokens
-instance IsLocationUpdatedBy LineColPos MTokenPos where
-    -- advance :: LineColPos -> MToken -> LineColPos
+-- | Region is a location that can be updated by MTokens
+instance IsLocationUpdatedBy Region MTokenPos where
+    -- advance :: Region -> MToken -> Region
     -- Assume the position of the next MToken
     advance _ (MTokenPos _ p) = p
 
 
 -- | Parse Garry's mod Lua tokens to an abstract syntax tree.
 -- Also returns parse errors
-parseGLua :: [MToken] -> (AST, [Error LineColPos])
+parseGLua :: [MToken] -> (AST, [Error Region])
 parseGLua mts = let (cms, ts) = splitComments . filter (not . isWhitespace) $ mts in
                  execAParser (parseChunk cms) ts
 
 -- | Parse a string directly into an AST
-parseGLuaFromString :: String -> (AST, [Error LineColPos])
+parseGLuaFromString :: String -> (AST, [Error Region])
 parseGLuaFromString = parseGLua . filter (not . isWhitespace) . fst . Lex.execParseTokens
 
 -- | Parse a string directly
-parseFromString :: AParser a -> String -> (a, [Error LineColPos])
+parseFromString :: AParser a -> String -> (a, [Error Region])
 parseFromString p = execAParser p . filter (not . isWhitespace) . fst . Lex.execParseTokens
 
 -- | Create a parsable string from MTokens
-createString :: [MToken] -> Str MTokenPos [MTokenPos] LineColPos
-createString [] = createStr (LineColPos 0 0 0) []
+createString :: [MToken] -> Str MTokenPos [MTokenPos] Region
+createString [] = createStr (Region (LineColPos 0 0 0) (LineColPos 0 0 0)) []
 createString mts@(MToken p _ : xs) = createStr p mtpos where
     mts' = xs ++ [last mts] -- Repeat last element of mts
     mkMtPos mt (MToken p' _) = MTokenPos mt p'
@@ -56,7 +56,7 @@ createString mts@(MToken p _ : xs) = createStr p mtpos where
 
 -- | Text.ParserCombinators.UU.Utils.execParser modified to parse MTokens
 -- The first MToken might not be on the first line, so use the first MToken's position to start
-execAParser :: AParser a -> [MToken] -> (a, [Error LineColPos])
+execAParser :: AParser a -> [MToken] -> (a, [Error Region])
 execAParser p mts@[] = parse_h ((,) <$> p <*> pEnd) . createString $ mts
 execAParser p mts@(_ : _) = parse_h ((,) <$> p <*> pEnd) . createString $ mts -- createStr (mpos m) $ mts
 
@@ -69,7 +69,7 @@ pMSatisfy f t ins = getToken <$> pSatisfy f' (Insertion ins (MTokenPos (MToken e
     getToken :: MTokenPos -> MToken
     getToken (MTokenPos t' _) = t'
 
-    ep = LineColPos 0 0 0
+    ep = Region (LineColPos 0 0 0) (LineColPos 0 0 0)
 
 -- | Parse a single Metatoken, based on a positionless token (much like pSym)
 pMTok :: Token -> AParser MToken
@@ -101,8 +101,14 @@ parseChunk cms = AST cms <$> parseBlock
 parseBlock :: AParser Block
 parseBlock = Block <$> pInterleaved (pMTok Semicolon) parseMStat <*> (parseReturn <<|> pReturn NoReturn)
 
+
+-- | A thing of which the region is to be parsed
+annotated :: (Region -> a -> b) -> AParser a -> AParser b
+annotated f p = (\s t e -> f (Region (rgStart s) (rgEnd e)) t) <$> pPos <*> p <*> pPos
+
 parseMStat :: AParser MStat
-parseMStat = MStat <$> pPos <*> parseStat
+parseMStat = annotated MStat parseStat
+
 -- | Parser that is interleaved with 0 or more of the other parser
 pInterleaved :: AParser a -> AParser b -> AParser [b]
 pInterleaved sep q = pMany sep *> pMany (q <* pMany sep)
@@ -134,15 +140,14 @@ parseCallDef = parseGoto <<|>
                     varDecl namedVarDecl)
 
     -- Simple direct declaration: varName, ... = 1, ...
-    namedVarDecl :: [PrefixExp] -> LineColPos -> [MExpr] -> (ExprSuffixList -> PrefixExp) -> Stat
-    namedVarDecl vars pos exprs pfe = let pfes = (pfe []) : vars in Def (zip pfes $ map Just exprs ++ repeat Nothing)
+    namedVarDecl :: [PrefixExp] -> [MExpr] -> (ExprSuffixList -> PrefixExp) -> Stat
+    namedVarDecl vars exprs pfe = let pfes = (pfe []) : vars in Def (zip pfes $ map Just exprs ++ repeat Nothing)
 
     -- This is where we know it's a variable declaration
     -- Takes a function that turns it into a proper Def Stat
-    varDecl :: ([PrefixExp] -> LineColPos -> [MExpr] -> b) -> AParser b
+    varDecl :: ([PrefixExp] -> [MExpr] -> b) -> AParser b
     varDecl f = f <$> opt (pMTok Comma *> parseVarList) [] <*
               pMTok Equals <*>
-              pPos <*>
               parseExpressionList
 
     -- We know that there is at least one suffix (indexation or call).
@@ -163,8 +168,8 @@ parseCallDef = parseGoto <<|>
 
     -- Multiple suffixes have been found, and proof has been found that this must be a declaration.
     -- Now to give all the collected suffixes and a function that creates the declaration
-    complexDecl :: [PrefixExp] -> LineColPos -> [MExpr] -> PFExprSuffix -> ([PFExprSuffix], PrefixExp -> Stat)
-    complexDecl vars pos exprs s = ([s], \pf -> Def (zip (pf : vars) $ map Just exprs ++ repeat Nothing))
+    complexDecl :: [PrefixExp] -> [MExpr] -> PFExprSuffix -> ([PFExprSuffix], PrefixExp -> Stat)
+    complexDecl vars exprs s = ([s], \pf -> Def (zip (pf : vars) $ map Just exprs ++ repeat Nothing))
 
 
 -- | Parse a single statement
@@ -442,7 +447,7 @@ parseFieldList = (:) <$> parseField <*> otherFields <<|> pReturn []
 -- This function gets called when we know a field is unnamed and contains an expression that
 -- starts with a PrefixExp
 -- See the parseField parser where it is used
-makeUnNamedField :: Maybe (BinOp, MExpr) -> ExprSuffixList -> (LineColPos, MToken) -> Field
+makeUnNamedField :: Maybe (BinOp, MExpr) -> ExprSuffixList -> (Region, MToken) -> Field
 makeUnNamedField Nothing sfs (p, nm) = UnnamedField $ MExpr p $ APrefixExpr $ PFVar nm sfs
 makeUnNamedField (Just (op, mexpr)) sfs (p, nm) = UnnamedField $ MExpr p $ (merge (APrefixExpr $ PFVar nm sfs) mexpr)
   where

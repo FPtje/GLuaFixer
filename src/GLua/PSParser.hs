@@ -14,6 +14,7 @@ import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
 
 type AParser = Parsec [MToken] ()
 
+
 -- | Execute a parser
 execAParser :: SourceName -> AParser a -> [MToken] -> Either ParseError a
 execAParser name p = parse p name
@@ -28,6 +29,18 @@ parseGLua :: [MToken] -> Either ParseError AST
 parseGLua mts = let (cms, ts) = splitComments . filter (not . isWhitespace) $ mts in
                  execAParser "source.lua" (parseChunk cms) ts
 
+-- | Region start to SourcePos
+rgStart2sp :: Region -> SourcePos
+rgStart2sp (Region start _) = lcp2sp start
+
+-- | Region end to SourcePos
+rgEnd2sp :: Region -> SourcePos
+rgEnd2sp (Region _ end) = lcp2sp end
+
+-- | SourcePos to region
+sp2Rg :: SourcePos -> Region
+sp2Rg sp = Region (sp2lcp sp) (sp2lcp sp)
+
 -- | LineColPos to SourcePos
 lcp2sp :: LineColPos -> SourcePos
 lcp2sp (LineColPos l c _) = newPos "source.lua" l c
@@ -38,8 +51,8 @@ sp2lcp pos = LineColPos (sourceLine pos) (sourceColumn pos) 0
 
 -- | Update a SourcePos with an MToken
 updatePosMToken :: SourcePos -> MToken -> [MToken] -> SourcePos
-updatePosMToken _ (MToken p tok) [] = incSourceColumn (lcp2sp p) (tokenSize tok)
-updatePosMToken _ _ (MToken p _ : _) = lcp2sp p
+updatePosMToken _ (MToken p tok) [] = incSourceColumn (rgStart2sp p) (tokenSize tok)
+updatePosMToken _ _ (MToken p _ : _) = rgStart2sp p
 
 -- | Match a token
 pMTok :: Token -> AParser MToken
@@ -59,8 +72,11 @@ pMSatisfy cond = tokenPrim show updatePosMToken testMToken
 -- Simply gets the position of the next token
 -- Falls back on the collected position when there is no token left
 pPos :: AParser LineColPos
-pPos = mpos <$> lookAhead anyToken <|> sp2lcp <$> getPosition
-    --
+pPos = rgStart . mpos <$> lookAhead anyToken <|> sp2lcp <$> getPosition
+
+-- | A thing of which the region is to be parsed
+annotated :: (Region -> a -> b) -> AParser a -> AParser b
+annotated f p = (\s t e -> f (Region s e) t) <$> pPos <*> p <*> pPos
 
 -- | Parses the full AST
 -- Its first parameter contains all comments
@@ -73,7 +89,7 @@ parseBlock :: AParser Block
 parseBlock = Block <$> pInterleaved (pMTok Semicolon) parseMStat <*> (parseReturn <|> return NoReturn)
 
 parseMStat :: AParser MStat
-parseMStat = MStat <$> pPos <*> parseStat
+parseMStat = annotated MStat parseStat
 
 -- | Parser that is interleaved with 0 or more of the other parser
 pInterleaved :: AParser a -> AParser b -> AParser [b]
@@ -81,7 +97,7 @@ pInterleaved sep q = many sep *> many (q <* many sep)
 
 -- | Parse a return value
 parseReturn :: AParser AReturn
-parseReturn = AReturn <$> pPos <* pMTok Return <*> option [] parseExpressionList <* many (pMTok Semicolon) <?> "return statement"
+parseReturn = annotated AReturn (pMTok Return *> option [] parseExpressionList <* many (pMTok Semicolon) <?> "return statement")
 
 -- | Label
 parseLabel :: AParser MToken
@@ -178,7 +194,7 @@ parseNFor = flip (<?>) "numeric for loop" $
         return $ ANFor name start to st blk
     where
         step :: AParser MExpr
-        step = pMTok Comma *> parseExpression <|> MExpr <$> pPos <*> return (ANumber "1")
+        step = pMTok Comma *> parseExpression <|> annotated MExpr (return (ANumber "1"))
 
 -- | Generic for loop
 parseGFor :: AParser Stat
@@ -269,13 +285,13 @@ samePrioL :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
 samePrioL ops pr = chainl1 pr (choice (map f ops))
   where
     f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
-    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos <* pMTok t
+    f (t, at) = annotated (\p _ e1 e2 -> MExpr p (BinOpExpr at e1 e2)) (pMTok t)
 
 samePrioR :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
 samePrioR ops pr = chainl1 pr (choice (map f ops))
   where
     f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
-    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos <* pMTok t
+    f (t, at) = annotated (\p _ e1 e2 -> MExpr p (BinOpExpr at e1 e2)) (pMTok t)
 
 -- | Parse unary operator (-, not, #)
 parseUnOp :: AParser UnOp
@@ -326,8 +342,8 @@ parseExpression =  samePrioL lvl1
                    samePrioR lvl4 $
                    samePrioL lvl5 $
                    samePrioL lvl6 $
-                   MExpr <$> pPos <*> (UnOpExpr <$> parseUnOp <*> parseExpression) <|> -- lvl7
-                   samePrioR lvl8 (MExpr <$> pPos <*> parseSubExpression)) <?> "expression"
+                   annotated MExpr (UnOpExpr <$> parseUnOp <*> parseExpression) <|> -- lvl7
+                   samePrioR lvl8 (annotated MExpr parseSubExpression)) <?> "expression"
 
 -- | Prefix expressions
 -- can have any arbitrary list of expression suffixes

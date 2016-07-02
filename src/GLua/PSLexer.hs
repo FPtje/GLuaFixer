@@ -11,6 +11,17 @@ import Text.Parsec.String
 import Text.Parsec.Pos
 import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
 
+-- | Region start to SourcePos
+rgStart2sp :: Region -> SourcePos
+rgStart2sp (Region start _) = lcp2sp start
+
+-- | Region end to SourcePos
+rgEnd2sp :: Region -> SourcePos
+rgEnd2sp (Region _ end) = lcp2sp end
+
+-- | SourcePos to region
+sp2Rg :: SourcePos -> Region
+sp2Rg sp = Region (sp2lcp sp) (sp2lcp sp)
 
 -- | LineColPos to SourcePos
 lcp2sp :: LineColPos -> SourcePos
@@ -225,9 +236,23 @@ parseToken =
                 RSquare <$ char ']'
 
 
+-- | A thing of which the region is to be parsed
+annotated :: (Region -> a -> b) -> Parser a -> Parser b
+annotated f p = (\s t e -> f (Region s e) t) <$> pPos <*> p <*> pPos
+
+-- | parse located MToken
+parseMToken :: Parser MToken
+parseMToken =
+  do
+    start <- pPos
+    tok <- parseToken
+    end <- pPos
+
+    return $ MToken (Region start end) tok
+
 -- | Parse a list of tokens and turn them into MTokens.
 parseTokens :: Parser [MToken]
-parseTokens = many (MToken <$> pPos <*> parseToken)
+parseTokens = many parseMToken
 
 -- | Parse the potential #!comment on the first line
 -- Lua ignores the first line if it starts with #

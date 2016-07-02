@@ -276,14 +276,14 @@ badSequence opts = deprecatedSequence opts          <|>
                     whiteSpaceStyleSequence opts
 
 -- | Creates a warning for a certain sequence at any position
-badSequenceWarning :: LineColPos -> String -> [String] -> [String]
-badSequenceWarning pos wrn = (:) (showString "[Warning] " . showString (renderPos pos) . showString ": " . showString wrn $ "")
+badSequenceWarning :: Region -> String -> [String] -> [String]
+badSequenceWarning pos wrn = (:) (showString "[Warning] " . showString (renderRegion pos) . showString ": " . showString wrn $ "")
 
 -- | Searches for all the bad sequences
 badSequenceParser :: LintSettings -> AParser [String]
 badSequenceParser opts =
     -- A bad sequence
-    badSequenceWarning <$> pPos <*> badSequence opts <*> badSequenceParser opts <|>
+    annotated badSequenceWarning (badSequence opts) <*> badSequenceParser opts <|>
     -- Continue searching
     anyToken *> badSequenceParser opts <|>
     -- end of input

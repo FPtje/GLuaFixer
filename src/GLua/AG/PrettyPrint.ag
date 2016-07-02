@@ -71,24 +71,27 @@ printEls (Just b) i = zeroWidthText "else" $+$ pp_block b i
 renderPos :: LineColPos -> String
 renderPos (LineColPos l c _) = "line " ++ show (succ l) ++ ", column " ++ show (succ c)
 
+renderRegion :: Region -> String
+renderRegion (Region l r) = renderPos l ++ " - " ++ renderPos r
+
 renderSourcePos :: SourcePos -> String
 renderSourcePos sp = "line " ++ (show . succ . sourceLine $ sp) ++ ", column " ++ (show . succ . sourceColumn $ sp)
 
 getMStatPos :: MStat -> String
-getMStatPos (MStat p _) = renderPos p
+getMStatPos (MStat p _) = renderRegion p
 
 getAReturnPos :: AReturn -> String
-getAReturnPos (AReturn p _) = renderPos p
+getAReturnPos (AReturn p _) = renderRegion p
 getAReturnPos NoReturn = "<unknown>"
 
 getMExprPos :: MExpr -> String
-getMExprPos (MExpr p _) = renderPos p
+getMExprPos (MExpr p _) = renderRegion p
 
-before :: LineColPos -> LineColPos -> Bool
-before (LineColPos _ _ p) (LineColPos _ _ p') = p < p'
+before :: Region -> Region -> Bool
+before (Region _ (LineColPos _ _ p)) (Region (LineColPos _ _ p') _ ) = p < p'
 
-beforeOrOnLine :: LineColPos -> LineColPos -> Bool
-beforeOrOnLine (LineColPos l _ _) (LineColPos l' _ _) = l <= l'
+beforeOrOnLine :: Region -> Region -> Bool
+beforeOrOnLine (Region _ (LineColPos l _ _)) (Region (LineColPos l' _ _) _) = l <= l'
 
 renderError :: Error LineColPos -> String
 renderError (Inserted str pos strs)       = renderPos pos ++ ": Inserted '" ++ str ++ "'." ++ render_expecting strs
@@ -201,7 +204,7 @@ attr MStat Stat
     inh isLastStatement :: Bool
 
 attr MStat MExprList MExpr Field
-    syn pos :: LineColPos
+    syn pos :: Region
 
 attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList ElseIf ElseIfList Else Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
     chn comments :: {[MToken]}
@@ -246,7 +249,7 @@ sem MExprList
                  tl.isHead  = False
                  lhs.pos    = @hd.pos
     | Nil        lhs.pretty = empty
-                 lhs.pos    = LineColPos 0 0 0
+                 lhs.pos    = emptyRg
 
 sem FieldList
     | Cons       lhs.pretty = @loc.prettyCommentsBefore `@loc.sep` @loc.ind (@hd.pretty <> @loc.comma <-> @loc.prettyCommentsAfter) `@loc.sep` @tl.pretty

@@ -34,10 +34,10 @@ rewriteNameTo = [
     ]
 
 rewriteFuncName :: Int -> [PFExprSuffix] -> PrefixExp
-rewriteFuncName i sfs = PFVar (MToken (LineColPos 0 0 0) (Identifier "DarkRP")) (funcName : sfs)
+rewriteFuncName i sfs = PFVar (MToken emptyRg (Identifier "DarkRP")) (funcName : sfs)
     where
         fn = rewriteNameTo !! i
-        funcName = DotIndex $ MToken (LineColPos 0 0 0) (Identifier fn)
+        funcName = DotIndex $ MToken emptyRg (Identifier fn)
 
 rewriteParams = [
     ["color", "model", "description", "weapons", "command", "max", "salary", "admin", "vote", "hasLicense", "NeedToChangeFrom", "customCheck"],
@@ -58,10 +58,10 @@ identifierName (MToken _ (Identifier s)) = s
 -- Converts syntax of jobs, shipments and entities.
 -- Vehicles don't have the name as first parameter, so they're handled separately
 convertSyntax :: Int -> [MExpr] -> Args
-convertSyntax i (name : args) = ListArgs (name : [MExpr (LineColPos 0 0 0 ) tbl])
+convertSyntax i (name : args) = ListArgs (name : [MExpr emptyRg tbl])
     where
         tbl :: Expr
-        tbl = ATableConstructor [NamedField (MToken (LineColPos 0 0 0) (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) args]
+        tbl = ATableConstructor [NamedField (MToken emptyRg (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) args]
 }
 
 attr AllStuff
@@ -104,7 +104,7 @@ sem Args
         lhs.repl = case @lhs.shouldReplace of
                         Nothing -> ListArgs @args.repl
                         Just i  -> if @lhs.customItemKind == "AddCustomVehicle" then
-                                    TableArg [NamedField (MToken (LineColPos 0 0 0) (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) @args.repl]
+                                    TableArg [NamedField (MToken emptyRg (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) @args.repl]
                                    else
                                     convertSyntax i @args.repl
 
