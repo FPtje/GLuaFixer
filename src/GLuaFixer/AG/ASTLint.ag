@@ -98,7 +98,7 @@ attr UnOp
 attr MExpr Expr PrefixExp MaybeMExpr
     inh isNegation :: Bool
 
-attr MExpr Expr PrefixExp
+attr MExpr Expr PrefixExp MExprList
     inh inParentheses :: Bool -- Whether an expression is directly between parentheses (used to check double parentheses)
 
 attr VarsList Declaration
@@ -151,7 +151,6 @@ sem MStatList
 sem MExprList
     | Cons
         hd.isNegation           = False
-        hd.inParentheses        = False
     | Nil
 
 sem MaybeMExpr
@@ -287,6 +286,7 @@ sem Stat
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AGFor
         lhs.isIfStatement       = False
+        vals.inParentheses      = True
         body.loopLevel          = @lhs.loopLevel + 1
         body.isRepeat           = False
         -- The variables the for loop introduces
@@ -352,6 +352,7 @@ sem Else
                                     (:) $ warn @lhs.mtokenPos "Empty else statement"
 sem AReturn
     | AReturn
+        values.inParentheses    = True
         lhs.mtokenPos           = @pos.copy
     | NoReturn
         lhs.statementCount      = 0
@@ -394,7 +395,7 @@ sem PFExprSuffix
     | MetaCall
     | ExprIndex
         index.isNegation        = False
-        index.inParentheses     = False
+        index.inParentheses     = True
     | DotIndex
 
 sem MExpr
@@ -434,10 +435,11 @@ sem Expr
                                     (:) $ warn @lhs.mtokenPos "Silly negation. Use '" ++ fromJust @loc.stupidNegation ++ "'"
     | UnOpExpr
         right.isNegation        = @op.isNegation
-        right.inParentheses     = @op.isNegation
+        right.inParentheses     = False
 
 sem Args
     | ListArgs
+        args.inParentheses      = True
     | TableArg
         arg.fieldNames          = S.empty
     | StringArg
@@ -446,19 +448,19 @@ sem Field
     | ExprField
         lhs.mtokenPos           = @key.mtokenPos
         key.isNegation          = False
-        key.inParentheses       = False
+        key.inParentheses       = True
         value.isNegation        = False
-        value.inParentheses     = False
+        value.inParentheses     = True
     | NamedField
         loc.mtokenPos           = @key.mtokenPos
         lhs.fieldNames          = S.insert @key.mtok @lhs.fieldNames
         value.isNegation        = False
-        value.inParentheses     = False
+        value.inParentheses     = True
         +warnings               = if not (lint_duplicateTableKeys @lhs.config) || not (S.member @key.mtok @lhs.fieldNames) then id else
                                     (:) $ warn @key.mtokenPos "Duplicate key in table: '" ++ show @key.mtok ++ "'."
     | UnnamedField
         value.isNegation        = False
-        value.inParentheses     = False
+        value.inParentheses     = True
 
 sem UnOp
     | UnMinus
