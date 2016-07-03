@@ -142,6 +142,7 @@ sem MToken
         lhs.mtokenPos           = @mpos.copy
         lhs.mtok                = @mtok.copy
         lhs.warnings            = map (warn @mpos.copy) @mtok.warnings
+        lhs.identifier          = @mtok.identifier
 
 sem MTokenList MStatList MExprList FieldList VarsList
     | Cons
