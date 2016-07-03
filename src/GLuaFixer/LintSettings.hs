@@ -17,6 +17,7 @@ data LintSettings = LintSettings {
                         lint_gotos :: Bool,
                         lint_doubleNegations :: Bool,
                         lint_redundantIfStatements :: Bool,
+                        lint_redundantParentheses :: Bool,
                         lint_duplicateTableKeys :: Bool,
                         lint_profanity :: Bool,
                         lint_unusedVars :: Bool,
@@ -46,6 +47,7 @@ defaultLintSettings =   LintSettings {
                             lint_gotos = True,
                             lint_doubleNegations = True,
                             lint_redundantIfStatements = True,
+                            lint_redundantParentheses = True,
                             lint_duplicateTableKeys = True,
                             lint_profanity = True,
                             lint_unusedVars = True,
@@ -75,6 +77,7 @@ instance FromJSON LintSettings where
                                v .:? "lint_gotos" .!= (lint_gotos defaultLintSettings) <*>
                                v .:? "lint_doubleNegations" .!= (lint_doubleNegations defaultLintSettings) <*>
                                v .:? "lint_redundantIfStatements" .!= (lint_redundantIfStatements defaultLintSettings) <*>
+                               v .:? "lint_redundantParentheses" .!= (lint_redundantParentheses defaultLintSettings) <*>
                                v .:? "lint_duplicateTableKeys" .!= (lint_duplicateTableKeys defaultLintSettings) <*>
                                v .:? "lint_profanity" .!= (lint_profanity defaultLintSettings) <*>
                                v .:? "lint_unusedVars" .!= (lint_unusedVars defaultLintSettings) <*>
@@ -116,6 +119,7 @@ instance ToJSON LintSettings where
                         "lint_gotos" .= lint_gotos ls,
                         "lint_doubleNegations" .= lint_doubleNegations ls,
                         "lint_redundantIfStatements" .= lint_redundantIfStatements ls,
+                        "lint_redundantParentheses" .= lint_redundantParentheses ls,
                         "lint_duplicateTableKeys" .= lint_duplicateTableKeys ls,
                         "lint_profanity" .= lint_profanity ls,
                         "lint_unusedVars" .= lint_unusedVars ls,
