@@ -112,6 +112,15 @@ attr PrefixExp
 attr FuncName
     syn isMeta :: Bool
 
+attr ElseIfList Else
+    -- Whether there is any kind of "else" or "elseif" in an if
+    syn elseExists use {||} {False} :: Bool
+
+attr Stat MStat MStatList Block
+    -- Whether this statement represents an if-statement
+    -- AND holds no else or elseif bits
+    syn isIfStatement use {||} {False} :: Bool
+
 ---------------------------------------
 --  Semantics
 ---------------------------------------
@@ -223,6 +232,11 @@ sem Stat
         body.scopes             = M.empty : @cond.scopes
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty while loop"
+
+        -- Warn for if statements being put as the only statement in a while loop
+        -- e.g. while true do if condition then <stuff> end end
+        +warnings               = if @body.statementCount /= 1 || not @body.isIfStatement then id else
+                                    (:) $ warn @body.mtokenPos "Unnecessary if statement. Please combine the condition of this if statement with that of the while loop using `and`."
     | ARepeat
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
@@ -237,14 +251,21 @@ sem Stat
          --                           (++) $ M.foldrWithKey (\k (_, pos) ls -> warn pos ("Unused variable: " ++ k) : ls) [] @loc.deadVars
 
     | AIf
+        lhs.isIfStatement       = not @elifs.elseExists && not @els.elseExists
         cond.isNegation         = False
         cond.inParentheses      = False
         body.scopes             = M.empty : @cond.scopes
         body.isRepeat           = False
         elifs.mtokenPos         = @lhs.mtokenPos
         els.mtokenPos           = @lhs.mtokenPos
+
+        -- Warn for empty if statements
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty if statement"
+
+        -- Warn for if statements being put as the only statement in another if-statement
+        +warnings               = if @body.statementCount /= 1 || not @body.isIfStatement then id else
+                                    (:) $ warn @body.mtokenPos "Double if statement. Please combine the condition of this if statement with that of the outer if statement using `and`."
     | ANFor
         body.loopLevel          = @lhs.loopLevel + 1
         val.isNegation          = False
@@ -302,6 +323,10 @@ sem Stat
         +warnings               = if not (lint_shadowing @lhs.config) || isNothing @loc.funcNameShadows then id else
                                     (:) . fromJust $ @loc.funcNameShadows
 
+sem ElseIfList
+    | Cons
+        lhs.elseExists          = True
+
 sem ElseIf
     | Tuple
         x1.isNegation           = False
@@ -315,6 +340,7 @@ sem Else
     | Just
         just.scopes             = M.empty : @lhs.scopes
         just.isRepeat           = False
+        lhs.elseExists          = True
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @just.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty else statement"
 sem AReturn
