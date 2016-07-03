@@ -220,11 +220,13 @@ sem Stat
         +warnings               = if not (lint_gotos @lhs.config) || @lhs.loopLevel >= 2 then id else
                                     (:) $ warn @lbl.mtokenPos "Don't use labels and gotos unless you're jumping out of multiple loops."
     | ADo
+        lhs.isIfStatement       = False
         body.scopes             = M.empty : @lhs.scopes
         body.isRepeat           = False
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty do block"
     | AWhile
+        lhs.isIfStatement       = False
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
         cond.inParentheses      = False
@@ -238,6 +240,7 @@ sem Stat
         +warnings               = if not (lint_redundantIfStatements @lhs.config) || @body.statementCount /= 1 || not @body.isIfStatement then id else
                                     (:) $ warn @body.mtokenPos "Unnecessary if statement. Please combine the condition of this if statement with that of the while loop using `and`."
     | ARepeat
+        lhs.isIfStatement       = False
         body.loopLevel          = @lhs.loopLevel + 1
         cond.isNegation         = False
         cond.inParentheses      = False
@@ -267,6 +270,7 @@ sem Stat
         +warnings               = if not (lint_redundantIfStatements @lhs.config) || @body.statementCount /= 1 || not @body.isIfStatement then id else
                                     (:) $ warn @body.mtokenPos "Double if statement. Please combine the condition of this if statement with that of the outer if statement using `and`."
     | ANFor
+        lhs.isIfStatement       = False
         body.loopLevel          = @lhs.loopLevel + 1
         val.isNegation          = False
         val.inParentheses       = False
@@ -282,6 +286,7 @@ sem Stat
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AGFor
+        lhs.isIfStatement       = False
         body.loopLevel          = @lhs.loopLevel + 1
         body.isRepeat           = False
         -- The variables the for loop introduces
@@ -292,6 +297,7 @@ sem Stat
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AFunc
+        lhs.isIfStatement       = False
         loc.argIdentifiers      = filter (/= MToken emptyRg VarArg) $ @args
         body.isRepeat           = False
         loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $
@@ -304,6 +310,7 @@ sem Stat
         body.isMeta             = @loc.isMeta
         body.funcName           = @name.identifier
     | ALocFunc
+        lhs.isIfStatement       = False
         loc.argIdentifiers      = filter (/= MToken emptyRg VarArg) $ @args
         body.isRepeat           = False
         loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $ -- self
