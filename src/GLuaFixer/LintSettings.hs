@@ -16,6 +16,7 @@ data LintSettings = LintSettings {
                         lint_shadowing :: Bool,
                         lint_gotos :: Bool,
                         lint_doubleNegations :: Bool,
+                        lint_redundantIfStatements :: Bool,
                         lint_duplicateTableKeys :: Bool,
                         lint_profanity :: Bool,
                         lint_unusedVars :: Bool,
@@ -44,6 +45,7 @@ defaultLintSettings =   LintSettings {
                             lint_shadowing = True,
                             lint_gotos = True,
                             lint_doubleNegations = True,
+                            lint_redundantIfStatements = True,
                             lint_duplicateTableKeys = True,
                             lint_profanity = True,
                             lint_unusedVars = True,
@@ -72,6 +74,7 @@ instance FromJSON LintSettings where
                                v .:? "lint_shadowing" .!= (lint_shadowing defaultLintSettings) <*>
                                v .:? "lint_gotos" .!= (lint_gotos defaultLintSettings) <*>
                                v .:? "lint_doubleNegations" .!= (lint_doubleNegations defaultLintSettings) <*>
+                               v .:? "lint_redundantIfStatements" .!= (lint_redundantIfStatements defaultLintSettings) <*>
                                v .:? "lint_duplicateTableKeys" .!= (lint_duplicateTableKeys defaultLintSettings) <*>
                                v .:? "lint_profanity" .!= (lint_profanity defaultLintSettings) <*>
                                v .:? "lint_unusedVars" .!= (lint_unusedVars defaultLintSettings) <*>
@@ -112,6 +115,7 @@ instance ToJSON LintSettings where
                         "lint_shadowing" .= lint_shadowing ls,
                         "lint_gotos" .= lint_gotos ls,
                         "lint_doubleNegations" .= lint_doubleNegations ls,
+                        "lint_redundantIfStatements" .= lint_redundantIfStatements ls,
                         "lint_duplicateTableKeys" .= lint_duplicateTableKeys ls,
                         "lint_profanity" .= lint_profanity ls,
                         "lint_unusedVars" .= lint_unusedVars ls,

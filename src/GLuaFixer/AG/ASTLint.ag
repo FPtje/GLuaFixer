@@ -235,7 +235,7 @@ sem Stat
 
         -- Warn for if statements being put as the only statement in a while loop
         -- e.g. while true do if condition then <stuff> end end
-        +warnings               = if @body.statementCount /= 1 || not @body.isIfStatement then id else
+        +warnings               = if not (lint_redundantIfStatements @lhs.config) || @body.statementCount /= 1 || not @body.isIfStatement then id else
                                     (:) $ warn @body.mtokenPos "Unnecessary if statement. Please combine the condition of this if statement with that of the while loop using `and`."
     | ARepeat
         body.loopLevel          = @lhs.loopLevel + 1
@@ -264,7 +264,7 @@ sem Stat
                                     (:) $ warn @lhs.mtokenPos "Empty if statement"
 
         -- Warn for if statements being put as the only statement in another if-statement
-        +warnings               = if @body.statementCount /= 1 || not @body.isIfStatement then id else
+        +warnings               = if not (lint_redundantIfStatements @lhs.config) || @body.statementCount /= 1 || not @body.isIfStatement then id else
                                     (:) $ warn @body.mtokenPos "Double if statement. Please combine the condition of this if statement with that of the outer if statement using `and`."
     | ANFor
         body.loopLevel          = @lhs.loopLevel + 1
