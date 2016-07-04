@@ -358,7 +358,7 @@ parseExpression = samePrioL lvl1 $
                   samePrioL lvl5 $
                   samePrioL lvl6 $
                   MExpr <$> pPos <*> (UnOpExpr <$> parseUnOp <*> parseExpression) <<|> -- lvl7
-                  samePrioR lvl8 (MExpr <$> pPos <*> parseSubExpression)
+                  samePrioR lvl8 (MExpr <$> pPos <*> (parseSubExpression <|> UnOpExpr <$> parseUnOp <*> parseExpression))
 
 -- | Parses a binary operator
 parseBinOp :: AParser BinOp

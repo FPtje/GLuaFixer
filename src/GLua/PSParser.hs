@@ -362,7 +362,7 @@ parseExpression =  samePrioL lvl1
                    samePrioL lvl5 $
                    samePrioL lvl6 $
                    annotated MExpr (UnOpExpr <$> parseUnOp <*> parseExpression) <|> -- lvl7
-                   samePrioR lvl8 (annotated MExpr parseSubExpression)) <?> "expression"
+                   samePrioR lvl8 (annotated MExpr (parseSubExpression <|> UnOpExpr <$> parseUnOp <*> parseExpression))) <?> "expression"
 
 -- | Prefix expressions
 -- can have any arbitrary list of expression suffixes
