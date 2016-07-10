@@ -87,7 +87,7 @@ parseCComment :: Parser Token
 parseCComment = do
     char '/'
     try (SlashComment <$ char '/' <*> pUntilEnd) <|>
-     SlashBlockComment <$ char '*' <*> manyTill anyChar (try (string "*/"))
+     SlashBlockComment <$ char '*' <*> manyTill anyChar (try (string "*/") <|> const "\n" <$> eof)
 
 -- | Parse any kind of comment.
 parseComment :: Parser Token
