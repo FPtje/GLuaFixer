@@ -84,6 +84,11 @@ attr AllStuff MToken MTokenList
 
     -- Global variable definitions
     chn globalDefinitions :: {M.Map String [Region]}
+
+    -- Calls to module() make every global definition afterwards
+    -- member of the table provided in the first argument of it.
+    -- Those things should not register as /real/ global definitions.
+    chn isInModule :: Bool
     chn scopes :: {[M.Map String (Bool, Region)]} -- Scopes of variables and parameters
     inh isMeta :: Bool -- whether the current piece of code is within a metafunction definition
     inh funcName :: String -- The last base function name in which a subtree exists
@@ -185,7 +190,7 @@ sem Declaration
         x1.isNegation           = False
         x1.registerVarUse       = False
         x1.inParentheses        = False
-        x1.topLevel   = False
+        x1.topLevel             = False
         x2.isNegation           = False
 
         loc.var                 = tokenLabel . fromJust $ @x1.varName
@@ -200,7 +205,7 @@ sem Declaration
                                             registerVariable @lhs.scopes @x1.mtokenPos @loc.var @x1.hasSuffixes
                                         else
                                             @lhs.scopes -- ExprVar assignments don't affect the scope
-        +globalDefinitions      = if @lhs.localDefinition || isVariableLocal @lhs.scopes @loc.var || @x1.hasSuffixes then id else
+        +globalDefinitions      = if @lhs.isInModule || @lhs.localDefinition || isVariableLocal @lhs.scopes @loc.var || @x1.hasSuffixes then id else
                                     M.insertWith (++) @loc.var [@x1.mtokenPos]
 
         +warnings               = if not (lint_shadowing @lhs.config) || not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
@@ -238,7 +243,9 @@ sem Stat
         fn.isNegation           = False
         fn.registerVarUse       = True
         fn.inParentheses        = False
-        fn.topLevel   = True
+        fn.topLevel             = True
+        loc.isModuleCall        = (tokenLabel . fromJust $ @fn.varName) == "module"
+        lhs.isInModule          = @lhs.isInModule || @loc.isModuleCall
     | ALabel
     | ABreak
     | AContinue
@@ -303,10 +310,10 @@ sem Stat
         body.loopLevel          = @lhs.loopLevel + 1
         val.isNegation          = False
         val.inParentheses       = False
-        val.topLevel  = True
+        val.topLevel            = True
         to.isNegation           = False
         to.inParentheses        = False
-        to.topLevel   = True
+        to.topLevel             = True
         body.isRepeat           = False
         step.isNegation         = False
         step.inParentheses      = False
@@ -338,7 +345,7 @@ sem Stat
                                     M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
         body.scopes             = @loc.introduces : (registerVariable @name.scopes @name.mtokenPos @name.identifier True)
 
-        +globalDefinitions      = if isVariableLocal @lhs.scopes @name.identifier || @name.isMeta || @name.hasSuffixes then id else
+        +globalDefinitions      = if @lhs.isInModule || isVariableLocal @lhs.scopes @name.identifier || @name.isMeta || @name.hasSuffixes then id else
                                     M.insertWith (++) @name.identifier [@name.mtokenPos]
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
@@ -440,7 +447,7 @@ sem PFExprSuffix
     | ExprIndex
         index.isNegation        = False
         index.inParentheses     = True
-        index.topLevel= True
+        index.topLevel          = True
     | DotIndex
 
 sem MExpr
@@ -537,7 +544,8 @@ inh_AST conf = Inh_AST {
                 mtokenPos_Inh_AST               = emptyRg,
                 scopeLevel_Inh_AST              = 0,
                 scopes_Inh_AST                  = [M.empty],
-                funcName_Inh_AST                = ""
+                funcName_Inh_AST                = "",
+                isInModule_Inh_AST              = False
                }
 
 allAttributes :: LintSettings -> AST -> Syn_AST
