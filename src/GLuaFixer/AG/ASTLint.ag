@@ -44,6 +44,17 @@ checkShadows (scope : scs) mtok = if M.member lbl scope then
     where
         lbl = tokenLabel mtok
 
+-- Determines whether a variable is local
+-- It is local if it does not exist in any but the topmost (global) scope
+-- it may or may not exist in the topmost scope.
+isVariableLocal :: [M.Map String (Bool, Region)] -> String -> Bool
+isVariableLocal [_] _ = False
+isVariableLocal (scope : scs) var =
+    case M.lookup var scope of
+        Just _ -> True
+        Nothing -> isVariableLocal scs var
+
+
 -- Registers a variable as global variable when it hasn't been
 -- introduced in any of the visible scopes
 registerVariable :: [M.Map String (Bool, Region)] -> Region -> String -> Bool -> [M.Map String (Bool, Region)]
@@ -71,6 +82,8 @@ attr AllStuff
 attr AllStuff MToken MTokenList
     chn mtokenPos :: {Region} -- The location of the warning
 
+    -- Global variable definitions
+    chn globalDefinitions :: {M.Map String [Region]}
     chn scopes :: {[M.Map String (Bool, Region)]} -- Scopes of variables and parameters
     inh isMeta :: Bool -- whether the current piece of code is within a metafunction definition
     inh funcName :: String -- The last base function name in which a subtree exists
@@ -116,6 +129,7 @@ attr PrefixExp
 
 attr FuncName
     syn isMeta :: Bool
+    syn hasSuffixes :: Bool
 
 attr ElseIfList Else
     -- Whether there is any kind of "else" or "elseif" in an if
@@ -178,6 +192,7 @@ sem Declaration
         loc.shadowWarning       = do
                                     var <- @x1.varName
                                     checkShadows @lhs.scopes var
+
         x1.scopes               = if @lhs.localDefinition then
                                     M.insert @loc.var (False, @x1.mtokenPos) (head @lhs.scopes) : tail @lhs.scopes
                                    else if isJust @x1.varName then
@@ -185,6 +200,9 @@ sem Declaration
                                             registerVariable @lhs.scopes @x1.mtokenPos @loc.var @x1.hasSuffixes
                                         else
                                             @lhs.scopes -- ExprVar assignments don't affect the scope
+        +globalDefinitions      = if @lhs.localDefinition || isVariableLocal @lhs.scopes @loc.var || @x1.hasSuffixes then id else
+                                    M.insertWith (++) @loc.var [@x1.mtokenPos]
+
         +warnings               = if not (lint_shadowing @lhs.config) || not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
                                     (:) . fromJust $ @loc.shadowWarning
 
@@ -319,6 +337,9 @@ sem Stat
         loc.introduces          = (if @loc.isMeta then M.insert "self" (True, @name.mtokenPos) else id) $
                                     M.fromList . map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) $ @loc.argIdentifiers
         body.scopes             = @loc.introduces : (registerVariable @name.scopes @name.mtokenPos @name.identifier True)
+
+        +globalDefinitions      = if isVariableLocal @lhs.scopes @name.identifier || @name.isMeta || @name.hasSuffixes then id else
+                                    M.insertWith (++) @name.identifier [@name.mtokenPos]
         -- Parameter shadowing
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @loc.argIdentifiers
@@ -380,6 +401,7 @@ sem FuncName
         lhs.mtokenPos           = mpos (head @names)
         lhs.identifier          = tokenLabel . head $ @names
         lhs.isMeta              = isJust @meta
+        lhs.hasSuffixes         = length @names > 1
 
 sem PrefixExp
     | PFVar
@@ -511,12 +533,19 @@ inh_AST conf = Inh_AST {
                 config_Inh_AST                  = conf,
                 isMeta_Inh_AST                  = False,
                 loopLevel_Inh_AST               = 0,
+                globalDefinitions_Inh_AST       = M.empty,
                 mtokenPos_Inh_AST               = emptyRg,
                 scopeLevel_Inh_AST              = 0,
                 scopes_Inh_AST                  = [M.empty],
                 funcName_Inh_AST                = ""
                }
 
+allAttributes :: LintSettings -> AST -> Syn_AST
+allAttributes conf p = wrap_AST (sem_AST p) (inh_AST conf)
+
 astWarnings :: LintSettings -> AST -> [String]
-astWarnings conf p = warnings_Syn_AST (wrap_AST (sem_AST p) (inh_AST conf))
+astWarnings conf p = warnings_Syn_AST $ allAttributes conf p
+
+globalDefinitions :: LintSettings -> AST -> M.Map String [Region]
+globalDefinitions conf p = globalDefinitions_Syn_AST $ allAttributes conf p
 }

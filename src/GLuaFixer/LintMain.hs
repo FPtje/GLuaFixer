@@ -9,6 +9,8 @@ import qualified GLua.PSLexer as PSL
 import GLuaFixer.AG.ASTLint
 import GLuaFixer.BadSequenceFinder
 import GLua.AG.PrettyPrint
+import GLua.AG.AST
+import GLua.AG.Token
 import System.FilePath
 import System.FilePath.Find
 import GLuaFixer.LintSettings
@@ -19,6 +21,8 @@ import Data.Maybe
 import System.Directory
 import Control.Applicative
 import GLuaFixer.AG.DarkRPRewrite
+import qualified Data.Map as M
+import GHC.Exts (sortWith)
 
 version :: String
 version = "1.8.1"
@@ -46,12 +50,78 @@ prettyPrint ind = do
     putStr pretty
 
 
--- | Lint a single file, using parsec
-lintFile :: LintSettings -> FilePath -> String -> [String]
-lintFile config f contents =
+data GlobalAnalysis =
+  GlobalAnalysis
+    { ga_path :: FilePath
+    , ga_regions :: [Region]
+    }
+
+  deriving (Show)
+
+-- | Analyse the globals of a single file
+analyseGlobalsFile :: LintSettings -> FilePath -> IO (M.Map String [GlobalAnalysis])
+analyseGlobalsFile lintSettings f =
+  do
+    contents <- readFile f
+
+    case parseFile lintSettings f contents of
+      Left errs -> mapM_ putStrLn errs >> return M.empty
+      Right (_, ast) ->
+          return $ M.map ((:[]) . GlobalAnalysis f) $ globalDefinitions lintSettings ast
+
+-- | Analyse the globals of a path
+analyseGlobals :: FilePath -> IO ()
+analyseGlobals f =
+  do
+    settings <- getSettings f
+
+    -- When we're dealing with a directory, lint all the files in it recursively.
+    isDirectory <- doesDirectoryExist f
+
+    if isDirectory then
+      do
+        luaFiles <- findLuaFiles f
+        globals <- mapM (analyseGlobalsFile settings) luaFiles
+        let globals' = M.unionsWith (++) globals
+        reportGlobals globals'
+    else
+      do
+        globals <- analyseGlobalsFile settings f
+        reportGlobals globals
+
+-- | Report found global variables
+reportGlobals :: M.Map String [GlobalAnalysis] -> IO ()
+reportGlobals globals =
+  let
+    globals' :: [(String, [GlobalAnalysis])]
+    globals' = M.toList $ M.map (sortWith ga_path) globals
+
+    reportRegions :: [Region] -> IO ()
+    reportRegions rgs =
+      mapM_ (\r -> putStrLn $ "    " ++ renderRegion r) $ reverse rgs
+
+    reportAnalysis :: GlobalAnalysis -> IO ()
+    reportAnalysis analysis =
+      do
+        putStrLn $ "  " ++ ga_path analysis ++ ":"
+        reportRegions $ ga_regions analysis
+        putStrLn ""
+
+    reportGlobal :: (String, [GlobalAnalysis]) -> IO ()
+    reportGlobal (global, analyses) =
+      do
+        putStrLn $ "- " ++ global
+        mapM_ reportAnalysis analyses
+  in
+    mapM_ reportGlobal globals'
+
+
+-- | Parse a single file using parsec
+parseFile :: LintSettings -> FilePath -> String -> Either [String] ([String], AST)
+parseFile config f contents =
     case PSL.execParseTokens contents of
         Left lexErr ->
-            [f ++ ": [Error] " ++ renderPSError lexErr | lint_syntaxErrors config]
+            Left [f ++ ": [Error] " ++ renderPSError lexErr | lint_syntaxErrors config]
 
         Right tokens -> do
             let fixedTokens = fixedLexPositions tokens
@@ -61,13 +131,21 @@ lintFile config f contents =
             case parsed of
                 Left err ->
                     -- Return syntax errors
-                    [f ++ ": [Error] " ++ renderPSError err | lint_syntaxErrors config]
+                    Left [f ++ ": [Error] " ++ renderPSError err | lint_syntaxErrors config]
+                Right ast -> Right (lexWarnings, ast)
 
-                Right ast -> do
-                    let parserWarnings = map ((f ++ ": ") ++) $ astWarnings config ast
 
-                    -- Print all warnings
-                    lexWarnings ++ parserWarnings
+-- | Lint a single file, using parsec
+lintFile :: LintSettings -> FilePath -> String -> [String]
+lintFile config f contents =
+    case parseFile config f contents of
+        Left errs -> errs
+        Right (lexWarnings, ast) ->
+            let
+                parserWarnings = map ((f ++ ": ") ++) $ astWarnings config ast
+            in
+                -- Print all warnings
+                lexWarnings ++ parserWarnings
 
 
 -- | Finds all Lua files
@@ -113,6 +191,7 @@ type Indentation = String
 parseCLArgs :: Maybe Indentation -> [String] -> IO (Maybe LintSettings, [FilePath])
 parseCLArgs _ [] = return (Nothing, [])
 parseCLArgs ind ("--pretty-print" : _) = prettyPrint ind >> exitSuccess
+parseCLArgs _ ("--analyse-globals" : f : _) = analyseGlobals f >> exitSuccess
 parseCLArgs _ ("--version" : _) = putStrLn version >> exitSuccess
 parseCLArgs ind ("--stdin" : xs) = do
                                  (sets, pths) <- parseCLArgs ind xs
