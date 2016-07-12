@@ -42,19 +42,6 @@ parseGLua :: [T.MToken] -> Either (ParseError (Token [T.MToken]) Dec) AST
 parseGLua mts = let (cms, ts) = splitComments . filter (not . isWhitespace) $ mts in
                  execAParser "source.lua" (parseChunk cms) ts
 
--- | Region start to SourcePos
-rgStart2sp :: T.Region -> SourcePos
-rgStart2sp (T.Region start _) = lcp2sp start
-
--- | Region end to SourcePos
-rgEnd2sp :: T.Region -> SourcePos
-rgEnd2sp (T.Region _ end) = lcp2sp end
-
--- | SourcePos to region
-sp2Rg :: SourcePos -> T.Region
-sp2Rg sp = T.Region (sp2lcp sp) (sp2lcp sp)
-
-
 -- | LineColPos to SourcePos
 lcp2sp :: LineColPos -> SourcePos
 lcp2sp (LineColPos l c _) = SourcePos "source.lua" (unsafePos $ fromIntegral l) (unsafePos $ fromIntegral c)
@@ -90,10 +77,10 @@ pPos = rgStart . mpos <$> lookAhead anyToken <|> sp2lcp <$> getPosition
 -- | Get the source position
 -- Simply gets the end position of the last parsed token
 pEndPos :: AParser LineColPos
-pEndPos =  -- getState
+pEndPos =
   do
     s <- getParserState
-    return $ sp2lcp $ NE.head $ statePos s -- TODO: is head correct?
+    return $ sp2lcp $ NE.head $ statePos s
 
 
 -- | A thing of which the region is to be parsed
@@ -326,71 +313,6 @@ binary name op =
 prefix :: T.Token -> UnOp -> Operator AParser MExpr
 prefix name op =
     Prefix ((\(T.MToken rg _) e@(MExpr rg' _) -> MExpr (T.Region (rgStart rg) (rgEnd rg')) (UnOpExpr op e)) <$> pMTok name)
-
----- | Parse operators of the same precedence in a chain
---samePrioL :: [(T.Token, BinOp)] -> AParser MExpr -> AParser MExpr
---samePrioL ops pr = _ pr (choice (map f ops))
---  where
---    f :: (T.Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
---    f (t, at) = annotated (\p _ e1 e2 -> MExpr p (BinOpExpr at e1 e2)) (pMTok t)
-
---samePrioR :: [(T.Token, BinOp)] -> AParser MExpr -> AParser MExpr
---samePrioR ops pr = _ pr (choice (map f ops))
---  where
---    f :: (T.Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
---    f (t, at) = annotated (\p _ e1 e2 -> MExpr p (BinOpExpr at e1 e2)) (pMTok t)
-
----- | Parse unary operator (-, not, #)
---parseUnOp :: AParser UnOp
---parseUnOp = UnMinus <$ pMTok T.Minus <|>
---            ANot    <$ pMTok T.Not   <|>
---            ANot    <$ pMTok T.CNot  <|>
---            AHash   <$ pMTok T.Hash
-
----- | Parses a binary operator
---parseBinOp :: AParser BinOp
---parseBinOp = const AOr          <$> pMTok T.Or           <|>
---             const AOr          <$> pMTok T.COr          <|>
---             const AAnd         <$> pMTok T.And          <|>
---             const AAnd         <$> pMTok T.CAnd         <|>
---             const ALT          <$> pMTok T.TLT          <|>
---             const AGT          <$> pMTok T.TGT          <|>
---             const ALEQ         <$> pMTok T.TLEQ         <|>
---             const AGEQ         <$> pMTok T.TGEQ         <|>
---             const ANEq         <$> pMTok T.TNEq         <|>
---             const ANEq         <$> pMTok T.TCNEq        <|>
---             const AEq          <$> pMTok T.TEq          <|>
---             const AConcatenate <$> pMTok T.Concatenate  <|>
---             const APlus        <$> pMTok T.Plus         <|>
---             const BinMinus     <$> pMTok T.Minus        <|>
---             const AMultiply    <$> pMTok T.Multiply     <|>
---             const ADivide      <$> pMTok T.Divide       <|>
---             const AModulus     <$> pMTok T.Modulus      <|>
---             const APower       <$> pMTok T.Power
-
----- | Operators, sorted by priority
----- Priority from: http://www.lua.org/manual/5.2/manual.html#3.4.7
---lvl1, lvl2, lvl3, lvl4, lvl5, lvl6, lvl8 :: [(T.Token, BinOp)]
---lvl1 = [(T.Or, AOr), (T.COr, AOr)]
---lvl2 = [(T.And, AAnd), (T.CAnd, AAnd)]
---lvl3 = [(T.TLT, ALT), (T.TGT, AGT), (T.TLEQ, ALEQ), (T.TGEQ, AGEQ), (T.TNEq, ANEq), (T.TCNEq, ANEq), (T.TEq, AEq)]
---lvl4 = [(T.Concatenate, AConcatenate)]
---lvl5 = [(T.Plus, APlus), (T.Minus, BinMinus)]
---lvl6 = [(T.Multiply, AMultiply), (T.Divide, ADivide), (T.Modulus, AModulus)]
----- lvl7 is unary operators
---lvl8 = [(T.Power, APower)]
-
-
----- | Parse chains of binary and unary operators
---parseExpression :: AParser MExpr
---parseExpression =  samePrioL lvl1
---                  (samePrioL lvl2 $
---                   samePrioL lvl3 $
---                   samePrioR lvl4 $
---                   samePrioL lvl5 $
---                   samePrioL lvl6 $
---                   annotated MExpr (UnOpExpr <$> parseUnOp <*> parseExpression) <|> -- lvl7
---                   samePrioR lvl8 (annotated MExpr (parseSubExpression <|> UnOpExpr <$> parseUnOp <*> parseExpression))) <?> "expression"
 
 -- | Prefix expressions
 -- can have any arbitrary list of expression suffixes
