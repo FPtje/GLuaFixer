@@ -4,32 +4,31 @@
 
 module GLua.PSLexer where
 
-import GLua.AG.Token
+import qualified GLua.AG.Token as T
 
-import Text.Parsec
-import Text.Parsec.String
-import Text.Parsec.Pos
+import Text.Megaparsec
+import Text.Megaparsec.String
 import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
 
 -- | Region start to SourcePos
-rgStart2sp :: Region -> SourcePos
-rgStart2sp (Region start _) = lcp2sp start
+rgStart2sp :: T.Region -> SourcePos
+rgStart2sp (T.Region start _) = lcp2sp start
 
 -- | Region end to SourcePos
-rgEnd2sp :: Region -> SourcePos
-rgEnd2sp (Region _ end) = lcp2sp end
+rgEnd2sp :: T.Region -> SourcePos
+rgEnd2sp (T.Region _ end) = lcp2sp end
 
 -- | SourcePos to region
-sp2Rg :: SourcePos -> Region
-sp2Rg sp = Region (sp2lcp sp) (sp2lcp sp)
+sp2Rg :: SourcePos -> T.Region
+sp2Rg sp = T.Region (sp2lcp sp) (sp2lcp sp)
 
 -- | LineColPos to SourcePos
 lcp2sp :: LineColPos -> SourcePos
-lcp2sp (LineColPos l c _) = newPos "source.lua" l c
+lcp2sp (LineColPos l c _) = SourcePos "source.lua" (unsafePos $ fromIntegral l) (unsafePos $ fromIntegral c)
 
 -- | SourcePos to LineColPos
 sp2lcp :: SourcePos -> LineColPos
-sp2lcp !pos = LineColPos (sourceLine pos - 1) (sourceColumn pos - 1) 0
+sp2lcp !pos = LineColPos (fromIntegral (unPos $ sourceLine pos)) (fromIntegral (unPos $ sourceColumn pos)) 0
 
 -- | Get the source position
 pPos :: Parser LineColPos
@@ -41,11 +40,11 @@ underscore = char '_'
 
 -- | Parse the string until the end. Used in parseLineComment among others.
 pUntilEnd :: Parser String
-pUntilEnd = manyTill anyChar (lookAhead (endOfLine <|> const '\n' <$> eof))
+pUntilEnd = manyTill anyChar (lookAhead (eol <|> const "\n" <$> eof))
 
 -- | Whitespace parser.
 parseWhitespace :: Parser String
-parseWhitespace = many1 space <?> "whitespace"
+parseWhitespace = some spaceChar <?> "whitespace"
 
 -- | An escaped character of a single line string
 -- Takes the delimiter of the string as parameter
@@ -69,189 +68,189 @@ nestedString depth = do
     manyTill anyChar (try $ string endStr)
 
 -- | Parse Lua style comments
-parseLuaComment :: Parser Token
+parseLuaComment :: Parser T.Token
 parseLuaComment = do
     string "--"
     -- When a nested comment is started, it must be finished
-    startNested <- optionMaybe (try startNestedString)
+    startNested <- optional (try startNestedString)
 
     case startNested of
-        Nothing -> DashComment <$> pUntilEnd
+        Nothing -> T.DashComment <$> pUntilEnd
         Just depth -> do
             contents <- nestedString depth
-            return $ DashBlockComment (length depth) contents
+            return $ T.DashBlockComment (length depth) contents
 
 
 -- | Parse C-Style comments
-parseCComment :: Parser Token
+parseCComment :: Parser T.Token
 parseCComment = do
     char '/'
-    try (SlashComment <$ char '/' <*> pUntilEnd) <|>
-     SlashBlockComment <$ char '*' <*> manyTill anyChar (try (string "*/") <|> const "\n" <$> eof)
+    try (T.SlashComment <$ char '/' <*> pUntilEnd) <|>
+     T.SlashBlockComment <$ char '*' <*> manyTill anyChar (try (string "*/") <|> const "\n" <$> eof)
 
 -- | Parse any kind of comment.
-parseComment :: Parser Token
+parseComment :: Parser T.Token
 parseComment = parseLuaComment <|> parseCComment <?> "Comment"
 
 -- | Convert the result of the nestedString parser to a MultiLine string
-nestedStringToMLString :: String -> String -> Token
-nestedStringToMLString depth contents = MLString (showChar '[' . showString depth . showChar '[' . showString contents . showChar ']' . showString depth . showChar ']' $ "")
+nestedStringToMLString :: String -> String -> T.Token
+nestedStringToMLString depth contents = T.MLString (showChar '[' . showString depth . showChar '[' . showString contents . showChar ']' . showString depth . showChar ']' $ "")
 
 -- | Parse single line strings e.g. "sdf", 'werf'.
 parseLineString :: Char -> Parser String
 parseLineString c = concat <$ char c <*> many (escapedStringChar c) <* char c
 
 -- | Single and multiline strings.
-parseString :: Parser Token
-parseString = SQString <$> parseLineString '\'' <|>
-              DQString <$> parseLineString '"' <|> do
+parseString :: Parser T.Token
+parseString = T.SQString <$> parseLineString '\'' <|>
+              T.DQString <$> parseLineString '"' <|> do
                 depth <- startNestedString
                 nestedStringToMLString depth <$> nestedString depth <?> "String"
 
 -- | Parse any kind of number.
 -- Except for numbers that start with a '.'. That's handled by parseDots to solve ambiguity.
-parseNumber :: Parser Token
-parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pNumber) <*> option "" parseNumberSuffix) <?> "Number"
+parseNumber :: Parser T.Token
+parseNumber = T.TNumber <$> ((++) <$> (pHexadecimal <|> pNumber) <*> option "" parseNumberSuffix) <?> "Number"
     where
         pNumber :: Parser String
-        pNumber = (++) <$> many1 digit <*> option "" pDecimal
+        pNumber = (++) <$> some digitChar <*> option "" pDecimal
 
         pDecimal :: Parser String
-        pDecimal = (:) <$> char '.' <*> many digit
+        pDecimal = (:) <$> char '.' <*> many digitChar
 
         pHexadecimal :: Parser String
-        pHexadecimal = (++) <$> try (string "0x") <*> ((++) <$> many1 pHex <*> option "" pDecimal)
+        pHexadecimal = (++) <$> try (string "0x") <*> ((++) <$> some pHex <*> option "" pDecimal)
 
         pHex :: Parser Char
-        pHex = digit <|> oneOf ['a', 'b', 'c', 'd', 'e', 'f', 'A', 'B', 'C', 'D', 'E', 'F']
+        pHex = digitChar <|> oneOf ['a', 'b', 'c', 'd', 'e', 'f', 'A', 'B', 'C', 'D', 'E', 'F']
 
 -- Parse the suffix of a number
 parseNumberSuffix :: Parser String
 parseNumberSuffix = (\e s d -> e : s ++ d) <$> oneOf ['e', 'E', 'p', 'P']
             <*> option "" (string "+" <|> string "-")
-            <*> many1 digit
+            <*> some digitChar
 
 -- | Parse either a keyword or an identifier that starts with that keyword
-parseKeyword :: Token -> String -> Parser Token
+parseKeyword :: T.Token -> String -> Parser T.Token
 parseKeyword tok str = try (do
     string str
-    (\s -> Identifier (str ++ s)) <$> many1 (underscore <|> alphaNum) <|>
+    (\s -> T.Identifier (str ++ s)) <$> some (underscore <|> alphaNumChar) <|>
         return tok
     <?> "Keyword " ++ str)
 
 -- | Parse just an identifier.
 parseIdentifier :: Parser String
-parseIdentifier = (:) <$> (letter <|> underscore) <*> many allowed <?> "Identifier"
+parseIdentifier = (:) <$> (letterChar <|> underscore) <*> many allowed <?> "Identifier"
     where
-        allowed = letter <|> digit <|> underscore
+        allowed = letterChar <|> digitChar <|> underscore
 
 -- | Parse a label.
 parseLabel :: Parser String
 parseLabel = string "::" *> parseIdentifier <* string "::" <?> "Label"
 
 -- | Parse anything to do with dots. Indexaction (.), concatenation (..), varargs (...) or numbers that start with a dot
-parseDots :: Parser Token
+parseDots :: Parser T.Token
 parseDots = do
     char '.' -- first .
     try (do
         char '.' -- second .
-        try (VarArg <$ char '.') <|> -- third .
-            return Concatenate) <|>
+        try (T.VarArg <$ char '.') <|> -- third .
+            return T.Concatenate) <|>
 
         -- try to parse a number that starts with a .
         try (do
-            nums <- many1 digit
+            nums <- some digitChar
             suffix <- option "" parseNumberSuffix
-            return $ TNumber ('.' : (nums ++ suffix))
+            return $ T.TNumber ('.' : (nums ++ suffix))
             ) <|>
 
 
-        return Dot
+        return T.Dot
 
 -- | Parse any kind of token.
-parseToken :: Parser Token
+parseToken :: Parser T.Token
 parseToken =
-                Whitespace <$> parseWhitespace                  <|>
+                T.Whitespace <$> parseWhitespace                  <|>
                 -- Constants
                 try parseString                                 <|>
                 parseNumber                                     <|>
-                parseKeyword TTrue "true"                       <|>
-                parseKeyword TFalse "false"                     <|>
-                parseKeyword Nil "nil"                          <|>
-                parseKeyword Not "not"                          <|>
-                parseKeyword And "and"                          <|>
-                parseKeyword Or "or"                            <|>
-                parseKeyword Function "function"                <|>
-                parseKeyword Local "local"                      <|>
-                parseKeyword If "if"                            <|>
-                parseKeyword Then "then"                        <|>
-                parseKeyword Elseif "elseif"                    <|>
-                parseKeyword Else "else"                        <|>
-                parseKeyword For "for"                          <|>
-                parseKeyword In "in"                            <|>
-                parseKeyword Do "do"                            <|>
-                parseKeyword While "while"                      <|>
-                parseKeyword Until "until"                      <|>
-                parseKeyword Repeat "repeat"                    <|>
-                parseKeyword Continue "continue"                <|>
-                parseKeyword Break "break"                      <|>
-                parseKeyword Return "return"                    <|>
-                parseKeyword End "end"                          <|>
+                parseKeyword T.TTrue "true"                       <|>
+                parseKeyword T.TFalse "false"                     <|>
+                parseKeyword T.Nil "nil"                          <|>
+                parseKeyword T.Not "not"                          <|>
+                parseKeyword T.And "and"                          <|>
+                parseKeyword T.Or "or"                            <|>
+                parseKeyword T.Function "function"                <|>
+                parseKeyword T.Local "local"                      <|>
+                parseKeyword T.If "if"                            <|>
+                parseKeyword T.Then "then"                        <|>
+                parseKeyword T.Elseif "elseif"                    <|>
+                parseKeyword T.Else "else"                        <|>
+                parseKeyword T.For "for"                          <|>
+                parseKeyword T.In "in"                            <|>
+                parseKeyword T.Do "do"                            <|>
+                parseKeyword T.While "while"                      <|>
+                parseKeyword T.Until "until"                      <|>
+                parseKeyword T.Repeat "repeat"                    <|>
+                parseKeyword T.Continue "continue"                <|>
+                parseKeyword T.Break "break"                      <|>
+                parseKeyword T.Return "return"                    <|>
+                parseKeyword T.End "end"                          <|>
 
-                Identifier <$> parseIdentifier                  <|>
+                T.Identifier <$> parseIdentifier                  <|>
 
-                Semicolon  <$ char ';'                          <|>
+                T.Semicolon  <$ char ';'                          <|>
                 parseDots                                       <|>
 
                 try parseComment                                <|>
 
                 -- Operators
-                Plus <$ string "+"                              <|>
-                Minus <$ string "-"                             <|>
-                Multiply <$ string "*"                          <|>
-                Divide <$ string "/"                            <|>
-                Modulus <$ string "%"                           <|>
-                Power <$ string "^"                             <|>
-                TEq <$ try (string "==")                        <|>
-                Equals <$ string "="                            <|>
-                TNEq <$ string "~="                             <|>
-                TCNEq <$ try (string "!=")                      <|>
-                CNot <$ string "!"                              <|>
-                TLEQ <$ try (string "<=")                       <|>
-                TLT <$ string "<"                               <|>
-                TGEQ <$ try (string ">=")                       <|>
-                TGT <$ string ">"                               <|>
-                Label <$> try parseLabel                        <|>
-                Colon <$ string ":"                             <|>
-                Comma <$ string ","                             <|>
-                Hash <$ string "#"                              <|>
-                CAnd <$ string "&&"                             <|>
-                COr <$ string "||"                              <|>
+                T.Plus <$ string "+"                              <|>
+                T.Minus <$ string "-"                             <|>
+                T.Multiply <$ string "*"                          <|>
+                T.Divide <$ string "/"                            <|>
+                T.Modulus <$ string "%"                           <|>
+                T.Power <$ string "^"                             <|>
+                T.TEq <$ try (string "==")                        <|>
+                T.Equals <$ string "="                            <|>
+                T.TNEq <$ string "~="                             <|>
+                T.TCNEq <$ try (string "!=")                      <|>
+                T.CNot <$ string "!"                              <|>
+                T.TLEQ <$ try (string "<=")                       <|>
+                T.TLT <$ string "<"                               <|>
+                T.TGEQ <$ try (string ">=")                       <|>
+                T.TGT <$ string ">"                               <|>
+                T.Label <$> try parseLabel                        <|>
+                T.Colon <$ string ":"                             <|>
+                T.Comma <$ string ","                             <|>
+                T.Hash <$ string "#"                              <|>
+                T.CAnd <$ string "&&"                             <|>
+                T.COr <$ string "||"                              <|>
 
-                LRound <$ char '('                              <|>
-                RRound <$ char ')'                              <|>
-                LCurly <$ char '{'                              <|>
-                RCurly <$ char '}'                              <|>
-                LSquare <$ char '['                             <|>
-                RSquare <$ char ']'
+                T.LRound <$ char '('                              <|>
+                T.RRound <$ char ')'                              <|>
+                T.LCurly <$ char '{'                              <|>
+                T.RCurly <$ char '}'                              <|>
+                T.LSquare <$ char '['                             <|>
+                T.RSquare <$ char ']'
 
 
 -- | A thing of which the region is to be parsed
-annotated :: (Region -> a -> b) -> Parser a -> Parser b
-annotated f p = (\s t e -> f (Region s e) t) <$> pPos <*> p <*> pPos
+annotated :: (T.Region -> a -> b) -> Parser a -> Parser b
+annotated f p = (\s t e -> f (T.Region s e) t) <$> pPos <*> p <*> pPos
 
 -- | parse located MToken
-parseMToken :: Parser MToken
+parseMToken :: Parser T.MToken
 parseMToken =
   do
     start <- pPos
     tok <- parseToken
     end <- pPos
 
-    return $ MToken (Region start end) tok
+    return $ T.MToken (T.Region start end) tok
 
 -- | Parse a list of tokens and turn them into MTokens.
-parseTokens :: Parser [MToken]
+parseTokens :: Parser [T.MToken]
 parseTokens = many parseMToken
 
 -- | Parse the potential #!comment on the first line
@@ -260,5 +259,5 @@ parseHashBang :: Parser String
 parseHashBang = option "" (char '#' *> pUntilEnd)
 
 -- | Parse a string into MTokens.
-execParseTokens :: String -> Either ParseError [MToken]
+execParseTokens :: String -> Either (ParseError Char Dec) [T.MToken]
 execParseTokens = parse (parseHashBang *> parseTokens <* eof) "input"

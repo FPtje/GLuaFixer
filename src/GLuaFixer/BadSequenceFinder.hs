@@ -1,13 +1,12 @@
-module GLuaFixer.BadSequenceFinder (sequenceWarnings, checkFromString) where
+module GLuaFixer.BadSequenceFinder (sequenceWarnings) where
 
 
 import GLua.AG.PrettyPrint
 import GLua.AG.Token
 import GLua.PSParser
 import GLuaFixer.LintSettings
-import Text.Parsec
-import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
-import qualified GLua.PSLexer as PSL
+import Text.Megaparsec hiding (Token)
+import qualified Data.Set as Set
 
 -- | Satisfy for normal tokens
 pTSatisfy :: (Token -> Bool) -> AParser MToken
@@ -245,6 +244,10 @@ whiteSpaceStyleSequence opts = if not (lint_whitespaceStyle opts) then parserZer
         )
     )
 
+-- | Simple failure
+parserZero :: AParser a
+parserZero = failure Set.empty Set.empty Set.empty
+
 -- | Parser for all profanity
 profanitySequence :: LintSettings -> AParser String
 profanitySequence opts = if not (lint_profanity opts) then parserZero else const "Watch your profanity" <$> (
@@ -295,8 +298,3 @@ sequenceWarnings opts mts = case execAParser "source.lua" (badSequenceParser opt
     Left _ -> error "[Error] line 1, column 1: Sequence finding error! Report an issue!"
     Right warnings -> warnings
 
--- | Helper function: check from string
-checkFromString :: AParser a -> String -> Either ParseError a
-checkFromString p inp = do
-    lexed <- PSL.execParseTokens inp
-    execAParser "source.lua" p lexed

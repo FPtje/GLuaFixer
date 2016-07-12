@@ -7,8 +7,12 @@ import Text.PrettyPrint hiding (parens, brackets, braces)
 import GLua.TokenTypes
 import GLua.AG.Token
 import Data.Maybe
-import Text.Parsec
-import Text.Parsec.Error
+import Data.List (intercalate)
+import qualified Data.Set as Set
+import Text.Megaparsec hiding (Token)
+import Text.Megaparsec.Error
+
+import qualified Data.List.NonEmpty as NE
 }
 
 include "AST.ag"
@@ -48,6 +52,10 @@ defaultPPConfig = PPConfig {
     indentation = "    "
 }
 
+instance ShowToken MToken where
+    showTokens (x NE.:| [y]) = show x ++ ", " ++ show y
+    showTokens (x NE.:| xs) = show x ++ ", " ++ intercalate ", " (map show xs)
+
 metaDoc :: Maybe MToken -> Doc
 metaDoc (Just m) = zchr ':' <> tok m
 metaDoc Nothing  = empty
@@ -69,13 +77,13 @@ printEls (Just b) i = zeroWidthText "else" $+$ pp_block b i
 
 
 renderPos :: LineColPos -> String
-renderPos (LineColPos l c _) = "line " ++ show (succ l) ++ ", column " ++ show (succ c)
+renderPos (LineColPos l c _) = "line " ++ show l ++ ", column " ++ show c
 
 renderRegion :: Region -> String
 renderRegion (Region l r) = renderPos l ++ " - " ++ renderPos r
 
 renderSourcePos :: SourcePos -> String
-renderSourcePos sp = "line " ++ (show . succ . sourceLine $ sp) ++ ", column " ++ (show . succ . sourceColumn $ sp)
+renderSourcePos sp = "line " ++ (show . succ . unPos . sourceLine $ sp) ++ ", column " ++ (show . succ . unPos . sourceColumn $ sp)
 
 getMStatPos :: MStat -> String
 getMStatPos (MStat p _) = renderRegion p
@@ -104,12 +112,38 @@ render_expecting [a]    = "Parser expected a " ++ a
 render_expecting (a:as) = "Parser expected one of [" ++ a ++ concat (map (", " ++) as) ++ "]"
 render_expecting []     = "Parser expected nothing"
 
+showErrorPos :: NE.NonEmpty SourcePos -> String
+showErrorPos (p NE.:| _) = renderSourcePos p
 
-renderPSError :: ParseError -> String
-renderPSError ps = renderSourcePos (errorPos ps) ++ ":" ++ (map replNL . showErrorMessages "or" "unknown parse error" "expecting" "unexpected" "end of input" . errorMessages  $ ps)
-    where
-        replNL '\n' = ' '
-        replNL c = c
+renderPSError :: ( Ord t
+                    , ShowToken t
+                    , ShowErrorComponent e )
+  => ParseError t e    -- ^ Parse error to render
+  -> String            -- ^ Result of rendering
+renderPSError (ParseError pos us ps xs) =
+  showErrorPos pos ++ ": " ++
+  if Set.null us && Set.null ps && Set.null xs
+    then "unknown parse error"
+    else concat
+      [ messageItemsPretty "unexpected " us
+      , messageItemsPretty "expecting "  ps
+      , unlines (showErrorComponent <$> Set.toAscList xs) ]
+
+messageItemsPretty :: ShowErrorComponent a
+  => String            -- ^ Prefix to prepend
+  -> Set.Set a             -- ^ Collection of messages
+  -> String            -- ^ Result of rendering
+messageItemsPretty prefix ts
+  | Set.null ts = ""
+  | otherwise =
+    let f = orList . NE.fromList . Set.toAscList . Set.map showErrorComponent
+    in prefix ++ f ts ++ "\n"
+
+orList :: NE.NonEmpty String -> String
+orList (x NE.:| [])  = x
+orList (x NE.:| [y]) = x ++ " or " ++ y
+orList xs            = intercalate ", " (NE.init xs) ++ ", or " ++ NE.last xs
+
 
 -- | Render multiline comments
 renderMLComments :: PrettyPrintConfig -> Int -> [MToken] -> Doc

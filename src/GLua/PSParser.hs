@@ -1,86 +1,85 @@
 {-# LANGUAGE FlexibleInstances,
+             BangPatterns,
+             TypeFamilies,
              MultiParamTypeClasses #-}
 
 module GLua.PSParser where
 
 import GLua.TokenTypes
-import GLua.AG.Token
+import qualified GLua.AG.Token as T
 import GLua.AG.AST
 import qualified GLua.Lexer as Lex
 
-import Text.Parsec
-import Text.Parsec.Pos
+import qualified Data.Set as Set
+import Text.Megaparsec
+import Text.Megaparsec.Expr
 import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
-import Control.Monad.State
+import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 
-type AParser = Parsec [MToken] LineColPos
+type AParser = Parsec Dec [T.MToken]
 
+
+instance Stream [T.MToken] where
+  type Token [T.MToken] = T.MToken
+  uncons [] = Nothing
+  uncons (t:ts) = Just (t, ts)
+  {-# INLINE uncons #-}
+  updatePos _ _ _ (T.MToken rg _) = (lcp2sp $ rgStart rg, lcp2sp $ rgEnd rg)
+  {-# INLINE updatePos #-}
 
 -- | Execute a parser
-execAParser :: SourceName -> AParser a -> [MToken] -> Either ParseError a
-execAParser name p = runParser p (LineColPos 0 0 0) name
+execAParser :: String -> AParser a -> [T.MToken] -> Either (ParseError (Token [T.MToken]) Dec) a
+execAParser name p = runParser p name
 
 -- | Parse a string directly
-parseFromString :: AParser a -> String -> Either ParseError a
+parseFromString :: AParser a -> String -> Either (ParseError (Token [T.MToken]) Dec) a
 parseFromString p = execAParser "source.lua" p . filter (not . isWhitespace) . fst . Lex.execParseTokens
 
 -- | Parse Garry's mod Lua tokens to an abstract syntax tree.
 -- Also returns parse errors
-parseGLua :: [MToken] -> Either ParseError AST
+parseGLua :: [T.MToken] -> Either (ParseError (Token [T.MToken]) Dec) AST
 parseGLua mts = let (cms, ts) = splitComments . filter (not . isWhitespace) $ mts in
                  execAParser "source.lua" (parseChunk cms) ts
 
 -- | Region start to SourcePos
-rgStart2sp :: Region -> SourcePos
-rgStart2sp (Region start _) = lcp2sp start
+rgStart2sp :: T.Region -> SourcePos
+rgStart2sp (T.Region start _) = lcp2sp start
 
 -- | Region end to SourcePos
-rgEnd2sp :: Region -> SourcePos
-rgEnd2sp (Region _ end) = lcp2sp end
+rgEnd2sp :: T.Region -> SourcePos
+rgEnd2sp (T.Region _ end) = lcp2sp end
 
 -- | SourcePos to region
-sp2Rg :: SourcePos -> Region
-sp2Rg sp = Region (sp2lcp sp) (sp2lcp sp)
+sp2Rg :: SourcePos -> T.Region
+sp2Rg sp = T.Region (sp2lcp sp) (sp2lcp sp)
+
 
 -- | LineColPos to SourcePos
 lcp2sp :: LineColPos -> SourcePos
-lcp2sp (LineColPos l c _) = newPos "source.lua" l c
+lcp2sp (LineColPos l c _) = SourcePos "source.lua" (unsafePos $ fromIntegral l) (unsafePos $ fromIntegral c)
 
 -- | SourcePos to LineColPos
 sp2lcp :: SourcePos -> LineColPos
-sp2lcp pos = LineColPos (sourceLine pos) (sourceColumn pos) 0
+sp2lcp !pos = LineColPos (fromIntegral (unPos $ sourceLine pos)) (fromIntegral (unPos $ sourceColumn pos)) 0
 
--- | Update a SourcePos with an MToken
-updatePosMToken :: SourcePos -> MToken -> [MToken] -> SourcePos
-updatePosMToken _ (MToken p tok) [] = incSourceColumn (rgStart2sp p) (tokenSize tok)
-updatePosMToken _ _ (MToken p _ : _) = rgStart2sp p
+
+pMSatisfy :: (T.MToken -> Bool) -> AParser T.MToken
+pMSatisfy f = token testToken Nothing
+  where
+    testToken x =
+      if f x
+        then Right x
+        else Left (Set.singleton (Tokens (x :| [])), Set.empty, Set.empty)
+
 
 -- | Match a token
-pMTok :: Token -> AParser MToken
-pMTok tok =
-  do
-    let testMToken :: MToken -> Maybe MToken
-        testMToken mt@(MToken _ t) = if t == tok then Just mt else Nothing
+pMTok :: T.Token -> AParser T.MToken
+pMTok tok = pMSatisfy (\(T.MToken _ t) -> t == tok)
 
-    mt@(MToken pos _) <- tokenPrim show updatePosMToken testMToken
-
-    putState (rgEnd pos)
-
-    return mt
-
-
--- Tokens that satisfy a condition
-pMSatisfy :: (MToken -> Bool) -> AParser MToken
-pMSatisfy cond =
-  do
-    let testMToken :: MToken -> Maybe MToken
-        testMToken mt = if cond mt then Just mt else Nothing
-
-    mt@(MToken pos _) <- tokenPrim show updatePosMToken testMToken
-
-    putState (rgEnd pos)
-
-    return mt
+-- | Parse any token
+anyToken :: AParser T.MToken
+anyToken = pMSatisfy (const True)
 
 -- | Get the source position
 -- Simply gets the position of the next token
@@ -91,21 +90,25 @@ pPos = rgStart . mpos <$> lookAhead anyToken <|> sp2lcp <$> getPosition
 -- | Get the source position
 -- Simply gets the end position of the last parsed token
 pEndPos :: AParser LineColPos
-pEndPos = getState
+pEndPos =  -- getState
+  do
+    s <- getParserState
+    return $ sp2lcp $ NE.head $ statePos s -- TODO: is head correct?
+
 
 -- | A thing of which the region is to be parsed
-annotated :: (Region -> a -> b) -> AParser a -> AParser b
-annotated f p = (\s t e -> f (Region s e) t) <$> pPos <*> p <*> pEndPos
+annotated :: (T.Region -> a -> b) -> AParser a -> AParser b
+annotated f p = (\s t e -> f (T.Region s e) t) <$> pPos <*> p <*> pEndPos
 
 -- | Parses the full AST
 -- Its first parameter contains all comments
 -- Assumes the mtokens fed to the AParser have no comments
-parseChunk :: [MToken] -> AParser AST
+parseChunk :: [T.MToken] -> AParser AST
 parseChunk cms = AST cms <$> parseBlock <* eof
 
 -- | Parse a block with an optional return value
 parseBlock :: AParser Block
-parseBlock = Block <$> pInterleaved (pMTok Semicolon) parseMStat <*> (parseReturn <|> return NoReturn)
+parseBlock = Block <$> pInterleaved (pMTok T.Semicolon) parseMStat <*> (parseReturn <|> return NoReturn)
 
 parseMStat :: AParser MStat
 parseMStat = annotated MStat parseStat
@@ -116,31 +119,31 @@ pInterleaved sep q = many sep *> many (q <* many sep)
 
 -- | Parse a return value
 parseReturn :: AParser AReturn
-parseReturn = annotated AReturn (pMTok Return *> option [] parseExpressionList <* many (pMTok Semicolon) <?> "return statement")
+parseReturn = annotated AReturn (pMTok T.Return *> option [] parseExpressionList <* many (pMTok T.Semicolon) <?> "return statement")
 
 -- | Label
-parseLabel :: AParser MToken
+parseLabel :: AParser T.MToken
 parseLabel = pMSatisfy isLabel <?> "label"
     where
-        isLabel :: MToken -> Bool
-        isLabel (MToken _ (Label _)) = True
+        isLabel :: T.MToken -> Bool
+        isLabel (T.MToken _ (T.Label _)) = True
         isLabel _ = False
 
 -- | Parse a single statement
 parseStat :: AParser Stat
 parseStat = ALabel <$> parseLabel <|>
-            ABreak <$ pMTok Break <|>
-            AContinue <$ pMTok Continue <|>
-            ADo <$ pMTok Do <*> parseBlock <* pMTok End <|>
-            AWhile <$ pMTok While <*> parseExpression <* pMTok Do <*> parseBlock <* pMTok End <|>
-            ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseExpression <|>
+            ABreak <$ pMTok T.Break <|>
+            AContinue <$ pMTok T.Continue <|>
+            ADo <$ pMTok T.Do <*> parseBlock <* pMTok T.End <|>
+            AWhile <$ pMTok T.While <*> parseExpression <* pMTok T.Do <*> parseBlock <* pMTok T.End <|>
+            ARepeat <$ pMTok T.Repeat <*> parseBlock <* pMTok T.Until <*> parseExpression <|>
             parseIf <|>
             parseFunction <|>
             parseFor <|>
-            try (AGoto <$ pMTok (Identifier "goto") <*> pName) <|>
+            try (AGoto <$ pMTok (T.Identifier "goto") <*> pName) <|>
             parseDefinition <|>
             AFuncCall <$> pFunctionCall <|>
-            pMTok Local *>
+            pMTok T.Local *>
                 (parseLocalDefinition <|>
                 parseLocalFunction)
 
@@ -151,7 +154,7 @@ parseDefinition :: AParser Stat
 parseDefinition = flip (<?>) "variable definition" $ do
     vars <- try $ do
         vs <- parseVarList
-        pMTok Equals
+        pMTok T.Equals
         return vs
 
     exprs <- parseExpressionList
@@ -160,34 +163,34 @@ parseDefinition = flip (<?>) "variable definition" $ do
 
 -- | Local definition
 parseLocalDefinition :: AParser Stat
-parseLocalDefinition = def <$> parseLocalVarList <*> option [] (pMTok Equals *> parseExpressionList) <?> "variable declaration"
+parseLocalDefinition = def <$> parseLocalVarList <*> option [] (pMTok T.Equals *> parseExpressionList) <?> "variable declaration"
     where
         def :: [PrefixExp] -> [MExpr] -> Stat
         def ps exs = LocDef $ zip ps (map Just exs ++ repeat Nothing)
 
 -- | Global function definition
 parseFunction :: AParser Stat
-parseFunction = AFunc <$ pMTok Function <*> parseFuncName <*>
-                     between (pMTok LRound) (pMTok RRound) parseParList <*>
+parseFunction = AFunc <$ pMTok T.Function <*> parseFuncName <*>
+                     between (pMTok T.LRound) (pMTok T.RRound) parseParList <*>
                      parseBlock <*
-                     pMTok End <?> "function definition"
+                     pMTok T.End <?> "function definition"
 
 -- | Local function definition
 parseLocalFunction :: AParser Stat
-parseLocalFunction = ALocFunc <$ pMTok Function <*> parseLocFuncName <*>
-                     between (pMTok LRound) (pMTok RRound) parseParList <*>
+parseLocalFunction = ALocFunc <$ pMTok T.Function <*> parseLocFuncName <*>
+                     between (pMTok T.LRound) (pMTok T.RRound) parseParList <*>
                      parseBlock <*
-                     pMTok End <?> "local function definition"
+                     pMTok T.End <?> "local function definition"
 
 -- | Parse if then elseif then else end expressions
 parseIf :: AParser Stat
-parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
+parseIf = AIf <$ pMTok T.If <*> parseExpression <* pMTok T.Then <*>
             parseBlock <*>
             -- elseif
-            many ((,) <$ pMTok Elseif <*> parseExpression <* pMTok Then <*> parseBlock) <*>
+            many ((,) <$ pMTok T.Elseif <*> parseExpression <* pMTok T.Then <*> parseBlock) <*>
             -- else
-            optionMaybe (pMTok Else *> parseBlock) <*
-            pMTok End <?> "if statement"
+            optional (pMTok T.Else *> parseBlock) <*
+            pMTok T.End <?> "if statement"
 
 parseFor :: AParser Stat
 parseFor = parseNFor <|> parseGFor
@@ -197,32 +200,32 @@ parseNFor :: AParser Stat
 parseNFor = flip (<?>) "numeric for loop" $
     do
         name <- try $ do
-            pMTok For
+            pMTok T.For
             name <- pName
-            pMTok Equals
+            pMTok T.Equals
             return name
 
         start <- parseExpression
-        pMTok Comma
+        pMTok T.Comma
         to <- parseExpression
         st <- step
-        pMTok Do
+        pMTok T.Do
         blk <- parseBlock
-        pMTok End
+        pMTok T.End
 
         return $ ANFor name start to st blk
     where
         step :: AParser MExpr
-        step = pMTok Comma *> parseExpression <|> annotated MExpr (return (ANumber "1"))
+        step = pMTok T.Comma *> parseExpression <|> annotated MExpr (return (ANumber "1"))
 
 -- | Generic for loop
 parseGFor :: AParser Stat
-parseGFor = AGFor <$ pMTok For <*> parseNameList <* pMTok In <*> parseExpressionList <* pMTok Do <*> parseBlock <* pMTok End <?> "generic for loop"
+parseGFor = AGFor <$ pMTok T.For <*> parseNameList <* pMTok T.In <*> parseExpressionList <* pMTok T.Do <*> parseBlock <* pMTok T.End <?> "generic for loop"
 
--- | Function name (includes dot indices and meta indices)
+-- | T.Function name (includes dot indices and meta indices)
 parseFuncName :: AParser FuncName
-parseFuncName = (\a b c -> FuncName (a:b) c) <$> pName <*> many (pMTok Dot *> pName) <*>
-                option Nothing (Just <$ pMTok Colon <*> pName) <?> "function name"
+parseFuncName = (\a b c -> FuncName (a:b) c) <$> pName <*> many (pMTok T.Dot *> pName) <*>
+                option Nothing (Just <$ pMTok T.Colon <*> pName) <?> "function name"
 
 -- | Local function name: cannot be a meta function nor indexed
 parseLocFuncName :: AParser FuncName
@@ -230,62 +233,62 @@ parseLocFuncName = (\name -> FuncName [name] Nothing) <$> pName <?> "function na
 
 -- | Parse a number into an expression
 parseNumber :: AParser Expr
-parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pMSatisfy isNumber <?> "number"
+parseNumber = (\(T.MToken _ (T.TNumber str)) -> ANumber str) <$> pMSatisfy isNumber <?> "number"
     where
-        isNumber :: MToken -> Bool
-        isNumber (MToken _ (TNumber _)) = True
+        isNumber :: T.MToken -> Bool
+        isNumber (T.MToken _ (T.TNumber _)) = True
         isNumber _ = False
 
 -- | Parse any kind of string
-parseString :: AParser MToken
+parseString :: AParser T.MToken
 parseString = pMSatisfy isString <?> "string"
     where
-        isString :: MToken -> Bool
-        isString (MToken _ (DQString _)) = True
-        isString (MToken _ (SQString _)) = True
-        isString (MToken _ (MLString _)) = True
+        isString :: T.MToken -> Bool
+        isString (T.MToken _ (T.DQString _)) = True
+        isString (T.MToken _ (T.SQString _)) = True
+        isString (T.MToken _ (T.MLString _)) = True
         isString _ = False
 
 -- | Parse an identifier
-pName :: AParser MToken
+pName :: AParser T.MToken
 pName = pMSatisfy isName <?> "identifier"
     where
-        isName :: MToken -> Bool
-        isName (MToken _ (Identifier _)) = True
+        isName :: T.MToken -> Bool
+        isName (T.MToken _ (T.Identifier _)) = True
         isName _ = False
 
 -- | Parse a list of identifiers
-parseNameList :: AParser [MToken]
-parseNameList = sepBy1 pName (pMTok Comma)
+parseNameList :: AParser [T.MToken]
+parseNameList = sepBy1 pName (pMTok T.Comma)
 
 -- | Parse variable list (var1, var2, var3)
 parseVarList :: AParser [PrefixExp]
-parseVarList = sepBy1 parseVar (pMTok Comma)
+parseVarList = sepBy1 parseVar (pMTok T.Comma)
 
 -- | Parse local variable list (var1, var2, var3)
 parseLocalVarList :: AParser [PrefixExp]
-parseLocalVarList = sepBy1 (PFVar <$> pName <*> pure []) (pMTok Comma)
+parseLocalVarList = sepBy1 (PFVar <$> pName <*> pure []) (pMTok T.Comma)
 
 -- | Parse list of function parameters
-parseParList :: AParser [MToken]
+parseParList :: AParser [T.MToken]
 parseParList = option [] $ nameParam <|> vararg
     where
-        vararg = (:[]) <$> pMTok VarArg <?> "..."
+        vararg = (:[]) <$> pMTok T.VarArg <?> "..."
         nameParam = (:) <$> pName <*> moreParams <?> "parameter"
-        moreParams = option [] $ pMTok Comma *> (nameParam <|> vararg)
+        moreParams = option [] $ pMTok T.Comma *> (nameParam <|> vararg)
 
 -- | list of expressions
 parseExpressionList :: AParser [MExpr]
-parseExpressionList = sepBy1 parseExpression (pMTok Comma)
+parseExpressionList = sepBy1 parseExpression (pMTok T.Comma)
 
 -- | Subexpressions, i.e. without operators
 parseSubExpression :: AParser Expr
-parseSubExpression = ANil <$ pMTok Nil <|>
-                  AFalse <$ pMTok TFalse <|>
-                  ATrue <$ pMTok TTrue <|>
+parseSubExpression = ANil <$ pMTok T.Nil <|>
+                  AFalse <$ pMTok T.TFalse <|>
+                  ATrue <$ pMTok T.TTrue <|>
                   parseNumber <|>
                   AString <$> parseString <|>
-                  AVarArg <$ pMTok VarArg <|>
+                  AVarArg <$ pMTok T.VarArg <|>
                   parseAnonymFunc <|>
                   APrefixExpr <$> parsePrefixExp <|>
                   ATableConstructor <$> parseTableConstructor <?> "expression"
@@ -294,75 +297,100 @@ parseSubExpression = ANil <$ pMTok Nil <|>
 -- | Separate parser for anonymous function subexpression
 parseAnonymFunc :: AParser Expr
 parseAnonymFunc = AnonymousFunc <$
-                   pMTok Function <*
-                   pMTok LRound <*> parseParList <* pMTok RRound <*>
+                   pMTok T.Function <*
+                   pMTok T.LRound <*> parseParList <* pMTok T.RRound <*>
                    parseBlock <*
-                   pMTok End <?> "anonymous function"
-
--- | Parse operators of the same precedence in a chain
-samePrioL :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
-samePrioL ops pr = chainl1 pr (choice (map f ops))
-  where
-    f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
-    f (t, at) = annotated (\p _ e1 e2 -> MExpr p (BinOpExpr at e1 e2)) (pMTok t)
-
-samePrioR :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
-samePrioR ops pr = chainl1 pr (choice (map f ops))
-  where
-    f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
-    f (t, at) = annotated (\p _ e1 e2 -> MExpr p (BinOpExpr at e1 e2)) (pMTok t)
-
--- | Parse unary operator (-, not, #)
-parseUnOp :: AParser UnOp
-parseUnOp = UnMinus <$ pMTok Minus <|>
-            ANot    <$ pMTok Not   <|>
-            ANot    <$ pMTok CNot  <|>
-            AHash   <$ pMTok Hash
-
--- | Parses a binary operator
-parseBinOp :: AParser BinOp
-parseBinOp = const AOr          <$> pMTok Or           <|>
-             const AOr          <$> pMTok COr          <|>
-             const AAnd         <$> pMTok And          <|>
-             const AAnd         <$> pMTok CAnd         <|>
-             const ALT          <$> pMTok TLT          <|>
-             const AGT          <$> pMTok TGT          <|>
-             const ALEQ         <$> pMTok TLEQ         <|>
-             const AGEQ         <$> pMTok TGEQ         <|>
-             const ANEq         <$> pMTok TNEq         <|>
-             const ANEq         <$> pMTok TCNEq        <|>
-             const AEq          <$> pMTok TEq          <|>
-             const AConcatenate <$> pMTok Concatenate  <|>
-             const APlus        <$> pMTok Plus         <|>
-             const BinMinus     <$> pMTok Minus        <|>
-             const AMultiply    <$> pMTok Multiply     <|>
-             const ADivide      <$> pMTok Divide       <|>
-             const AModulus     <$> pMTok Modulus      <|>
-             const APower       <$> pMTok Power
-
--- | Operators, sorted by priority
--- Priority from: http://www.lua.org/manual/5.2/manual.html#3.4.7
-lvl1, lvl2, lvl3, lvl4, lvl5, lvl6, lvl8 :: [(Token, BinOp)]
-lvl1 = [(Or, AOr), (COr, AOr)]
-lvl2 = [(And, AAnd), (CAnd, AAnd)]
-lvl3 = [(TLT, ALT), (TGT, AGT), (TLEQ, ALEQ), (TGEQ, AGEQ), (TNEq, ANEq), (TCNEq, ANEq), (TEq, AEq)]
-lvl4 = [(Concatenate, AConcatenate)]
-lvl5 = [(Plus, APlus), (Minus, BinMinus)]
-lvl6 = [(Multiply, AMultiply), (Divide, ADivide), (Modulus, AModulus)]
--- lvl7 is unary operators
-lvl8 = [(Power, APower)]
+                   pMTok T.End <?> "anonymous function"
 
 
--- | Parse chains of binary and unary operators
 parseExpression :: AParser MExpr
-parseExpression =  samePrioL lvl1
-                  (samePrioL lvl2 $
-                   samePrioL lvl3 $
-                   samePrioR lvl4 $
-                   samePrioL lvl5 $
-                   samePrioL lvl6 $
-                   annotated MExpr (UnOpExpr <$> parseUnOp <*> parseExpression) <|> -- lvl7
-                   samePrioR lvl8 (annotated MExpr (parseSubExpression <|> UnOpExpr <$> parseUnOp <*> parseExpression))) <?> "expression"
+parseExpression =
+    makeExprParser
+        ((annotated MExpr parseSubExpression {-<|> UnOpExpr <$> parseUnOp <*> parseExpression-}) <?> "expression")
+        [ [binary T.Power APower]
+        , [prefix T.Minus UnMinus, prefix T.Not ANot, prefix T.CNot ANot, prefix T.Hash AHash]
+        , [binary T.Multiply AMultiply, binary T.Divide ADivide, binary T.Modulus AModulus]
+        , [binary T.Plus APlus, binary T.Minus BinMinus]
+        , [binary T.Concatenate AConcatenate]
+        , [binary T.TLT ALT, binary T.TGT AGT, binary T.TLEQ ALEQ, binary T.TGEQ AGEQ, binary T.TNEq ANEq, binary T.TCNEq ANEq, binary T.TEq AEq]
+        , [binary T.And AAnd, binary T.CAnd AAnd]
+        , [binary T.Or AOr, binary T.COr AOr]
+        ]
+
+-- Binary left associative operators
+binary :: T.Token -> BinOp -> Operator AParser MExpr
+binary name op =
+    InfixL ((\l@(MExpr rg _) r@(MExpr rg' _) -> MExpr (T.Region (rgStart rg) (rgEnd rg')) (BinOpExpr op l r)) <$ pMTok name)
+
+-- Prefix unary operator
+prefix :: T.Token -> UnOp -> Operator AParser MExpr
+prefix name op =
+    Prefix ((\(T.MToken rg _) e@(MExpr rg' _) -> MExpr (T.Region (rgStart rg) (rgEnd rg')) (UnOpExpr op e)) <$> pMTok name)
+
+---- | Parse operators of the same precedence in a chain
+--samePrioL :: [(T.Token, BinOp)] -> AParser MExpr -> AParser MExpr
+--samePrioL ops pr = _ pr (choice (map f ops))
+--  where
+--    f :: (T.Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
+--    f (t, at) = annotated (\p _ e1 e2 -> MExpr p (BinOpExpr at e1 e2)) (pMTok t)
+
+--samePrioR :: [(T.Token, BinOp)] -> AParser MExpr -> AParser MExpr
+--samePrioR ops pr = _ pr (choice (map f ops))
+--  where
+--    f :: (T.Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
+--    f (t, at) = annotated (\p _ e1 e2 -> MExpr p (BinOpExpr at e1 e2)) (pMTok t)
+
+---- | Parse unary operator (-, not, #)
+--parseUnOp :: AParser UnOp
+--parseUnOp = UnMinus <$ pMTok T.Minus <|>
+--            ANot    <$ pMTok T.Not   <|>
+--            ANot    <$ pMTok T.CNot  <|>
+--            AHash   <$ pMTok T.Hash
+
+---- | Parses a binary operator
+--parseBinOp :: AParser BinOp
+--parseBinOp = const AOr          <$> pMTok T.Or           <|>
+--             const AOr          <$> pMTok T.COr          <|>
+--             const AAnd         <$> pMTok T.And          <|>
+--             const AAnd         <$> pMTok T.CAnd         <|>
+--             const ALT          <$> pMTok T.TLT          <|>
+--             const AGT          <$> pMTok T.TGT          <|>
+--             const ALEQ         <$> pMTok T.TLEQ         <|>
+--             const AGEQ         <$> pMTok T.TGEQ         <|>
+--             const ANEq         <$> pMTok T.TNEq         <|>
+--             const ANEq         <$> pMTok T.TCNEq        <|>
+--             const AEq          <$> pMTok T.TEq          <|>
+--             const AConcatenate <$> pMTok T.Concatenate  <|>
+--             const APlus        <$> pMTok T.Plus         <|>
+--             const BinMinus     <$> pMTok T.Minus        <|>
+--             const AMultiply    <$> pMTok T.Multiply     <|>
+--             const ADivide      <$> pMTok T.Divide       <|>
+--             const AModulus     <$> pMTok T.Modulus      <|>
+--             const APower       <$> pMTok T.Power
+
+---- | Operators, sorted by priority
+---- Priority from: http://www.lua.org/manual/5.2/manual.html#3.4.7
+--lvl1, lvl2, lvl3, lvl4, lvl5, lvl6, lvl8 :: [(T.Token, BinOp)]
+--lvl1 = [(T.Or, AOr), (T.COr, AOr)]
+--lvl2 = [(T.And, AAnd), (T.CAnd, AAnd)]
+--lvl3 = [(T.TLT, ALT), (T.TGT, AGT), (T.TLEQ, ALEQ), (T.TGEQ, AGEQ), (T.TNEq, ANEq), (T.TCNEq, ANEq), (T.TEq, AEq)]
+--lvl4 = [(T.Concatenate, AConcatenate)]
+--lvl5 = [(T.Plus, APlus), (T.Minus, BinMinus)]
+--lvl6 = [(T.Multiply, AMultiply), (T.Divide, ADivide), (T.Modulus, AModulus)]
+---- lvl7 is unary operators
+--lvl8 = [(T.Power, APower)]
+
+
+---- | Parse chains of binary and unary operators
+--parseExpression :: AParser MExpr
+--parseExpression =  samePrioL lvl1
+--                  (samePrioL lvl2 $
+--                   samePrioL lvl3 $
+--                   samePrioR lvl4 $
+--                   samePrioL lvl5 $
+--                   samePrioL lvl6 $
+--                   annotated MExpr (UnOpExpr <$> parseUnOp <*> parseExpression) <|> -- lvl7
+--                   samePrioR lvl8 (annotated MExpr (parseSubExpression <|> UnOpExpr <$> parseUnOp <*> parseExpression))) <?> "expression"
 
 -- | Prefix expressions
 -- can have any arbitrary list of expression suffixes
@@ -373,7 +401,7 @@ parsePrefixExp = pPrefixExp (many pPFExprSuffix)
 -- The suffixes define rules on the allowed suffixes
 pPrefixExp :: AParser [PFExprSuffix] -> AParser PrefixExp
 pPrefixExp suffixes = PFVar <$> pName <*> suffixes <|>
-                      ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound <*> suffixes
+                      ExprVar <$ pMTok T.LRound <*> parseExpression <* pMTok T.RRound <*> suffixes
 
 -- | Parse any expression suffix
 pPFExprSuffix :: AParser PFExprSuffix
@@ -382,18 +410,18 @@ pPFExprSuffix = pPFExprCallSuffix <|> pPFExprIndexSuffix
 -- | Parse an indexing expression suffix
 pPFExprCallSuffix :: AParser PFExprSuffix
 pPFExprCallSuffix = Call <$> parseArgs <|>
-                    MetaCall <$ pMTok Colon <*> pName <*> parseArgs <?> "function call"
+                    MetaCall <$ pMTok T.Colon <*> pName <*> parseArgs <?> "function call"
 
 -- | Parse an indexing expression suffix
 pPFExprIndexSuffix :: AParser PFExprSuffix
-pPFExprIndexSuffix = ExprIndex <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <|>
-                     DotIndex <$ pMTok Dot <*> pName <?> "indexation"
+pPFExprIndexSuffix = ExprIndex <$ pMTok T.LSquare <*> parseExpression <* pMTok T.RSquare <|>
+                     DotIndex <$ pMTok T.Dot <*> pName <?> "indexation"
 
--- | Function calls are prefix expressions, but the last suffix MUST be either a function call or a metafunction call
+-- | T.Function calls are prefix expressions, but the last suffix MUST be either a function call or a metafunction call
 pFunctionCall :: AParser PrefixExp
 pFunctionCall = pPrefixExp suffixes <?> "function call"
     where
-        suffixes = concat <$> many1 ((\ix c -> ix ++ [c]) <$> many1 pPFExprIndexSuffix <*> pPFExprCallSuffix <|>
+        suffixes = concat <$> some ((\ix c -> ix ++ [c]) <$> some pPFExprIndexSuffix <*> pPFExprCallSuffix <|>
                                      (:[])                <$> pPFExprCallSuffix)
 
 -- | single variable. Note: definition differs from reference to circumvent the left recursion
@@ -402,18 +430,18 @@ pFunctionCall = pPrefixExp suffixes <?> "function call"
 parseVar :: AParser PrefixExp
 parseVar = pPrefixExp suffixes <?> "variable"
     where
-        suffixes = concat <$> many ((\c ix -> c ++ [ix]) <$> many1 pPFExprCallSuffix <*> pPFExprIndexSuffix <|>
+        suffixes = concat <$> many ((\c ix -> c ++ [ix]) <$> some pPFExprCallSuffix <*> pPFExprIndexSuffix <|>
                                     (:[])                <$> pPFExprIndexSuffix)
 
 -- | Arguments of a function call (including brackets)
 parseArgs :: AParser Args
-parseArgs = ListArgs <$ pMTok LRound <*> option [] parseExpressionList <* pMTok RRound <|>
+parseArgs = ListArgs <$ pMTok T.LRound <*> option [] parseExpressionList <* pMTok T.RRound <|>
             TableArg <$> parseTableConstructor <|>
             StringArg <$> parseString <?> "function arguments"
 
 -- | Table constructor
 parseTableConstructor :: AParser [Field]
-parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly <?> "table"
+parseTableConstructor = pMTok T.LCurly *> parseFieldList <* pMTok T.RCurly <?> "table"
 
 -- | A list of table entries
 -- Grammar: field {separator field} [separator]
@@ -426,7 +454,7 @@ parseNamedField :: AParser Field
 parseNamedField = do
     name <- try $ do
         n <- pName
-        pMTok Equals
+        pMTok T.Equals
         return n
 
     expr <- parseExpression
@@ -435,11 +463,11 @@ parseNamedField = do
 
 -- | A field in a table
 parseField :: AParser Field
-parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <|>
+parseField = ExprField <$ pMTok T.LSquare <*> parseExpression <* pMTok T.RSquare <* pMTok T.Equals <*> parseExpression <|>
              parseNamedField <|>
              UnnamedField <$> parseExpression <?> "field"
 
 -- | Field separator
-parseFieldSep :: AParser MToken
-parseFieldSep = pMTok Comma <|> pMTok Semicolon
+parseFieldSep :: AParser T.MToken
+parseFieldSep = pMTok T.Comma <|> pMTok T.Semicolon
 

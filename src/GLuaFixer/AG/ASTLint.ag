@@ -438,7 +438,7 @@ sem PrefixExp
         +warnings               = if not (lint_redundantParentheses @lhs.config) || not (null @suffixes.copy) || not @lhs.inParentheses then id else
                                     (:) $ warn @lhs.mtokenPos "Unnecessary parentheses"
 
-        +warnings               = if not (lint_redundantParentheses @lhs.config) || not (null @suffixes.copy) || @lhs.topLevel || not @expr.isSimpleExpression then id else
+        +warnings               = if not (lint_redundantParentheses @lhs.config) || not (null @suffixes.copy) || @lhs.topLevel || not @expr.isSimpleExpression || @lhs.inParentheses then id else
                                     (:) $ warn @lhs.mtokenPos "Unnecessary parentheses"
 
 sem PFExprSuffix
