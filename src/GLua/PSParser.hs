@@ -63,7 +63,7 @@ lcp2sp (LineColPos l c _) = SourcePos "source.lua" (unsafePos $ fromIntegral l) 
 sp2lcp :: SourcePos -> LineColPos
 sp2lcp !pos = LineColPos (fromIntegral (unPos $ sourceLine pos)) (fromIntegral (unPos $ sourceColumn pos)) 0
 
-
+-- | Satisfy primitive
 pMSatisfy :: (T.MToken -> Bool) -> AParser T.MToken
 pMSatisfy f = token testToken Nothing
   where
