@@ -82,7 +82,7 @@ type Indentation = String
 parseCLArgs :: Maybe Indentation -> [String] -> IO (Maybe LintSettings, [FilePath])
 parseCLArgs _ [] = return (Nothing, [])
 parseCLArgs ind ("--pretty-print" : _) = prettyPrint ind >> exitSuccess
-parseCLArgs _ ("--analyse-globals" : f : _) = analyseGlobals f >> exitSuccess
+parseCLArgs _ ("--analyse-globals" : fs) = analyseGlobals fs >> exitSuccess
 parseCLArgs _ ("--version" : _) = putStrLn version >> exitSuccess
 parseCLArgs ind ("--stdin" : xs) = do
                                  (sets, pths) <- parseCLArgs ind xs

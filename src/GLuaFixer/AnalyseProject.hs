@@ -32,8 +32,9 @@ analyseGlobalsFile lintSettings f =
           return $ M.map ((:[]) . GlobalAnalysis f) $ globalDefinitions lintSettings ast
 
 -- | Analyse the globals of a path
-analyseGlobals :: FilePath -> IO ()
-analyseGlobals f =
+analyseGlobals :: [FilePath] -> IO ()
+analyseGlobals [] = return ()
+analyseGlobals (f : fs) =
   do
     settings <- getSettings f
 
@@ -46,10 +47,12 @@ analyseGlobals f =
         globals <- mapM (analyseGlobalsFile settings) luaFiles
         let globals' = M.unionsWith (++) globals
         reportGlobals globals'
+        analyseGlobals fs
     else
       do
         globals <- analyseGlobalsFile settings f
         reportGlobals globals
+        analyseGlobals fs
 
 -- | Report found global variables
 reportGlobals :: M.Map String [GlobalAnalysis] -> IO ()
