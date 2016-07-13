@@ -7,6 +7,7 @@ import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 import GLuaFixer.Util
 
+import Data.Char (toLower)
 import GHC.Exts (sortWith)
 import qualified Data.Map as M
 import System.Directory (doesDirectoryExist)
@@ -59,7 +60,7 @@ reportGlobals :: M.Map String [GlobalAnalysis] -> IO ()
 reportGlobals globals =
   let
     globals' :: [(String, [GlobalAnalysis])]
-    globals' = M.toList $ M.map (sortWith ga_path) globals
+    globals' = sortWith (map toLower . fst ) $ M.toList $ M.map (sortWith ga_path) globals
 
     reportRegions :: [Region] -> IO ()
     reportRegions rgs =
