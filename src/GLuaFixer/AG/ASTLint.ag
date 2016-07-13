@@ -9,7 +9,9 @@ import qualified GLua.AG.PrettyPrint as PP
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 import Data.Maybe
+import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
+import GLuaFixer.Util
 
 import Debug.Trace
 }
@@ -20,8 +22,8 @@ include "../../GLua/AG/Token.ag"
 --  Helper functions
 ----------------------------------------
 {
-warn :: Region -> String -> String
-warn pos str = "[Warning] " ++ PP.renderRegion pos ++ ": " ++ str
+warn :: Region -> String -> String -> LintMessage
+warn pos str = LintWarning pos str
 
 -- Used in detecting "not (a == b)" kind of things
 oppositeBinOp :: BinOp -> Maybe String
@@ -34,7 +36,7 @@ oppositeBinOp AEq = Just "~="
 oppositeBinOp _ = Nothing
 
 -- Checks whether a variable shadows existing variables
-checkShadows :: [M.Map String (Bool, Region)] -> MToken -> Maybe String
+checkShadows :: [M.Map String (Bool, Region)] -> MToken -> Maybe (String -> LintMessage)
 checkShadows [] _ = Nothing
 checkShadows _ (MToken _ (Identifier "_")) = Nothing -- Exception for vars named '_'
 checkShadows (scope : scs) mtok = if M.member lbl scope then
@@ -97,9 +99,12 @@ attr Block
     inh isRepeat :: Bool -- Scopes should not be popped and certain errors are not to be thrown when this is the body of a repeat
 
 attr AllStuff MToken MTokenList Token TokenList Region
-    syn warnings use {++} {[]} :: {[String]}
+    syn warnings use {++} {[]} :: {[String -> LintMessage]}
     syn copy :: self
     syn identifier use {const} {"Unknown identifier"} :: String -- identifier of the first token
+
+attr Token TokenList
+    syn tokenWarnings use {++} {[]} :: {[String]}
 
 attr Block MStat MStatList AReturn
     syn statementCount use {+} {1} :: Int
@@ -153,14 +158,14 @@ sem Token
         lhs.identifier          = @lbl
     | Identifier
         lhs.identifier          = @ident
-        +warnings               = if @ident /= "goto" then id else
+        +tokenWarnings          = if @ident /= "goto" then id else
                                     (:) "Don't use 'goto', it will cause a syntax error in future versions of Lua."
 
 sem MToken
     | MToken
         lhs.mtokenPos           = @mpos.copy
         lhs.mtok                = @mtok.copy
-        lhs.warnings            = map (warn @mpos.copy) @mtok.warnings
+        lhs.warnings            = map (warn @mpos.copy) @mtok.tokenWarnings
         lhs.identifier          = @mtok.identifier
 
 sem MTokenList MStatList MExprList FieldList VarsList
@@ -487,7 +492,7 @@ sem Expr
         -- Wheter someone is doing "not (a == b)" or "not (a ~= b)"
         loc.stupidNegation      = oppositeBinOp @op.copy
         +warnings               = if not (lint_doubleNegations @lhs.config) || not @lhs.isNegation || isNothing @loc.stupidNegation then id else
-                                    (:) $ warn @lhs.mtokenPos "Silly negation. Use '" ++ fromJust @loc.stupidNegation ++ "'"
+                                    (:) $ warn @lhs.mtokenPos $ "Silly negation. Use '" ++ fromJust @loc.stupidNegation ++ "'"
     | UnOpExpr
         lhs.isSimpleExpression  = False
         right.isNegation        = @op.isNegation
@@ -518,7 +523,7 @@ sem Field
         value.inParentheses     = True
         value.topLevel          = True
         +warnings               = if not (lint_duplicateTableKeys @lhs.config) || not (S.member @key.mtok @lhs.fieldNames) then id else
-                                    (:) $ warn @key.mtokenPos "Duplicate key in table: '" ++ show @key.mtok ++ "'."
+                                    (:) $ warn @key.mtokenPos $ "Duplicate key in table: '" ++ show @key.mtok ++ "'."
     | UnnamedField
         value.isNegation        = False
         value.inParentheses     = True
@@ -551,7 +556,7 @@ inh_AST conf = Inh_AST {
 allAttributes :: LintSettings -> AST -> Syn_AST
 allAttributes conf p = wrap_AST (sem_AST p) (inh_AST conf)
 
-astWarnings :: LintSettings -> AST -> [String]
+astWarnings :: LintSettings -> AST -> [String -> LintMessage]
 astWarnings conf p = warnings_Syn_AST $ allAttributes conf p
 
 globalDefinitions :: LintSettings -> AST -> M.Map String [Region]

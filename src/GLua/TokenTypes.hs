@@ -17,6 +17,20 @@ instance Eq MToken where
 instance Ord MToken where
     compare (MToken _ t1) (MToken _ t2) = compare t1 t2
 
+instance Eq LineColPos where
+    (LineColPos l c p) == (LineColPos l' c' p') = l == l' && c == c' && p == p'
+
+instance Ord LineColPos where
+    compare (LineColPos l c _) (LineColPos l' c' _) =
+        compare l l' `mappend` compare c c'
+
+instance Eq Region where
+    Region s e == Region s' e' = s == s' && e == e'
+
+instance Ord Region where
+    compare (Region s e) (Region s' e') =
+        compare s s' `mappend` compare e e'
+
 -- | Metatoken algebra
 type MTokenAlgebra mtok = Region -> Token -> mtok
 

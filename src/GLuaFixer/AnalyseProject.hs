@@ -3,6 +3,7 @@ module GLuaFixer.AnalyseProject where
 import GLua.AG.PrettyPrint
 import GLua.AG.Token
 import GLuaFixer.AG.ASTLint
+import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 import GLuaFixer.Util
 
@@ -26,7 +27,7 @@ analyseGlobalsFile lintSettings f =
     contents <- readFile f
 
     case parseFile lintSettings f contents of
-      Left errs -> mapM_ putStrLn errs >> return M.empty
+      Left errs -> mapM_ print (sortLintMessages errs) >> return M.empty
       Right (_, ast) ->
           return $ M.map ((:[]) . GlobalAnalysis f) $ globalDefinitions lintSettings ast
 

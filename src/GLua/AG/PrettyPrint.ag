@@ -106,7 +106,7 @@ render_expecting []     = "Parser expected nothing"
 
 
 renderPSError :: ParseError -> String
-renderPSError ps = renderSourcePos (errorPos ps) ++ ":" ++ (map replNL . showErrorMessages "or" "unknown parse error" "expecting" "unexpected" "end of input" . errorMessages  $ ps)
+renderPSError ps = map replNL . showErrorMessages "or" "unknown parse error" "expecting" "unexpected" "end of input" . errorMessages $ ps
     where
         replNL '\n' = ' '
         replNL c = c

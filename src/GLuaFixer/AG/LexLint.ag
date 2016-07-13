@@ -14,6 +14,7 @@ import Data.List
 import GLua.TokenTypes
 import GLua.AG.Token
 import GLua.AG.PrettyPrint
+import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 }
 include "../../GLua/AG/Token.ag"
@@ -48,8 +49,8 @@ instance Monoid SyntaxUsed where
 syntaxInconsistency :: String -> String -> String
 syntaxInconsistency l c = "Inconsistent use of '" ++ l ++ "' and '" ++ c ++ "'"
 
-mTokenWarning :: Region -> String -> String
-mTokenWarning pos str = "[Warning] " ++ renderRegion pos ++ ": " ++ str
+mTokenWarning :: Region -> String -> String -> LintMessage
+mTokenWarning pos str = LintWarning pos str
 
 isSingleChar :: String -> Bool
 isSingleChar [] = True
@@ -78,7 +79,7 @@ attr MTokenList MToken Token TokenList Region
     syn copy :: self
     inh config :: LintSettings
 
-    syn warnings use {++} {[]} :: {[String]}
+    syn warnings use {++} {[]} :: {[String -> LintMessage]}
 
     chn lineCommentSyntax :: SyntaxUsed
     chn multilineCommentSyntax :: SyntaxUsed
@@ -91,8 +92,11 @@ attr MTokenList MToken Token TokenList Region
 
     chn nextTokenPos :: LineColPos
 
+attr Token TokenList
+    syn tokenWarnings use {++} {[]} :: {[String]}
+
 attr Token
-    syn customWarnings use {++} {[]} :: {[String]} -- Warnings where the position is modified
+    syn customWarnings use {++} {[]} :: {[String -> LintMessage]} -- Warnings where the position is modified
 
 ---------------------------------------
 --  Semantics
@@ -108,7 +112,7 @@ sem MToken
         loc.mpos = Region @lhs.nextTokenPos (customAdvanceToken @lhs.nextTokenPos @mtok.copy)
 
         -- Warnings from tokens
-        lhs.warnings = @mtok.customWarnings ++ map (mTokenWarning @loc.mpos) @mtok.warnings
+        lhs.warnings = @mtok.customWarnings ++ map (mTokenWarning @loc.mpos) @mtok.tokenWarnings
 
 sem Token
     | Whitespace
@@ -122,22 +126,22 @@ sem Token
         +customWarnings = if not (lint_whitespaceStyle @lhs.config) || (not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space)) then id else
                             (:) $ mTokenWarning (Region (fst @loc.whitespaceStart) @loc.whitespaceEnd) "Trailing whitespace"
 
-        +warnings = if not @loc.inconsistent then id else
-                        (:) "Inconsistent use of tabs and spaces for indentation"
+        +tokenWarnings = if not @loc.inconsistent then id else
+                            (:) "Inconsistent use of tabs and spaces for indentation"
 
     | DashComment
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.lineCommentSyntax)
         loc.lineCommentSyntax = SyntaxUsed @loc.consistent False -- When inconsistent, reset consistency check
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "--" "//"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "--" "//"
 
     | SlashComment
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.lineCommentSyntax)
         loc.lineCommentSyntax = SyntaxUsed False @loc.consistent
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "//" "--"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "//" "--"
 
 
     | DashBlockComment
@@ -145,16 +149,16 @@ sem Token
         lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @loc.str
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.multilineCommentSyntax)
         loc.multilineCommentSyntax = SyntaxUsed @loc.consistent False
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "--[[ ]]" "/* */"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "--[[ ]]" "/* */"
 
     | SlashBlockComment
         loc.str = showString "/*" . showString @comment . showString "*/" $ ""
         lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @loc.str
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.multilineCommentSyntax)
         loc.multilineCommentSyntax = SyntaxUsed False @loc.consistent
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "/* */" "--[[ ]]"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "/* */" "--[[ ]]"
 
     | Semicolon TNumber DQString SQString TTrue TFalse Nil VarArg Plus Minus Multiply Divide Modulus Power TEq TNEq TCNEq TLEQ TGEQ TLT TGT Equals Concatenate Colon Dot Comma Hash Not CNot And CAnd Or COr Function Local If Then Elseif Else For In Do While Until Repeat Continue Break Return End LRound RRound LCurly RCurly LSquare RSquare Identifier
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
@@ -162,14 +166,14 @@ sem Token
     | DQString
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.strSyntax)
         loc.strSyntax = SyntaxUsed @loc.consistent False
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "double quoted strings" "single quoted strings"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "double quoted strings" "single quoted strings"
 
     | SQString
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.strSyntax) || isSingleChar @str -- Allow single character ' ' strings
         loc.strSyntax = SyntaxUsed False (@loc.consistent && not (isSingleChar @str))
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "single quoted strings" "double quoted strings"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "single quoted strings" "double quoted strings"
 
     | MLString
         lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @str
@@ -177,50 +181,50 @@ sem Token
     | Not
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.notSyntax)
         loc.notSyntax = SyntaxUsed @loc.consistent False
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "not" "!"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "not" "!"
 
     | CNot
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.notSyntax)
         loc.notSyntax = SyntaxUsed False @loc.consistent
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "!" "not"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "!" "not"
 
     | And
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.andSyntax)
         loc.andSyntax = SyntaxUsed @loc.consistent False
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "and" "&&"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "and" "&&"
 
     | CAnd
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.andSyntax)
         loc.andSyntax = SyntaxUsed False @loc.consistent
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "&&" "and"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "&&" "and"
 
     | Or
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.orSyntax)
         loc.orSyntax = SyntaxUsed @loc.consistent False
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "or" "||"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "or" "||"
 
     | COr
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.orSyntax)
         loc.orSyntax = SyntaxUsed False @loc.consistent
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "||" "or"
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "||" "or"
 
     | TNEq
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.neqSyntax)
         loc.neqSyntax = SyntaxUsed @loc.consistent False
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "~=" "!="
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "~=" "!="
 
     | TCNEq
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.neqSyntax)
         loc.neqSyntax = SyntaxUsed False @loc.consistent
-        +warnings = if @loc.consistent then id else
-                        (:) $ syntaxInconsistency "!=" "~="
+        +tokenWarnings = if @loc.consistent then id else
+                            (:) $ syntaxInconsistency "!=" "~="
 
     | Label
         lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos (showString "::" . showString @lbl . showString "::" $ "")
@@ -243,7 +247,7 @@ inh_MTokenList conf =
                     nextTokenPos_Inh_MTokenList             = LineColPos 0 0 0
                  }
 
-lintWarnings        :: LintSettings -> [MToken] -> [String]
+lintWarnings        :: LintSettings -> [MToken] -> [String -> LintMessage]
 lintWarnings conf p = warnings_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) (inh_MTokenList conf))
 
 -- Necessary because uu-parsinglib parses tabs as 8 spaces
