@@ -1,9 +1,9 @@
 module GLuaFixer.BadSequenceFinder (sequenceWarnings) where
 
 
-import GLua.AG.PrettyPrint
 import GLua.AG.Token
 import GLua.PSParser
+import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 import Text.Megaparsec hiding (Token)
 import qualified Data.Set as Set
@@ -279,11 +279,11 @@ badSequence opts = deprecatedSequence opts          <|>
                     whiteSpaceStyleSequence opts
 
 -- | Creates a warning for a certain sequence at any position
-badSequenceWarning :: Region -> String -> [String] -> [String]
-badSequenceWarning pos wrn = (:) (showString "[Warning] " . showString (renderRegion pos) . showString ": " . showString wrn $ "")
+badSequenceWarning :: Region -> String -> [String -> LintMessage] -> [String -> LintMessage]
+badSequenceWarning pos wrn = (:) (LintWarning pos wrn)
 
 -- | Searches for all the bad sequences
-badSequenceParser :: LintSettings -> AParser [String]
+badSequenceParser :: LintSettings -> AParser [String -> LintMessage]
 badSequenceParser opts =
     -- A bad sequence
     annotated badSequenceWarning (badSequence opts) <*> badSequenceParser opts <|>
@@ -293,7 +293,7 @@ badSequenceParser opts =
     return []
 
 -- | Returns all the warnings for a lexicon
-sequenceWarnings :: LintSettings -> [MToken] -> [String]
+sequenceWarnings :: LintSettings -> [MToken] -> [String -> LintMessage]
 sequenceWarnings opts mts = case execAParser "source.lua" (badSequenceParser opts) mts of
     Left _ -> error "[Error] line 1, column 1: Sequence finding error! Report an issue!"
     Right warnings -> warnings

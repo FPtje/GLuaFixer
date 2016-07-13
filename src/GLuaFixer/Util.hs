@@ -5,6 +5,7 @@ import GLua.AG.PrettyPrint
 import qualified GLua.PSLexer as PSL
 import qualified GLua.PSParser as PSP
 import GLuaFixer.AG.LexLint
+import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 import GLuaFixer.BadSequenceFinder
 
@@ -14,10 +15,13 @@ import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory)
 import System.FilePath (takeDirectory, (</>), (<.>))
 import System.FilePath.Find (find, always, fileName, (~~?))
 import System.IO (openFile, hSetEncoding, utf8_bom, hGetContents, IOMode (..))
+import Text.Megaparsec.Error (errorPos)
 
 import Control.Applicative ((<|>))
 import Data.Aeson (eitherDecode)
 import Data.Maybe (fromJust)
+
+import qualified Data.List.NonEmpty as NE
 
 
 -- | Finds all Lua files in a folder
@@ -32,22 +36,23 @@ doReadFile f = do
     hGetContents handle
 
 -- | Parse a single file using parsec
-parseFile :: LintSettings -> FilePath -> String -> Either [String] ([String], AST)
+parseFile :: LintSettings -> FilePath -> String -> Either [LintMessage] ([LintMessage], AST)
 parseFile config f contents =
     case PSL.execParseTokens contents of
         Left lexErr ->
-            Left [f ++ ": [Error] " ++ renderPSError lexErr | lint_syntaxErrors config]
+            Left [LintError (PSL.sp2Rg $ NE.head $ errorPos lexErr) (renderPSError lexErr) f | lint_syntaxErrors config]
 
         Right tokens -> do
             let fixedTokens = fixedLexPositions tokens
-            let lexWarnings = map ((f ++ ": ") ++) (lintWarnings config fixedTokens ++ sequenceWarnings config fixedTokens)
+            let lexWarnings = map ($f) (lintWarnings config fixedTokens ++ sequenceWarnings config fixedTokens)
             let parsed = PSP.parseGLua fixedTokens
 
             case parsed of
                 Left err ->
                     -- Return syntax errors
-                    Left [f ++ ": [Error] " ++ renderPSError err | lint_syntaxErrors config]
-                Right ast -> Right (lexWarnings, ast)
+                    Left [LintError (PSL.sp2Rg $ NE.head $ errorPos err) (renderPSError err) f | lint_syntaxErrors config]
+                Right ast ->
+                    Right (lexWarnings, ast)
 
 
 -- | Read the settings from a file

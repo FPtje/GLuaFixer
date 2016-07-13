@@ -5,6 +5,7 @@ import GLua.Parser
 import GLuaFixer.AG.ASTLint
 import GLuaFixer.AG.DarkRPRewrite
 import GLuaFixer.AnalyseProject
+import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 import GLuaFixer.Util
 
@@ -36,16 +37,16 @@ prettyPrint ind = do
 
 
 -- | Lint a single file, using parsec
-lintFile :: LintSettings -> FilePath -> String -> [String]
+lintFile :: LintSettings -> FilePath -> String -> [LintMessage]
 lintFile config f contents =
     case parseFile config f contents of
         Left errs -> errs
         Right (lexWarnings, ast) ->
             let
-                parserWarnings = map ((f ++ ": ") ++) $ astWarnings config ast
+                parserWarnings = map ($f) $ astWarnings config ast
             in
                 -- Print all warnings
-                lexWarnings ++ parserWarnings
+                sortLintMessages $ lexWarnings ++ parserWarnings
 
 
 -- | Lint a set of files, uses parsec's parser library
@@ -64,11 +65,11 @@ lint ls (f : fs) = do
     else if f == "stdin" then do
         contents <- getContents
 
-        mapM_ putStrLn (lintFile config f contents)
+        mapM_ print (lintFile config f contents)
     else do
         contents <- doReadFile f
 
-        mapM_ putStrLn (lintFile config f contents)
+        mapM_ print (lintFile config f contents)
 
     -- Lint the other files
     lint ls fs
@@ -81,7 +82,7 @@ type Indentation = String
 parseCLArgs :: Maybe Indentation -> [String] -> IO (Maybe LintSettings, [FilePath])
 parseCLArgs _ [] = return (Nothing, [])
 parseCLArgs ind ("--pretty-print" : _) = prettyPrint ind >> exitSuccess
-parseCLArgs _ ("--analyse-globals" : f : _) = analyseGlobals f >> exitSuccess
+parseCLArgs _ ("--analyse-globals" : fs) = analyseGlobals fs >> exitSuccess
 parseCLArgs _ ("--version" : _) = putStrLn version >> exitSuccess
 parseCLArgs ind ("--stdin" : xs) = do
                                  (sets, pths) <- parseCLArgs ind xs

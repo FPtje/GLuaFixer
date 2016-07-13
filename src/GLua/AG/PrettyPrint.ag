@@ -121,7 +121,6 @@ renderPSError :: ( Ord t
   => ParseError t e    -- ^ Parse error to render
   -> String            -- ^ Result of rendering
 renderPSError (ParseError pos us ps xs) =
-  showErrorPos pos ++ ": " ++
   if Set.null us && Set.null ps && Set.null xs
     then "unknown parse error"
     else concat
@@ -143,7 +142,6 @@ orList :: NE.NonEmpty String -> String
 orList (x NE.:| [])  = x
 orList (x NE.:| [y]) = x ++ " or " ++ y
 orList xs            = intercalate ", " (NE.init xs) ++ ", or " ++ NE.last xs
-
 
 -- | Render multiline comments
 renderMLComments :: PrettyPrintConfig -> Int -> [MToken] -> Doc

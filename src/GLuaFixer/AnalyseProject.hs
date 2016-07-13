@@ -3,9 +3,11 @@ module GLuaFixer.AnalyseProject where
 import GLua.AG.PrettyPrint
 import GLua.AG.Token
 import GLuaFixer.AG.ASTLint
+import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 import GLuaFixer.Util
 
+import Data.Char (toLower)
 import GHC.Exts (sortWith)
 import qualified Data.Map as M
 import System.Directory (doesDirectoryExist)
@@ -26,13 +28,14 @@ analyseGlobalsFile lintSettings f =
     contents <- readFile f
 
     case parseFile lintSettings f contents of
-      Left errs -> mapM_ putStrLn errs >> return M.empty
+      Left errs -> mapM_ print (sortLintMessages errs) >> return M.empty
       Right (_, ast) ->
           return $ M.map ((:[]) . GlobalAnalysis f) $ globalDefinitions lintSettings ast
 
 -- | Analyse the globals of a path
-analyseGlobals :: FilePath -> IO ()
-analyseGlobals f =
+analyseGlobals :: [FilePath] -> IO ()
+analyseGlobals [] = return ()
+analyseGlobals (f : fs) =
   do
     settings <- getSettings f
 
@@ -45,17 +48,19 @@ analyseGlobals f =
         globals <- mapM (analyseGlobalsFile settings) luaFiles
         let globals' = M.unionsWith (++) globals
         reportGlobals globals'
+        analyseGlobals fs
     else
       do
         globals <- analyseGlobalsFile settings f
         reportGlobals globals
+        analyseGlobals fs
 
 -- | Report found global variables
 reportGlobals :: M.Map String [GlobalAnalysis] -> IO ()
 reportGlobals globals =
   let
     globals' :: [(String, [GlobalAnalysis])]
-    globals' = M.toList $ M.map (sortWith ga_path) globals
+    globals' = sortWith (map toLower . fst ) $ M.toList $ M.map (sortWith ga_path) globals
 
     reportRegions :: [Region] -> IO ()
     reportRegions rgs =
