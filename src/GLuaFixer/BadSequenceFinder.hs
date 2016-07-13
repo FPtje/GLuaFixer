@@ -1,12 +1,76 @@
+{-# LANGUAGE TypeFamilies, FlexibleInstances #-}
 module GLuaFixer.BadSequenceFinder (sequenceWarnings) where
 
 
 import GLua.AG.Token
-import GLua.PSParser
+import qualified GLua.TokenTypes as TT
+--import GLua.PSParser
 import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
-import Text.Megaparsec hiding (Token)
-import qualified Data.Set as Set
+--import Text.Megaparsec hiding (Token)
+--import Data.Attoparsec
+import Data.Attoparsec.Types
+import qualified Data.Attoparsec.Internal as I
+import qualified Data.Attoparsec.Internal.Types as T
+import Data.Attoparsec.Combinator
+
+type AParser = T.Parser [[MToken]]
+type instance T.State [[MToken]] = [MToken]
+
+type RegionalMessage = (String, Region)
+
+instance Chunk [[MToken]] where
+  type ChunkElem [[MToken]] = MToken
+
+  nullChunk [chunk] = null chunk
+  pappendChunk toks [ts] = ts ++ toks
+  atBufferEnd _ toks = T.Pos (length toks)
+  bufferElemAt _ (T.Pos pos) ts =
+    if length ts > pos then
+      Just (ts !! pos, 1)
+    else
+      Nothing
+  chunkElemToChar _ _ = 'a'--nus
+
+pMSatisfy :: (MToken -> Bool) -> AParser MToken
+pMSatisfy f =
+  do
+    tok : _ <- peekToken
+    if f tok then
+      advance 1 >> return tok
+    else
+      fail "satisfy"
+
+advance :: Int -> AParser ()
+advance n = T.Parser $ \t pos more _lose succc ->
+  succc t (pos + T.Pos n) more ()
+{-# INLINE advance #-}
+
+substring :: T.Pos -> T.Pos -> [MToken] -> [[MToken]]
+substring (T.Pos pos) (T.Pos n) mtoks = [take n $ drop pos mtoks]
+
+lengthAtLeast :: T.Pos -> Int -> [MToken] -> Bool
+lengthAtLeast (T.Pos pos) n bs = length bs >= pos + n
+
+ensureSuspended :: Int -> [MToken] -> T.Pos -> T.More
+                -> T.Failure [[MToken]] [MToken] r -- Failure r
+                -> T.Success [[MToken]] [MToken] [[MToken]] r -- Success MToken r
+                -> IResult [[MToken]] r -- Result r
+ensureSuspended n t pos more lose succc =
+    T.runParser (I.demandInput >> go) t pos more lose succc
+  where go = T.Parser $ \t' pos' more' lose' succ' ->
+          if lengthAtLeast pos' n t'
+          then succ' t' pos' more' (substring pos (T.Pos n) t')
+          else T.runParser (I.demandInput >> go) t' pos' more' lose' succ'
+
+-- | Match any token, to perform lookahead.  Does not consume any
+-- input, but will fail if end of input has been reached.
+peekToken :: AParser [MToken]
+peekToken = T.Parser $ \t pos@(T.Pos p) more lose succc ->
+    if lengthAtLeast pos 1 t
+    then succc t pos more (drop p t)
+    else let succ' t' pos' more' bs' = succc t' pos' more' $! head bs'
+         in ensureSuspended 1 t pos more lose succ'
 
 -- | Satisfy for normal tokens
 pTSatisfy :: (Token -> Bool) -> AParser MToken
@@ -14,6 +78,18 @@ pTSatisfy f = pMSatisfy f'
  where
     f' :: MToken -> Bool
     f' (MToken _ t) = f t
+
+pMTok :: Token -> AParser MToken
+pMTok t = pTSatisfy ((==) t)
+
+-- | A hint message with a region attached to it
+regionalMessage :: String -> MToken -> RegionalMessage
+regionalMessage txt tk = (txt, TT.mpos tk)
+
+-- | Prepend a text to a regional message
+prependMessage :: String -> RegionalMessage -> RegionalMessage
+prependMessage s (msg, rg) = (s ++ msg, rg)
+
 
 -- | Parse an identifier
 ident :: String -> AParser MToken
@@ -41,179 +117,178 @@ notWhitespace = pMSatisfy isNotWhitespace
     isNotWhitespace _ = True
 
 -- | Warnings for deprecated library functions
-libraryWarnings :: String -> AParser String -> AParser String
+libraryWarnings :: String -> AParser RegionalMessage -> AParser RegionalMessage
 libraryWarnings s p = do
-    ident s
+    MToken rg _ <- ident s
     pMTok Dot
 
-    p
+    (msg, rg') <- p
+    return (msg, Region (TT.rgStart rg) (TT.rgEnd rg'))
 
 -- | Warnings for the ai library
-aiWarnings :: AParser String
-aiWarnings = libraryWarnings "ai" $
-    const "The function is broken" <$> ident "GetScheduleID" <|>
-    const "The function is broken" <$> ident "GetTaskID"
+aiWarnings :: AParser RegionalMessage
+aiWarnings = libraryWarnings "ai" $ choice
+    [ regionalMessage "The function is broken" <$> ident "GetScheduleID"
+    , regionalMessage "The function is broken" <$> ident "GetTaskID"]
 
 -- | Warnings for the math library
-mathWarnings :: AParser String
-mathWarnings = libraryWarnings "math" $
-    const "Use math.Distance instead" <$> ident "Dist" <|>
-    const "Use math.fmod instead" <$> ident "mod"
+mathWarnings :: AParser RegionalMessage
+mathWarnings = libraryWarnings "math" $ choice
+    [ regionalMessage "Use math.Distance instead" <$> ident "Dist"
+    , regionalMessage "Use math.fmod instead" <$> ident "mod"]
 
 
 -- | Warnings for the spawnmenu library
-spawnmenuWarnings :: AParser String
-spawnmenuWarnings = libraryWarnings "spawnmenu" $
-    const "Use spawnmenu.SaveToTextFiles instead" <$> ident "DoSaveToTextFiles" <|>
-    const "Use spawnmenu.PopulateFromTextFiles instead" <$> ident "PopulateFromEngineTextFiles" <|>
-    const "The function is broken" <$> ident "SwitchToolTab"
+spawnmenuWarnings :: AParser RegionalMessage
+spawnmenuWarnings = libraryWarnings "spawnmenu" $ choice
+    [ regionalMessage "Use spawnmenu.SaveToTextFiles instead" <$> ident "DoSaveToTextFiles"
+    , regionalMessage "Use spawnmenu.PopulateFromTextFiles instead" <$> ident "PopulateFromEngineTextFiles"
+    , regionalMessage "The function is broken" <$> ident "SwitchToolTab"]
 
 -- | Warnings for the string library
-stringWarnings :: AParser String
-stringWarnings = libraryWarnings "string" $
-    const "Use either string.sub(str, index, index) or str[index]" <$> ident "GetChar" <|>
-    const "Use string.gmatch instead" <$> ident "gfind"
+stringWarnings :: AParser RegionalMessage
+stringWarnings = libraryWarnings "string" $ choice
+    [ regionalMessage "Use either string.sub(str, index, index) or str[index]" <$> ident "GetChar"
+    , regionalMessage "Use string.gmatch instead" <$> ident "gfind"]
 
 -- | Warnings for the surface library
-surfaceWarnings :: AParser String
-surfaceWarnings = libraryWarnings "libraryWarnings" $
-    const "Use ScrH instead" <$> ident "ScreenHeight" <|>
-    const "Use ScrW instead" <$> ident "ScreenWidth"
+surfaceWarnings :: AParser RegionalMessage
+surfaceWarnings = libraryWarnings "libraryWarnings" $ choice
+    [ regionalMessage "Use ScrH instead" <$> ident "ScreenHeight"
+    , regionalMessage "Use ScrW instead" <$> ident "ScreenWidth"]
 
 -- | Warnings for the table library
-tableWarnings :: AParser String
-tableWarnings = libraryWarnings "table" $
-    const "Use ipairs or something instead" <$> (
-        ident "FindNext" <|>
-        ident "FindPrev" <|>
-        ident "foreach"  <|>
-        ident "ForEach"  <|>
-        ident "foreachi"
-    ) <|>
-    const "Use next instead" <$> (
-        ident "GetFirstKey" <|>
-        ident "GetFirstValue"
-    ) <|>
-    const "Use #tbl instead"      <$> ident "GetLastKey"   <|>
-    const "Use tbl[#tbl] instead" <$> ident "GetLastValue" <|>
-    const "Use #tbl instead"      <$> ident "getn"
+tableWarnings :: AParser RegionalMessage
+tableWarnings = libraryWarnings "table" $ choice
+    [regionalMessage "Use ipairs or something instead" <$> choice
+        [ ident "FindNext"
+        , ident "FindPrev"
+        , ident "foreach"
+        , ident "ForEach"
+        , ident "foreachi"]
+    , regionalMessage "Use next instead" <$> choice
+        [ ident "GetFirstKey"
+        , ident "GetFirstValue"]
+    , regionalMessage "Use #tbl instead"      <$> ident "GetLastKey"
+    , regionalMessage "Use tbl[#tbl] instead" <$> ident "GetLastValue"
+    , regionalMessage "Use #tbl instead"      <$> ident "getn"]
 
 
 -- | Warnings for the timer library
-timerWarnings :: AParser String
-timerWarnings = libraryWarnings "timer" $
-    const "The function is broken" <$> ident "Check" <|>
-    const "Use timer.Remove instead" <$> ident "Destroy"
+timerWarnings :: AParser RegionalMessage
+timerWarnings = libraryWarnings "timer" $ choice
+    [ regionalMessage "The function is broken" <$> ident "Check"
+    , regionalMessage "Use timer.Remove instead" <$> ident "Destroy"]
 
 -- | Warnings for the umsg library
-umsgWarnings :: AParser String
+umsgWarnings :: AParser RegionalMessage
 umsgWarnings = libraryWarnings "umsg" $
-    const "Use net messages." <$> ident "Start"
+    regionalMessage "Use net messages." <$> ident "Start"
 
 -- | Warnings for the util library
-utilWarnings :: AParser String
-utilWarnings = libraryWarnings "util" $
-    const "Use tobool, without the util bit" <$> ident "tobool" <|>
-    const "The function is broken" <$> ident "TraceEntityHull"
+utilWarnings :: AParser RegionalMessage
+utilWarnings = libraryWarnings "util" $ choice
+    [ regionalMessage "Use tobool, without the util bit" <$> ident "tobool"
+    , regionalMessage "The function is broken" <$> ident "TraceEntityHull"]
 
 
 -- | Warnings for meta functions
-metaFuncWarnings :: AParser String
+metaFuncWarnings :: AParser RegionalMessage
 metaFuncWarnings = do
     pMTok Colon
 
     -- CLuaLocomotion functions
-    const  "Use :IsUsingLadder instead"                                     <$> ident "IsAscendingOrDescendingLadder"       <|>
+    choice [ regionalMessage  "Use :IsUsingLadder instead"                                     <$> ident "IsAscendingOrDescendingLadder"
 
      -- Panel functions
-     const "Use :GetPaintBackground instead"                                <$> ident "GetDrawBackground"                   <|>
-     const "Use :SetPaintBackground instead"                                <$> ident "SetDrawBackground"                   <|>
-     const "The function is broken"                                         <$> ident "AddText"                             <|>
-     const "Only used by deprecated Derma controls"                         <$> ident "PostMessage"                         <|>
-     const "Only used in deprecated Derma controls"                         <$> ident "SetActionFunction"                   <|>
-     const "Use :SetKeyboardInputEnabled instead"                           <$> ident "SetKeyBoardInputEnabled"             <|>
-     const "The function is broken"                                         <$> ident "SetPaintFunction"                    <|>
-     const "Use :SetTooltip instead, notice the lowercase fucking t"        <$> ident "SetToolTip"                          <|>
-     const "use :SetTooltipPanel instead, notice the lowercase fucking t"   <$> ident "SetToolTipPanel"                     <|>
-     const "Use :IsValid instead"                                           <$> ident "Valid"                               <|>
+     , regionalMessage "Use :GetPaintBackground instead"                                <$> ident "GetDrawBackground"
+     , regionalMessage "Use :SetPaintBackground instead"                                <$> ident "SetDrawBackground"
+     , regionalMessage "The function is broken"                                         <$> ident "AddText"
+     , regionalMessage "Only used by deprecated Derma controls"                         <$> ident "PostMessage"
+     , regionalMessage "Only used in deprecated Derma controls"                         <$> ident "SetActionFunction"
+     , regionalMessage "Use :SetKeyboardInputEnabled instead"                           <$> ident "SetKeyBoardInputEnabled"
+     , regionalMessage "The function is broken"                                         <$> ident "SetPaintFunction"
+     , regionalMessage "Use :SetTooltip instead, notice the lowercase fucking t"        <$> ident "SetToolTip"
+     , regionalMessage "use :SetTooltipPanel instead, notice the lowercase fucking t"   <$> ident "SetToolTipPanel"
+     , regionalMessage "Use :IsValid instead"                                           <$> ident "Valid"
 
      -- Entity functions
-     const "Use :GetHitBoxBone instead, note the capital fucking B"         <$> ident "GetHitboxBone"                       <|>
-     const "Use :GetNWAngle instead"                                        <$> ident "GetNetworkedAngle"                   <|>
-     const "Use :GetNWBool instead"                                         <$> ident "GetNetworkedBool"                    <|>
-     const "Use :GetNWEntity instead"                                       <$> ident "GetNetworkedEntity"                  <|>
-     const "Use :GetNWFloat instead"                                        <$> ident "GetNetworkedFloat"                   <|>
-     const "Use :GetNWInt instead"                                          <$> ident "GetNetworkedInt"                     <|>
-     const "Use :GetNWString instead"                                       <$> ident "GetNetworkedString"                  <|>
-     const "Use :GetNWVarProxy instead"                                     <$> ident "GetNetworkedVarProxy"                <|>
-     const "Use :GetNWVarTable instead"                                     <$> ident "GetNetworkedVarTable"                <|>
-     const "Use :GetNWVector instead"                                       <$> ident "GetNetworkedVector"                  <|>
-     const "The function is broken"                                         <$> ident "GetWorkshopID"                       <|>
-     --const "Use :SetParent instead"                                         <$> ident "SetAttachment"                       <|>
-     const "Use :SetNWAngle instead"                                        <$> ident "SetNetworkedAngle"                   <|>
-     const "Use :SetNWBool instead"                                         <$> ident "SetNetworkedBool"                    <|>
-     const "Use :SetNWEntity instead"                                       <$> ident "SetNetworkedEntity"                  <|>
-     const "Use :SetNWFloat instead"                                        <$> ident "SetNetworkedFloat"                   <|>
-     const "Use :SetNWInt instead"                                          <$> ident "SetNetworkedInt"                     <|>
-     const "Use :SetNWString instead"                                       <$> ident "SetNetworkedString"                  <|>
-     const "Use :SetNWVarProxy instead"                                     <$> ident "SetNetworkedVarProxy"                <|>
-     const "Use :SetNWVector instead"                                       <$> ident "SetNetworkedVector"                  <|>
+     , regionalMessage "Use :GetHitBoxBone instead, note the capital fucking B"         <$> ident "GetHitboxBone"
+     , regionalMessage "Use :GetNWAngle instead"                                        <$> ident "GetNetworkedAngle"
+     , regionalMessage "Use :GetNWBool instead"                                         <$> ident "GetNetworkedBool"
+     , regionalMessage "Use :GetNWEntity instead"                                       <$> ident "GetNetworkedEntity"
+     , regionalMessage "Use :GetNWFloat instead"                                        <$> ident "GetNetworkedFloat"
+     , regionalMessage "Use :GetNWInt instead"                                          <$> ident "GetNetworkedInt"
+     , regionalMessage "Use :GetNWString instead"                                       <$> ident "GetNetworkedString"
+     , regionalMessage "Use :GetNWVarProxy instead"                                     <$> ident "GetNetworkedVarProxy"
+     , regionalMessage "Use :GetNWVarTable instead"                                     <$> ident "GetNetworkedVarTable"
+     , regionalMessage "Use :GetNWVector instead"                                       <$> ident "GetNetworkedVector"
+     , regionalMessage "The function is broken"                                         <$> ident "GetWorkshopID"
+     --const "Use :SetParent instead"                                         <$> ident "SetAttachment"
+     , regionalMessage "Use :SetNWAngle instead"                                        <$> ident "SetNetworkedAngle"
+     , regionalMessage "Use :SetNWBool instead"                                         <$> ident "SetNetworkedBool"
+     , regionalMessage "Use :SetNWEntity instead"                                       <$> ident "SetNetworkedEntity"
+     , regionalMessage "Use :SetNWFloat instead"                                        <$> ident "SetNetworkedFloat"
+     , regionalMessage "Use :SetNWInt instead"                                          <$> ident "SetNetworkedInt"
+     , regionalMessage "Use :SetNWString instead"                                       <$> ident "SetNetworkedString"
+     , regionalMessage "Use :SetNWVarProxy instead"                                     <$> ident "SetNetworkedVarProxy"
+     , regionalMessage "Use :SetNWVector instead"                                       <$> ident "SetNetworkedVector"
 
      -- Player functions
-     const "Use :GetViewPunchAngles instead"                                <$> ident "GetPunchAngle"                       <|>
+     , regionalMessage "Use :GetViewPunchAngles instead"                                <$> ident "GetPunchAngle"
 
      -- Material functions
-     const "The function is broken"                                         <$> ident "SetShader"                           <|>
+     , regionalMessage "The function is broken"                                         <$> ident "SetShader"
 
      -- Vector functions
-     const "Use :Dot instead"                                               <$> ident "DotProduct"
+     , regionalMessage "Use :Dot instead"                                               <$> ident "DotProduct"]
 
 
 -- | Parser for all deprecated sequences of tokens
-deprecatedSequence :: LintSettings -> AParser String
-deprecatedSequence opts = if not (lint_deprecated opts) then parserZero else (++) "Deprecated: " <$> (
+deprecatedSequence :: LintSettings -> AParser RegionalMessage
+deprecatedSequence opts = if not (lint_deprecated opts) then fail "deprecated" else prependMessage "Deprecated: " <$> choice
 
     -- Deprecated meta functions
-    try metaFuncWarnings                                                                                        <|>
+    [ try metaFuncWarnings
 
     -- Library functions
-    try aiWarnings                                                                                              <|>
-    try mathWarnings                                                                                            <|>
-    try spawnmenuWarnings                                                                                       <|>
-    try stringWarnings                                                                                          <|>
-    try surfaceWarnings                                                                                         <|>
-    try tableWarnings                                                                                           <|>
-    try timerWarnings                                                                                           <|>
-    try umsgWarnings                                                                                            <|>
-    try utilWarnings                                                                                            <|>
+    , try aiWarnings
+    , try mathWarnings
+    , try spawnmenuWarnings
+    , try stringWarnings
+    , try surfaceWarnings
+    , try tableWarnings
+    , try timerWarnings
+    , try umsgWarnings
+    , try utilWarnings
 
     -- Global functions
-    const "Use collectgarbage(\"count\") instead"                   <$> ident "gcinfo"                          <|>
-    const "Use ConVar objects instead"                              <$> ident "GetConVarNumber"                 <|>
-    const "Use ConVar objects instead"                              <$> ident "GetConVarString"                 <|>
-    const "Use AddCSLuaFile in the file itself instead"             <$> ident "IncludeCS"                       <|>
-    const "Use ScreenScale instead"                                 <$> ident "SScale"                          <|>
-    const "Use IsUselessModel instead"                              <$> ident "UTIL_IsUselessModel"             <|>
-    const "Use IsValid instead"                                     <$> ident "ValidPanel"                      <|>
-    const "Use net messages."                                       <$> ident "SendUserMessage"                  )
+    , regionalMessage "Use collectgarbage(\"count\") instead"                   <$> ident "gcinfo"
+    , regionalMessage "Use ConVar objects instead"                              <$> ident "GetConVarNumber"
+    , regionalMessage "Use ConVar objects instead"                              <$> ident "GetConVarString"
+    , regionalMessage "Use AddCSLuaFile in the file itself instead"             <$> ident "IncludeCS"
+    , regionalMessage "Use ScreenScale instead"                                 <$> ident "SScale"
+    , regionalMessage "Use IsUselessModel instead"                              <$> ident "UTIL_IsUselessModel"
+    , regionalMessage "Use IsValid instead"                                     <$> ident "ValidPanel"
+    , regionalMessage "Use net messages."                                       <$> ident "SendUserMessage"]
 
 -- | Parser for all beginner mistakes
-beginnerMistakeSequence :: LintSettings -> AParser String
-beginnerMistakeSequence opts = if not (lint_beginnerMistakes opts) then parserZero else
-    try (const "There's little fucking reason to use ';' in the first place, don't use it twice in a row" <$> pMTok Semicolon <* pMTok Semicolon) <|>
-    try (const "The server already knows who sent the net message, use the first parameter of net.Receive" <$> do
+beginnerMistakeSequence :: LintSettings -> AParser RegionalMessage
+beginnerMistakeSequence opts = if not (lint_beginnerMistakes opts) then fail "beginner" else choice
+    [ try (regionalMessage "There's little fucking reason to use ';' in the first place, don't use it twice in a row" <$> pMTok Semicolon <* pMTok Semicolon)
+    , try (regionalMessage "The server already knows who sent the net message, use the first parameter of net.Receive" <$> do
         ident "net"
         pMTok Dot
         ident "WriteEntity"
         pMTok LRound
-        optional whitespace
+        option undefined whitespace
         ident "LocalPlayer"
-        optional whitespace
+        option undefined whitespace
         pMTok LRound
-        optional whitespace
+        option undefined whitespace
         pMTok RRound
-        ) <|>
-    try (const "Jesus christ fuck off already" <$> do
+        )
+    , try (regionalMessage "Jesus christ fuck off already" <$> do
         pMTok While
         whitespace
         pMTok TTrue
@@ -222,79 +297,94 @@ beginnerMistakeSequence opts = if not (lint_beginnerMistakes opts) then parserZe
         whitespace
         pMTok End
         )
+    ]
 
-whiteSpaceStyleSequence :: LintSettings -> AParser String
-whiteSpaceStyleSequence opts = if not (lint_whitespaceStyle opts) then parserZero else (++) "Style: " <$> (
-    try (const "Please put some whitespace after 'if'" <$> pMTok If <* notFollowedBy whitespace)            <|>
-    try (const "Please put some whitespace after 'elseif'" <$> pMTok Elseif <* notFollowedBy whitespace)    <|>
-    try (const "Please put some whitespace after 'while'" <$> pMTok While <* notFollowedBy whitespace)      <|>
-    try (const "Please put some whitespace after 'until'" <$> pMTok Until <* notFollowedBy whitespace)      <|>
+whiteSpaceStyleSequence :: LintSettings -> AParser RegionalMessage
+whiteSpaceStyleSequence opts = if not (lint_whitespaceStyle opts) then fail "style" else prependMessage "Style: " <$> choice
+    [ try (regionalMessage "Please put some whitespace after 'if'" <$> pMTok If <* notWhitespace)
+    , try (regionalMessage "Please put some whitespace after 'elseif'" <$> pMTok Elseif <* notWhitespace)
+    , try (regionalMessage "Please put some whitespace after 'while'" <$> pMTok While <* notWhitespace)
+    , try (regionalMessage "Please put some whitespace after 'until'" <$> pMTok Until <* notWhitespace)
 
-    try (const "Please put some whitespace after ')'" <$> do
+    , try (regionalMessage "Please put some whitespace after ')'" <$> do
         pMTok RRound
         pTSatisfy (\t -> not (isWhitespace t) && t `notElem` [Colon, RRound, LRound, LSquare, RSquare, LCurly, RCurly, Comma, Dot, Semicolon])
-        ) <|>
-    try (const "Please put some whitespace before the operator" <$> do
+        )
+    , try (regionalMessage "Please put some whitespace before the operator" <$> do
         notWhitespace
         choice [pMTok Plus, pMTok Multiply, pMTok Divide, pMTok Modulus, pMTok TEq, pMTok TNEq, pMTok TCNEq, pMTok TLEQ, pMTok TGEQ, pMTok TLT, pMTok TGT, pMTok Equals, pMTok Concatenate, pMTok And, pMTok CAnd, pMTok Or, pMTok COr]
-        ) <|>
-    try (const "Please put some whitespace after the operator" <$> do
+        )
+    , try (regionalMessage "Please put some whitespace after the operator" <$> do
         choice [pMTok Plus, pMTok Multiply, pMTok Divide, pMTok Modulus, pMTok TEq, pMTok TNEq, pMTok TCNEq, pMTok TLEQ, pMTok TGEQ, pMTok TLT, pMTok TGT, pMTok Equals, pMTok Concatenate, pMTok And, pMTok CAnd, pMTok Or, pMTok COr]
         notWhitespace
         )
-    )
+    ]
 
 -- | Simple failure
-parserZero :: AParser a
-parserZero = failure Set.empty Set.empty Set.empty
+--parserZero :: AParser a
+--parserZero = failure Set.empty Set.empty Set.empty
 
 -- | Parser for all profanity
-profanitySequence :: LintSettings -> AParser String
-profanitySequence opts = if not (lint_profanity opts) then parserZero else const "Watch your profanity" <$> (
-    ident "anus"                    <|>
-    ident "bitch"                   <|>
-    ident "cock"                    <|>
-    ident "cocks"                   <|>
-    ident "cunt"                    <|>
-    ident "dick"                    <|>
-    ident "dicks"                   <|>
-    ident "fuck"                    <|>
-    ident "fucking"                 <|>
-    ident "goddamnit"               <|>
-    ident "knob"                    <|>
-    ident "knobs"                   <|>
-    ident "motherfucker"            <|>
-    ident "nigger"                  <|>
-    ident "niggers"                 <|>
-    ident "niggertits"              <|>
-    ident "nipple"                  <|>
-    ident "shit"
-    )
+profanitySequence :: LintSettings -> AParser RegionalMessage
+profanitySequence opts = if not (lint_profanity opts) then fail "no profanity" else regionalMessage "Watch your profanity" <$> choice
+    [ ident "anus"
+    , ident "bitch"
+    , ident "cock"
+    , ident "cocks"
+    , ident "cunt"
+    , ident "dick"
+    , ident "dicks"
+    , ident "fuck"
+    , ident "fucking"
+    , ident "goddamnit"
+    , ident "knob"
+    , ident "knobs"
+    , ident "motherfucker"
+    , ident "nigger"
+    , ident "niggers"
+    , ident "niggertits"
+    , ident "nipple"
+    , ident "shit"
+    ]
 
 -- | Parses for any bad sequence
-badSequence :: LintSettings -> AParser String
-badSequence opts = deprecatedSequence opts          <|>
-                    profanitySequence opts          <|>
-                    beginnerMistakeSequence opts    <|>
-                    whiteSpaceStyleSequence opts
+badSequence :: LintSettings -> AParser RegionalMessage
+badSequence opts = choice
+  [ deprecatedSequence opts
+  , profanitySequence opts
+  , beginnerMistakeSequence opts
+  , whiteSpaceStyleSequence opts]
 
--- | Creates a warning for a certain sequence at any position
-badSequenceWarning :: Region -> String -> [String -> LintMessage] -> [String -> LintMessage]
-badSequenceWarning pos wrn = (:) (LintWarning pos wrn)
+-- | Add a warning for a bad sequence
+badSequenceWarning :: RegionalMessage -> [String -> LintMessage] -> [String -> LintMessage]
+badSequenceWarning (msg, rg) = (:) (LintWarning rg msg)
 
 -- | Searches for all the bad sequences
 badSequenceParser :: LintSettings -> AParser [String -> LintMessage]
-badSequenceParser opts =
+badSequenceParser opts = choice
     -- A bad sequence
-    annotated badSequenceWarning (badSequence opts) <*> badSequenceParser opts <|>
+    [ badSequenceWarning <$> badSequence opts <*> badSequenceParser opts
     -- Continue searching
-    anyToken *> badSequenceParser opts <|>
+    , advance 1 *> badSequenceParser opts
     -- end of input
-    return []
+    , return []
+    ]
+
+
+successK :: T.Success [[MToken]] [MToken] r r
+successK t (T.Pos pos) _more = T.Done [drop pos t]
+
+failK :: T.Failure [[MToken]] [MToken] r
+failK t (T.Pos pos) _more = T.Fail [drop pos t]
 
 -- | Returns all the warnings for a lexicon
 sequenceWarnings :: LintSettings -> [MToken] -> [String -> LintMessage]
-sequenceWarnings opts mts = case execAParser "source.lua" (badSequenceParser opts) mts of
-    Left _ -> error "[Error] line 1, column 1: Sequence finding error! Report an issue!"
-    Right warnings -> warnings
+sequenceWarnings opts mts =
+  --case T.runParser (badSequenceParser opts) mts (T.Pos 0) T.Complete (\t (T.Pos pos) _ stack msg -> T.Fail _ stack msg) (\t (T.Pos pos) _ a -> T.Done _ a) of
+  case T.runParser (badSequenceParser opts) mts (T.Pos 0) T.Complete failK successK of
+    T.Fail _ _ _ -> error "[Error] line 1, column 1: Sequence finding error! Report an issue!"
+    T.Done _ res -> res
+    --case execAParser "source.lua" (badSequenceParser opts) mts of
+    --Left _ -> error "[Error] line 1, column 1: Sequence finding error! Report an issue!"
+    --Right warnings -> warnings
 
