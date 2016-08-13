@@ -17,7 +17,7 @@ import System.Exit (exitWith, exitSuccess, ExitCode (..))
 
 
 version :: String
-version = "1.8.1"
+version = "1.9.0"
 
 
 -- | Pretty print, uses the uu-parsinglib library
