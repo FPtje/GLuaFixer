@@ -93,6 +93,9 @@ before (Region _ (LineColPos _ _ p)) (Region (LineColPos _ _ p') _ ) = p < p'
 beforeOrOnLine :: Region -> Region -> Bool
 beforeOrOnLine (Region _ (LineColPos l _ _)) (Region (LineColPos l' _ _) _) = l <= l'
 
+beforeEnd :: Region -> Region -> Bool
+beforeEnd (Region _ (LineColPos _ _ p)) (Region _ (LineColPos _ _ p')) = p < p'
+
 renderError :: Error LineColPos -> String
 renderError (Inserted str pos strs)       = renderPos pos ++ ": Inserted '" ++ str ++ "'." ++ render_expecting strs
 renderError (Deleted str pos strs)        = renderPos pos ++ ": Removed '" ++ str ++ "'. " ++render_expecting strs
@@ -221,6 +224,9 @@ attr Block AReturn Stat MStat MStatList
 attr ElseIfList Else
     syn elsesExist use {||} {False} :: Bool
 
+attr Stat Block MStatList Else Expr
+    inh statRegion :: Region
+
 sem MStatList
     | Cons
                  lhs.isMultiline = @hd.isMultiline
@@ -237,11 +243,15 @@ sem MStatList
                  tl.isHead  = False
                  hd.isLastStatement = @tl.isLast
                  lhs.isLast = False
-    | Nil        lhs.pretty = empty
+    | Nil        lhs.pretty = @loc.renderedComments
                  lhs.statementCount = 0
+                 loc.renderedComments = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBeforeEnd)
+                 loc.commentsBeforeEnd = span (\(MToken pos tok) -> pos `beforeEnd` @lhs.statRegion) @lhs.comments
+                 lhs.comments = snd @loc.commentsBeforeEnd
 
 sem MStat
     | MStat      lhs.pos    = @pos
+                 stat.statRegion = @pos
 
 sem MExprList
     | Cons       lhs.pretty = (if @lhs.isHead then empty else @loc.comma) <> @hd.pretty <> @tl.pretty
@@ -306,6 +316,7 @@ sem VarsList
 sem ElseIf
     | Tuple     lhs.pretty = zeroWidthText "elseif" <-> @x1.pretty <-> zeroWidthText "then" $+$ @x2.pretty
                 x2.indent = @lhs.indent + 1
+                x2.statRegion = emptyRg
 
 sem ElseIfList
     | Cons      lhs.pretty = indent @lhs.ppconf @lhs.indent @hd.pretty $+$ @tl.pretty
@@ -326,6 +337,7 @@ sem AST
     | AST       lhs.pretty = @chunk.pretty $+$ @loc.prettyComments
                 loc.prettyComments = renderMLComments @lhs.ppconf @lhs.indent @chunk.comments
                 chunk.comments = @comments
+                chunk.statRegion = emptyRg
 
 sem Block
     | Block      loc.newl = if @stats.statementCount > 0 && @ret.hasBreaking then zchr '\n' else empty
@@ -422,6 +434,7 @@ sem PFExprSuffix
 
 sem MExpr
     | MExpr             lhs.pos    = @pos
+                        expr.statRegion = @pos
 
 sem Expr
     | ANil              lhs.pretty = zeroWidthText "nil"
@@ -486,7 +499,7 @@ sem UnOp
 {
 
 pp_block :: Block -> Int -> Doc
-pp_block p i = pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] i defaultPPConfig))
+pp_block p i = pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] i defaultPPConfig emptyRg))
 
 pp_mstat :: MStat -> Int -> Doc
 pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] i False defaultPPConfig))
@@ -510,10 +523,10 @@ prettyprintConf :: PrettyPrintConfig -> AST -> String
 prettyprintConf conf p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0 conf))
 
 renderBlock        :: Block -> String
-renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] 0 defaultPPConfig))
+renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] 0 defaultPPConfig emptyRg))
 
 renderStat         :: Stat -> String
-renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat [] 0 False defaultPPConfig))
+renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat [] 0 False defaultPPConfig emptyRg))
 
 renderMStat         :: MStat -> String
 renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] 0 False defaultPPConfig))
@@ -528,7 +541,7 @@ renderPrefixExp    :: PrefixExp -> String
 renderPrefixExp p  = render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 defaultPPConfig))
 
 renderExpr         :: Expr -> String
-renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) (Inh_Expr [] 0 defaultPPConfig))
+renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) (Inh_Expr [] 0 defaultPPConfig emptyRg))
 
 renderMExpr         :: MExpr -> String
 renderMExpr p       = render $ pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 defaultPPConfig))
