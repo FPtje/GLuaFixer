@@ -19,24 +19,36 @@ import qualified Data.ListLike as LL
 -- | MTokens with the positions of the next MToken (used in the advance of parser)
 data MTokenPos = MTokenPos MToken Region
 
+data RegionProgression =
+  RegionProgression {lastRegion :: Region, nextRegion :: Region}
+  deriving (Show)
+
+emptyRgPrgs :: RegionProgression
+emptyRgPrgs = RegionProgression emptyRg emptyRg
+
 instance Show MTokenPos where
   show (MTokenPos tok _) = show tok
 
 -- | Custom parser that parses MTokens
-type AParser a = forall state. (IsLocationUpdatedBy Region MTokenPos, LL.ListLike state MTokenPos) => P (Str MTokenPos state Region) a
+type AParser a = forall state. (IsLocationUpdatedBy RegionProgression MTokenPos, LL.ListLike state MTokenPos) => P (Str MTokenPos state RegionProgression) a
 
--- | Region is a location that can be updated by MTokens
-instance IsLocationUpdatedBy Region MTokenPos where
-    -- advance :: Region -> MToken -> Region
+-- | RegionProgression is a location that can be updated by MTokens
+instance IsLocationUpdatedBy RegionProgression MTokenPos where
+    -- advance :: RegionProgression -> MToken -> RegionProgression
     -- Assume the position of the next MToken
-    advance _ (MTokenPos _ p) = p
+    advance _ (MTokenPos mt p) = RegionProgression (mpos mt) p
 
+resultsToRegion :: (a, [Error RegionProgression]) -> (a, [Error Region])
+resultsToRegion (a, errs) = (a, map errorToRegion errs)
 
 -- | Parse Garry's mod Lua tokens to an abstract syntax tree.
 -- Also returns parse errors
 parseGLua :: [MToken] -> (AST, [Error Region])
-parseGLua mts = let (cms, ts) = splitComments . filter (not . isWhitespace) $ mts in
-                 execAParser (parseChunk cms) ts
+parseGLua mts =
+  let
+    (cms, ts) = splitComments . filter (not . isWhitespace) $ mts
+  in
+    resultsToRegion $ execAParser (parseChunk cms) ts
 
 -- | Parse a string directly into an AST
 parseGLuaFromString :: String -> (AST, [Error Region])
@@ -44,19 +56,32 @@ parseGLuaFromString = parseGLua . filter (not . isWhitespace) . fst . Lex.execPa
 
 -- | Parse a string directly
 parseFromString :: AParser a -> String -> (a, [Error Region])
-parseFromString p = execAParser p . filter (not . isWhitespace) . fst . Lex.execParseTokens
+parseFromString p = resultsToRegion . execAParser p . filter (not . isWhitespace) . fst . Lex.execParseTokens
 
 -- | Create a parsable string from MTokens
-createString :: [MToken] -> Str MTokenPos [MTokenPos] Region
-createString [] = createStr (Region (LineColPos 0 0 0) (LineColPos 0 0 0)) []
-createString mts@(MToken p _ : xs) = createStr p mtpos where
+createString :: [MToken] -> Str MTokenPos [MTokenPos] RegionProgression
+createString [] = createStr emptyRgPrgs []
+createString mts@(MToken p _ : xs) = createStr (RegionProgression p (nextRg mts')) mtpos where
     mts' = xs ++ [last mts] -- Repeat last element of mts
     mkMtPos mt (MToken p' _) = MTokenPos mt p'
     mtpos = zipWith mkMtPos mts mts'
 
+    nextRg (MToken p _ : _) = p
+
+
+errorToRegion :: Error RegionProgression -> Error Region
+errorToRegion (Inserted a p b) = Inserted a (nextRegion p) b
+errorToRegion (Deleted a p b) = Deleted a (nextRegion p) b
+errorToRegion (Replaced a b p c) = Replaced a b (nextRegion p) c
+errorToRegion (DeletedAtEnd s) = DeletedAtEnd s
+
+-- | Position in Region (as opposed to RegionProgression)
+pPos' :: AParser Region
+pPos' = nextRegion <$> pPos
+
 -- | Text.ParserCombinators.UU.Utils.execParser modified to parse MTokens
 -- The first MToken might not be on the first line, so use the first MToken's position to start
-execAParser :: AParser a -> [MToken] -> (a, [Error Region])
+execAParser :: AParser a -> [MToken] -> (a, [Error RegionProgression])
 execAParser p mts@[] = parse_h ((,) <$> p <*> pEnd) . createString $ mts
 execAParser p mts@(_ : _) = parse_h ((,) <$> p <*> pEnd) . createString $ mts -- createStr (mpos m) $ mts
 
@@ -104,7 +129,7 @@ parseBlock = Block <$> pInterleaved (pMTok Semicolon) parseMStat <*> (parseRetur
 
 -- | A thing of which the region is to be parsed
 annotated :: (Region -> a -> b) -> AParser a -> AParser b
-annotated f p = (\s t e -> f (Region (rgStart s) (rgEnd e)) t) <$> pPos <*> p <*> pPos
+annotated f p = (\s t e -> f (Region (rgStart s) (rgEnd $ lastRegion $ pos $ e)) t) <$> pPos' <*> p <*> pState
 
 parseMStat :: AParser MStat
 parseMStat = annotated MStat parseStat
@@ -195,7 +220,7 @@ parseStat = parseCallDef <<|>
                 pMTok Function <*> parseLocFuncName <*> pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
                 parseBlock <* pMTok End <<|>
               -- local variables
-              (\v (p,e) l -> LocDef (zip v $ map Just e ++ repeat Nothing)) <$> parseLocalVarList <*> ((,) <$ pMTok Equals <*> pPos <*> parseExpressionList <<|> (,) <$> pPos <*> pReturn [])
+              (\v (p,e) l -> LocDef (zip v $ map Just e ++ repeat Nothing)) <$> parseLocalVarList <*> ((,) <$ pMTok Equals <*> pPos' <*> parseExpressionList <<|> (,) <$> pPos' <*> pReturn [])
             )
 
 
@@ -220,7 +245,7 @@ parseFor = do
       startExp <- parseExpression
       pMTok Comma
       toExp <- parseExpression
-      step <- pMTok Comma *> parseExpression <<|> MExpr <$> pPos <*> pReturn (ANumber "1")
+      step <- pMTok Comma *> parseExpression <<|> MExpr <$> pPos' <*> pReturn (ANumber "1")
       pMTok Do
       block <- parseBlock
       pMTok End
@@ -237,7 +262,7 @@ parseFor = do
 
 -- | Parse a return value
 parseReturn :: AParser AReturn
-parseReturn = AReturn <$> pPos <* pMTok Return <*> opt parseExpressionList [] <* pMany (pMTok Semicolon)
+parseReturn = AReturn <$> pPos' <* pMTok Return <*> opt parseExpressionList [] <* pMany (pMTok Semicolon)
 
 -- | Label
 parseLabel :: AParser MToken
@@ -320,14 +345,14 @@ samePrioL ops pr = pChainl (choice (map f ops)) pr
   where
     choice = foldr (<<|>) pFail
     f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
-    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos <* pMTok t
+    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos' <* pMTok t
 
 samePrioR :: [(Token, BinOp)] -> AParser MExpr -> AParser MExpr
 samePrioR ops pr = pChainr (choice (map f ops)) pr
   where
     choice = foldr (<<|>) pFail
     f :: (Token, BinOp) -> AParser (MExpr -> MExpr -> MExpr)
-    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos <* pMTok t
+    f (t, at) = (\p e1 e2 -> MExpr p (BinOpExpr at e1 e2)) <$> pPos' <* pMTok t
 
 -- | Parse unary operator (-, not, #)
 parseUnOp :: AParser UnOp
@@ -357,8 +382,8 @@ parseExpression = samePrioL lvl1 $
                   samePrioR lvl4 $
                   samePrioL lvl5 $
                   samePrioL lvl6 $
-                  MExpr <$> pPos <*> (UnOpExpr <$> parseUnOp <*> parseExpression) <<|> -- lvl7
-                  samePrioR lvl8 (MExpr <$> pPos <*> (parseSubExpression <|> UnOpExpr <$> parseUnOp <*> parseExpression))
+                  MExpr <$> pPos' <*> (UnOpExpr <$> parseUnOp <*> parseExpression) <<|> -- lvl7
+                  samePrioR lvl8 (MExpr <$> pPos' <*> (parseSubExpression <|> UnOpExpr <$> parseUnOp <*> parseExpression))
 
 -- | Parses a binary operator
 parseBinOp :: AParser BinOp
@@ -462,7 +487,7 @@ makeUnNamedField (Just (op, mexpr)) sfs (p, nm) = UnnamedField $ MExpr p $ (merg
 -- | A field in a table
 parseField :: AParser Field
 parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <<|>
-              ((,) <$> pPos <*> pName <**>
+              ((,) <$> pPos' <*> pName <**>
                 -- Named field has equals sign immediately after the name
                 (((\e (_, n) -> NamedField n e) <$ pMTok Equals <*> parseExpression) <<|>
 
