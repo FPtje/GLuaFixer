@@ -110,6 +110,7 @@ sem MTokenList
 sem MToken
     | MToken
         loc.mpos = Region @lhs.nextTokenPos (customAdvanceToken @lhs.nextTokenPos @mtok.copy)
+        loc.copy = MToken @loc.mpos @mtok.copy
 
         -- Warnings from tokens
         lhs.warnings = @mtok.customWarnings ++ map (mTokenWarning @loc.mpos) @mtok.tokenWarnings
