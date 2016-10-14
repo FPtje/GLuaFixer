@@ -44,11 +44,11 @@ sp2Rg sp = Region (sp2lcp sp) (sp2lcp sp)
 
 -- | LineColPos to SourcePos
 lcp2sp :: LineColPos -> SourcePos
-lcp2sp (LineColPos l c _) = newPos "source.lua" l c
+lcp2sp (LineColPos l c _) = newPos "source.lua" (l + 1) (c + 1)
 
 -- | SourcePos to LineColPos
 sp2lcp :: SourcePos -> LineColPos
-sp2lcp pos = LineColPos (sourceLine pos) (sourceColumn pos) 0
+sp2lcp pos = LineColPos (sourceLine pos - 1) (sourceColumn pos - 1) 0
 
 -- | Update a SourcePos with an MToken
 updatePosMToken :: SourcePos -> MToken -> [MToken] -> SourcePos
