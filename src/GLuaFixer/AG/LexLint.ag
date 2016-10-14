@@ -65,6 +65,15 @@ locateTrailingWhitespace pos ('\t' : xs) = (pos, xs)
 locateTrailingWhitespace pos (x : xs) = locateTrailingWhitespace (customAdvanceChr pos x) xs
 locateTrailingWhitespace pos [] = (pos, "")
 
+-- Locate the start of a line's indentation in a string of whitespace
+indentationStart :: LineColPos -> String -> LineColPos
+indentationStart pos = go pos pos
+  where
+    go :: LineColPos -> LineColPos -> String -> LineColPos
+    go _ cur ('\n' : xs) = let next = customAdvanceChr cur '\n' in go next next xs
+    go found cur (x : xs) = go found (customAdvanceChr cur x) xs
+    go found _ [] = found
+
 endOfTrailingWhitespace :: (LineColPos, String) -> LineColPos
 endOfTrailingWhitespace (pos, ('\n' : xs)) = pos
 endOfTrailingWhitespace (pos, (x : xs)) = endOfTrailingWhitespace (customAdvanceChr pos x, xs)
@@ -117,18 +126,23 @@ sem MToken
 
 sem Token
     | Whitespace
-        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @space
+        loc.curTokenPos = @lhs.nextTokenPos
+        loc.nextTokenPos = customAdvanceStr @loc.curTokenPos @space
+        loc.indentation = if @loc.inconsistent then mempty else @loc.whitespaceUsed
         loc.whitespaceUsed = mappend @lhs.indentation $ SyntaxUsed (isInfixOf "\n " @space) (isInfixOf "\n\t" @space)
         loc.inconsistent = luaUsed @loc.whitespaceUsed && cUsed @loc.whitespaceUsed
-        loc.indentation = if @loc.inconsistent then mempty else @loc.whitespaceUsed
-        loc.whitespaceStart = locateTrailingWhitespace @lhs.nextTokenPos @space
+
+        -- Start and end of trailing whitespace
+        loc.whitespaceStart = locateTrailingWhitespace @loc.curTokenPos @space
         loc.whitespaceEnd = endOfTrailingWhitespace @loc.whitespaceStart
 
-        +customWarnings = if not (lint_whitespaceStyle @lhs.config) || (not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space)) then id else
-                            (:) $ mTokenWarning (Region (fst @loc.whitespaceStart) @loc.whitespaceEnd) "Trailing whitespace"
+        -- Start and end of indentation at the start of a line
+        loc.indentationRg = Region (indentationStart @loc.curTokenPos @space) @loc.nextTokenPos
 
-        +tokenWarnings = if not @loc.inconsistent then id else
-                            (:) "Inconsistent use of tabs and spaces for indentation"
+        +customWarnings = if not (lint_whitespaceStyle @lhs.config) || (not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space)) then id else (:) $ mTokenWarning (Region (fst @loc.whitespaceStart) @loc.whitespaceEnd) "Trailing whitespace"
+
+        +customWarnings = if not (lint_whitespaceStyle @lhs.config) || not @loc.inconsistent then id else
+                            (:) $ mTokenWarning @loc.indentationRg "Inconsistent use of tabs and spaces for indentation"
 
     | DashComment
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
