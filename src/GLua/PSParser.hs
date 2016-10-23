@@ -11,7 +11,6 @@ import qualified GLua.Lexer as Lex
 import Text.Parsec
 import Text.Parsec.Pos
 import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
-import Control.Monad.State
 
 type AParser = Parsec [MToken] LineColPos
 
@@ -151,7 +150,7 @@ parseDefinition :: AParser Stat
 parseDefinition = flip (<?>) "variable definition" $ do
     vars <- try $ do
         vs <- parseVarList
-        pMTok Equals
+        _ <- pMTok Equals
         return vs
 
     exprs <- parseExpressionList
@@ -197,18 +196,18 @@ parseNFor :: AParser Stat
 parseNFor = flip (<?>) "numeric for loop" $
     do
         name <- try $ do
-            pMTok For
+            _ <- pMTok For
             name <- pName
-            pMTok Equals
+            _ <- pMTok Equals
             return name
 
         start <- parseExpression
-        pMTok Comma
+        _ <- pMTok Comma
         to <- parseExpression
         st <- step
-        pMTok Do
+        _ <- pMTok Do
         blk <- parseBlock
-        pMTok End
+        _ <- pMTok End
 
         return $ ANFor name start to st blk
     where
@@ -426,7 +425,7 @@ parseNamedField :: AParser Field
 parseNamedField = do
     name <- try $ do
         n <- pName
-        pMTok Equals
+        _ <- pMTok Equals
         return n
 
     expr <- parseExpression

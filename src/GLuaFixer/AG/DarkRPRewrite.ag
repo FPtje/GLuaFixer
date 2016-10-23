@@ -7,18 +7,14 @@ imports
 {
 import GLua.AG.AST
 import GLua.TokenTypes
-import Data.Maybe
 import Data.List
-import GLua.AG.Token
 }
 include "../../GLua/AG/AST.ag"
 
 {
 
-identToStr :: MToken -> String
-identToStr (MToken _ (Identifier s)) = s
-
 -- All rewrites
+rewriteNames :: [String]
 rewriteNames = [
     "AddExtraTeam",
     "AddCustomShipment",
@@ -26,6 +22,7 @@ rewriteNames = [
     "AddEntity"
     ]
 
+rewriteNameTo :: [String]
 rewriteNameTo = [
     "createJob",
     "createShipment",
@@ -39,6 +36,7 @@ rewriteFuncName i sfs = PFVar (MToken emptyRg (Identifier "DarkRP")) (funcName :
         fn = rewriteNameTo !! i
         funcName = DotIndex $ MToken emptyRg (Identifier fn)
 
+rewriteParams :: [[String]]
 rewriteParams = [
     ["color", "model", "description", "weapons", "command", "max", "salary", "admin", "vote", "hasLicense", "NeedToChangeFrom", "customCheck"],
     ["model", "entity", "price", "amount", "separate", "pricesep", "noship", "allowed", "shipmodel", "customCheck"],
@@ -54,10 +52,12 @@ isOldSyntax _ = Nothing
 -- Extract the name of an identifier MToken
 identifierName :: MToken -> String
 identifierName (MToken _ (Identifier s)) = s
+identifierName (MToken _ _) = error "has no identifier"
 
 -- Converts syntax of jobs, shipments and entities.
 -- Vehicles don't have the name as first parameter, so they're handled separately
 convertSyntax :: Int -> [MExpr] -> Args
+convertSyntax _ [] = ListArgs []
 convertSyntax i (name : args) = ListArgs (name : [MExpr emptyRg tbl])
     where
         tbl :: Expr

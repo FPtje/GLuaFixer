@@ -1,19 +1,20 @@
+optpragmas
+{
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
+}
+
 module {GLuaFixer.AG.ASTLint}{}{}
 
 imports
 {
 import GLua.AG.AST
-import Text.ParserCombinators.UU.BasicInstances
-import GLua.AG.Token
-import qualified GLua.AG.PrettyPrint as PP
+import GLua.TokenTypes
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 import Data.Maybe
 import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
-import GLuaFixer.Util
 
-import Debug.Trace
 }
 include "../../GLua/AG/AST.ag"
 include "../../GLua/AG/Token.ag"
@@ -39,17 +40,18 @@ oppositeBinOp _ = Nothing
 checkShadows :: [M.Map String (Bool, Region)] -> MToken -> Maybe (String -> LintMessage)
 checkShadows [] _ = Nothing
 checkShadows _ (MToken _ (Identifier "_")) = Nothing -- Exception for vars named '_'
-checkShadows (scope : scs) mtok = if M.member lbl scope then
-                                    Just $ warn (mpos mtok) ("Variable shadows existing binding of '" ++ lbl ++ "'")
+checkShadows (scope : scs) mtok' = if M.member lbl scope then
+                                    Just $ warn (mpos mtok') ("Variable shadows existing binding of '" ++ lbl ++ "'")
                                    else
-                                    checkShadows scs mtok
+                                    checkShadows scs mtok'
     where
-        lbl = tokenLabel mtok
+        lbl = tokenLabel mtok'
 
 -- Determines whether a variable is local
 -- It is local if it does not exist in any but the topmost (global) scope
 -- it may or may not exist in the topmost scope.
 isVariableLocal :: [M.Map String (Bool, Region)] -> String -> Bool
+isVariableLocal [] _ = False
 isVariableLocal [_] _ = False
 isVariableLocal (scope : scs) var =
     case M.lookup var scope of
@@ -60,10 +62,11 @@ isVariableLocal (scope : scs) var =
 -- Registers a variable as global variable when it hasn't been
 -- introduced in any of the visible scopes
 registerVariable :: [M.Map String (Bool, Region)] -> Region -> String -> Bool -> [M.Map String (Bool, Region)]
+registerVariable [] _ _ _ = error "cannot register top level variable"
 registerVariable (scope : []) pos var used = [M.insert var (used, pos) scope] -- global scope
 registerVariable (scope : scs) pos var used = case M.lookup var scope of
-                                                Just (True, pos) -> scope : scs
-                                                Just (False, pos) -> M.insert var (used, pos) scope : scs
+                                                Just (True, _) -> scope : scs
+                                                Just (False, pos') -> M.insert var (used, pos') scope : scs
                                                 Nothing -> scope : registerVariable scs pos var used
 
 findSelf :: [MToken] -> Bool

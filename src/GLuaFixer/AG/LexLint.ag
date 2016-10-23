@@ -1,3 +1,8 @@
+optpragmas
+{
+{-# OPTIONS_GHC -fno-warn-unused-binds #-}
+}
+
 module {GLuaFixer.AG.LexLint}
 {
     lintWarnings,
@@ -7,13 +12,9 @@ module {GLuaFixer.AG.LexLint}
 
 imports
 {
-import Data.Array.Unboxed
-import qualified Data.Vector.Unboxed as V
-import qualified Data.Vector as VB
 import Data.List
 import GLua.TokenTypes
 import GLua.AG.Token
-import GLua.AG.PrettyPrint
 import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 }
@@ -25,14 +26,14 @@ include "../../GLua/AG/Token.ag"
 --  Correcting token positions
 ----------------------------------------
 customAdvanceChr :: LineColPos -> Char -> LineColPos
-customAdvanceChr (LineColPos line pos abs) '\n' = LineColPos (line + 1) 0 (abs + 1)
-customAdvanceChr (LineColPos line pos abs) _    = LineColPos line (pos + 1) (abs + 1)
+customAdvanceChr (LineColPos line _ abs') '\n' = LineColPos (line + 1) 0 (abs' + 1)
+customAdvanceChr (LineColPos line pos abs') _    = LineColPos line (pos + 1) (abs' + 1)
 
 customAdvanceStr :: LineColPos -> String -> LineColPos
 customAdvanceStr lp str = foldl' customAdvanceChr lp str
 
 customAdvanceToken :: LineColPos -> Token -> LineColPos
-customAdvanceToken (LineColPos line pos abs) t = let len = tokenSize t in LineColPos line (pos + len) (abs + len)
+customAdvanceToken (LineColPos line pos abs') t = let len = tokenSize t in LineColPos line (pos + len) (abs' + len)
 
 ----------------------------------------
 --  C-style / Lua-style syntax inconsistencies
@@ -75,7 +76,7 @@ indentationStart pos = go pos pos
     go found _ [] = found
 
 endOfTrailingWhitespace :: (LineColPos, String) -> LineColPos
-endOfTrailingWhitespace (pos, ('\n' : xs)) = pos
+endOfTrailingWhitespace (pos, ('\n' : _)) = pos
 endOfTrailingWhitespace (pos, (x : xs)) = endOfTrailingWhitespace (customAdvanceChr pos x, xs)
 endOfTrailingWhitespace (pos, []) = pos
 

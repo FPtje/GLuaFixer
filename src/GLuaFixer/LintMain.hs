@@ -1,13 +1,13 @@
 module Main where
 
-import GLua.AG.PrettyPrint
-import GLua.Parser
-import GLuaFixer.AG.ASTLint
-import GLuaFixer.AG.DarkRPRewrite
-import GLuaFixer.AnalyseProject
-import GLuaFixer.LintMessage
-import GLuaFixer.LintSettings
-import GLuaFixer.Util
+import "glualint-lib" GLua.AG.PrettyPrint
+import "glualint-lib" GLua.Parser
+import "glualint-lib" GLuaFixer.AG.ASTLint
+import "glualint-lib" GLuaFixer.AG.DarkRPRewrite
+import "glualint-lib" GLuaFixer.AnalyseProject
+import "glualint-lib" GLuaFixer.LintMessage
+import "glualint-lib" GLuaFixer.LintSettings
+import "glualint-lib" GLuaFixer.Util
 
 import Control.Applicative ((<|>))
 import Data.Maybe (fromMaybe, fromJust)

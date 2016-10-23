@@ -1,6 +1,5 @@
 {-# LANGUAGE FlexibleInstances,
-             MultiParamTypeClasses,
-             BangPatterns #-}
+             MultiParamTypeClasses #-}
 
 module GLua.PSLexer where
 
@@ -56,9 +55,9 @@ escapedStringChar delim = (\c -> ['\\', c]) <$ char '\\' <*> noneOf ['\n'] <|> (
 -- Returns the amount of =-signs at the start of the nested string
 startNestedString :: Parser String
 startNestedString = do
-    char '['
+    _ <- char '['
     depth <- many (char '=')
-    char '['
+    _ <- char '['
     return depth
 
 -- | Parses a multiline string
@@ -71,7 +70,7 @@ nestedString depth = do
 -- | Parse Lua style comments
 parseLuaComment :: Parser Token
 parseLuaComment = do
-    string "--"
+    _ <- string "--"
     -- When a nested comment is started, it must be finished
     startNested <- optionMaybe (try startNestedString)
 
@@ -85,7 +84,7 @@ parseLuaComment = do
 -- | Parse C-Style comments
 parseCComment :: Parser Token
 parseCComment = do
-    char '/'
+    _ <- char '/'
     try (SlashComment <$ char '/' <*> pUntilEnd) <|>
      SlashBlockComment <$ char '*' <*> manyTill anyChar (try (string "*/") <|> const "\n" <$> eof)
 
@@ -134,7 +133,7 @@ parseNumberSuffix = (\e s d -> e : s ++ d) <$> oneOf ['e', 'E', 'p', 'P']
 -- | Parse either a keyword or an identifier that starts with that keyword
 parseKeyword :: Token -> String -> Parser Token
 parseKeyword tok str = try (do
-    string str
+    _ <- string str
     (\s -> Identifier (str ++ s)) <$> many1 (underscore <|> alphaNum) <|>
         return tok
     <?> "Keyword " ++ str)
@@ -152,9 +151,9 @@ parseLabel = string "::" *> parseIdentifier <* string "::" <?> "Label"
 -- | Parse anything to do with dots. Indexaction (.), concatenation (..), varargs (...) or numbers that start with a dot
 parseDots :: Parser Token
 parseDots = do
-    char '.' -- first .
+    _ <- char '.' -- first .
     try (do
-        char '.' -- second .
+        _ <- char '.' -- second .
         try (VarArg <$ char '.') <|> -- third .
             return Concatenate) <|>
 

@@ -66,7 +66,8 @@ createString mts@(MToken p _ : xs) = createStr (RegionProgression p (nextRg mts'
     mkMtPos mt (MToken p' _) = MTokenPos mt p'
     mtpos = zipWith mkMtPos mts mts'
 
-    nextRg (MToken p _ : _) = p
+    nextRg (MToken p' _ : _) = p'
+    nextRg [] = undefined
 
 
 errorToRegion :: Error RegionProgression -> Error Region
@@ -216,11 +217,11 @@ parseStat = parseCallDef <<|>
             -- local function and local vars both begin with "local"
             pMTok Local <**> (
               -- local function
-              (\n p b l -> ALocFunc n p b) <$
+              (\n p b _l -> ALocFunc n p b) <$
                 pMTok Function <*> parseLocFuncName <*> pPacked (pMTok LRound) (pMTok RRound) parseParList <*>
                 parseBlock <* pMTok End <<|>
               -- local variables
-              (\v (p,e) l -> LocDef (zip v $ map Just e ++ repeat Nothing)) <$> parseLocalVarList <*> ((,) <$ pMTok Equals <*> pPos' <*> parseExpressionList <<|> (,) <$> pPos' <*> pReturn [])
+              (\v (_p, e) _l -> LocDef (zip v $ map Just e ++ repeat Nothing)) <$> parseLocalVarList <*> ((,) <$ pMTok Equals <*> pPos' <*> parseExpressionList <<|> (,) <$> pPos' <*> pReturn [])
             )
 
 

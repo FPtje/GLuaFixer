@@ -5,10 +5,10 @@ imports
 import GLua.AG.AST
 import Text.PrettyPrint hiding (parens, brackets, braces)
 import GLua.TokenTypes
-import GLua.AG.Token
 import Data.Maybe
 import Text.Parsec
 import Text.Parsec.Error
+import Text.ParserCombinators.UU.BasicInstances hiding (pos)
 }
 
 include "AST.ag"
@@ -19,11 +19,11 @@ tok :: MToken -> Doc
 tok (MToken _ t) = zeroWidthText . show $ t
 
 printList :: (a -> Doc) -> String -> [a] -> Doc
-printList f sep []       = empty
-printList f sep (e : es) = (f e) <> g es
+printList _ _ []       = empty
+printList f sep' (e : es) = (f e) <> g es
     where
         g []       = empty
-        g (e : es) = zeroWidthText sep <> (f e) <> g es
+        g (e' : es') = zeroWidthText sep' <> (f e') <> g es'
 
 data PrettyPrintConfig = PPConfig {
     spaceAfterParens :: Bool,
@@ -56,15 +56,15 @@ printVarList :: [(PrefixExp, Maybe MExpr)] -> Doc
 printVarList vars = printList pp_prefixexp ", " (map fst vars) <-> zchr '=' <-> printList pp_mexpr ", " (catMaybes . map snd $ vars)
 
 printStats :: [MStat] -> Int -> Doc
-printStats [] i = empty
+printStats [] _ = empty
 printStats (x : xs) i = nest (i * 4) (pp_mstat x i) $+$ printStats xs i
 
 printElIfs :: [(MExpr, Block)] -> Int -> Doc
-printElIfs [] i = empty
+printElIfs [] _ = empty
 printElIfs ((e, b) : es) i = zeroWidthText "elseif" <-> pp_mexpr e <-> zeroWidthText "then" $+$ pp_block b i $+$ printElIfs es i
 
 printEls :: Maybe Block -> Int -> Doc
-printEls Nothing i = empty
+printEls Nothing _ = empty
 printEls (Just b) i = zeroWidthText "else" $+$ pp_block b i
 
 
@@ -131,7 +131,7 @@ convertComment conf (MToken p t) = MToken p $ convert' t
         luaComment :: Token -> Token
         luaComment (SlashComment s) = DashComment s
         luaComment (SlashBlockComment s) = DashBlockComment (lastBracket s) s
-        luaComment t = t
+        luaComment t' = t'
 
         -- converting /*]*/ would end up in --[[]]] when plainly converted
         -- Deepen the block comment by 1 if that's the case
@@ -142,29 +142,29 @@ convertComment conf (MToken p t) = MToken p $ convert' t
         cComment :: Token -> Token
         cComment (DashComment s) = SlashComment s
         cComment (DashBlockComment _ s) = SlashBlockComment s
-        cComment t = t
+        cComment t' = t'
 
 
 indent :: PrettyPrintConfig -> Int -> Doc -> Doc
 indent conf n = (<>) $ zeroWidthText (concat . replicate n $ indentation conf)
 
 parens :: PrettyPrintConfig -> Doc -> Doc
-parens conf doc = zchr '(' `sep` doc `sep` zchr ')'
+parens conf doc = zchr '(' `sep'` doc `sep'` zchr ')'
     where
-        sep :: Doc -> Doc -> Doc
-        sep = if spaceAfterParens conf then (<->) else (<>)
+        sep' :: Doc -> Doc -> Doc
+        sep' = if spaceAfterParens conf then (<->) else (<>)
 
 brackets :: PrettyPrintConfig -> Doc -> Doc
-brackets conf doc = zchr '[' `sep` doc `sep` zchr ']'
+brackets conf doc = zchr '[' `sep'` doc `sep'` zchr ']'
     where
-        sep :: Doc -> Doc -> Doc
-        sep = if spaceAfterBrackets conf then (<->) else (<>)
+        sep' :: Doc -> Doc -> Doc
+        sep' = if spaceAfterBrackets conf then (<->) else (<>)
 
 braces :: PrettyPrintConfig -> Doc -> Doc
-braces conf doc = zchr '{' `sep` doc `sep` zchr '}'
+braces conf doc = zchr '{' `sep'` doc `sep'` zchr '}'
     where
-        sep :: Doc -> Doc -> Doc
-        sep = if spaceAfterBraces conf then (<->) else (<>)
+        sep' :: Doc -> Doc -> Doc
+        sep' = if spaceAfterBraces conf then (<->) else (<>)
 
 infixl 5 $-$
 ($-$) :: Doc -> Doc -> Doc
@@ -235,8 +235,8 @@ sem MStatList
 
                  loc.prettyCommentsBefore = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
                  loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
-                 loc.commentsBefore = span (\(MToken pos _) -> pos `before` @hd.pos) @lhs.comments
-                 loc.commentsAfter  = span (\(MToken pos _) -> pos `beforeOrOnLine` @hd.pos) (snd @loc.commentsBefore)
+                 loc.commentsBefore = span (\(MToken pos' _) -> pos' `before` @hd.pos) @lhs.comments
+                 loc.commentsAfter  = span (\(MToken pos' _) -> pos' `beforeOrOnLine` @hd.pos) (snd @loc.commentsBefore)
                  hd.comments = snd @loc.commentsAfter
                  tl.comments = @hd.comments
 
@@ -246,7 +246,7 @@ sem MStatList
     | Nil        lhs.pretty = @loc.renderedComments
                  lhs.statementCount = 0
                  loc.renderedComments = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBeforeEnd)
-                 loc.commentsBeforeEnd = span (\(MToken pos tok) -> pos `beforeEnd` @lhs.statRegion) @lhs.comments
+                 loc.commentsBeforeEnd = span (\(MToken pos' _tok) -> pos' `beforeEnd` @lhs.statRegion) @lhs.comments
                  lhs.comments = snd @loc.commentsBeforeEnd
 
 sem MStat
@@ -383,7 +383,7 @@ sem Stat
     | ANFor      lhs.isMultiline = True
                  loc.step = case @step.copy of
                                 MExpr _ (ANumber "1") -> empty
-                                otherwise -> @loc.comma <> @step.pretty
+                                _ -> @loc.comma <> @step.pretty
                  lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> @loc.comma <> @to.pretty <> @loc.step <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  loc.comma = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  body.indent = @lhs.indent + 1

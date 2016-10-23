@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | Contains class instances and functions related to tokens
 module GLua.TokenTypes where
 
@@ -51,13 +52,13 @@ rgEnd (Region _ e) = e
 
 -- | Fold over metatoken
 foldMToken :: MTokenAlgebra t -> MToken -> t
-foldMToken alg (MToken pos t) = alg pos t
+foldMToken alg (MToken p t) = alg p t
 
 -- | mFold: Apply a TokenAlgebra to an MToken
 mFold :: TokenAlgebra a -> MToken -> a
-mFold alg mt = foldMToken f mt
+mFold alg = foldMToken f
   where
-    f _ t = foldToken alg t
+    f _ = foldToken alg
 
 -- | Huge token algebra
 type TokenAlgebra token = (

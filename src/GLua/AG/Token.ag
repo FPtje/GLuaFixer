@@ -2,7 +2,7 @@ module {GLua.AG.Token}{}{}
 
 imports
 {
-import Text.ParserCombinators.UU.BasicInstances
+import Text.ParserCombinators.UU.BasicInstances hiding (pos)
 }
 
 type TokenList = [Token]

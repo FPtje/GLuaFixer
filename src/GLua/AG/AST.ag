@@ -2,9 +2,8 @@ module {GLua.AG.AST}{}{}
 
 imports
 {
-import Text.ParserCombinators.UU.BasicInstances
-import GLua.TokenTypes
 import GLua.AG.Token
+import GLua.TokenTypes ()
 }
 
 type MStatList = [MStat]
