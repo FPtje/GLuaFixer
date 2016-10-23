@@ -12,7 +12,7 @@ author:              Falco Peijnenburg
 maintainer:          fpeijnenburg@gmail.com
 -- copyright:
 category:            Language
-build-type:          Custom
+build-type:          Simple
 extra-source-files:  README.md
 cabal-version:       >=1.10
 

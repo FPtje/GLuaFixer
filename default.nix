@@ -23,4 +23,9 @@ mkDerivation {
   homepage = "https://github.com/FPtje/GLuaFixer";
   description = "Attempts to fix your syntax erroring Lua files";
   license = stdenv.lib.licenses.lgpl21;
+
+  preBuild = ''
+    printf "Generating attribute grammar haskell files"
+    ./AGGenerator.sh
+  '';
 }
