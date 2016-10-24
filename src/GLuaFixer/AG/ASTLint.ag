@@ -8,6 +8,7 @@ module {GLuaFixer.AG.ASTLint}{}{}
 imports
 {
 import GLua.AG.AST
+import qualified GLua.AG.Token as T
 import GLua.TokenTypes
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
@@ -109,7 +110,7 @@ attr AllStuff MToken MTokenList Token TokenList Region
 attr Token TokenList
     syn tokenWarnings use {++} {[]} :: {[String]}
 
-attr Block MStat MStatList AReturn
+attr Block MStat MStatList AReturn MElse
     syn statementCount use {+} {1} :: Int
 
 attr MToken
@@ -305,10 +306,11 @@ sem Stat
         body.isRepeat           = False
         elifs.mtokenPos         = @lhs.mtokenPos
         els.mtokenPos           = @lhs.mtokenPos
+        loc.keywordPos          = Region (rgStart @lhs.mtokenPos) (customAdvanceToken (rgStart @lhs.mtokenPos) If)
 
         -- Warn for empty if statements
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
-                                    (:) $ warn @lhs.mtokenPos "Empty if statement"
+                                    (:) $ warn @loc.keywordPos "Empty if statement"
 
         -- Warn for if statements being put as the only statement in another if-statement
         +warnings               = if not (lint_redundantIfStatements @lhs.config) || @body.statementCount /= 1 || not @body.isIfStatement || @elifs.elseExists || @els.elseExists then id else
@@ -386,6 +388,10 @@ sem ElseIfList
     | Cons
         lhs.elseExists          = True
 
+sem MElseIf
+    | MElseIf
+        elif.mtokenPos          = @pos.copy
+
 sem ElseIf
     | Tuple
         x1.isNegation           = False
@@ -393,16 +399,22 @@ sem ElseIf
         x1.topLevel             = True
         x2.scopes               = M.empty : @x1.scopes
         x2.isRepeat             = False
+        loc.keywordPos          = Region (rgStart @lhs.mtokenPos) (customAdvanceToken (rgStart @lhs.mtokenPos) T.Elseif)
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @x2.statementCount > 0 then id else
-                                    (:) $ warn @lhs.mtokenPos "Empty elseif statement"
+                                    (:) $ warn @loc.keywordPos "Empty elseif statement"
+
+sem MElse
+    | MElse
+        body.isRepeat           = False
+        lhs.mtokenPos           = @pos.copy
 
 sem Else
     | Just
         just.scopes             = M.empty : @lhs.scopes
-        just.isRepeat           = False
         lhs.elseExists          = True
+        loc.keywordPos          = Region (rgStart @just.mtokenPos) (customAdvanceToken (rgStart @just.mtokenPos) T.Else)
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @just.statementCount > 0 then id else
-                                    (:) $ warn @lhs.mtokenPos "Empty else statement"
+                                    (:) $ warn @loc.keywordPos "Empty else statement"
 sem AReturn
     | AReturn
         values.inParentheses    = True

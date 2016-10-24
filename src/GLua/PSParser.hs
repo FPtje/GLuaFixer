@@ -183,9 +183,9 @@ parseIf :: AParser Stat
 parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
             parseBlock <*>
             -- elseif
-            many ((,) <$ pMTok Elseif <*> parseExpression <* pMTok Then <*> parseBlock) <*>
+            many (annotated MElseIf $ (,) <$ pMTok Elseif <*> parseExpression <* pMTok Then <*> parseBlock) <*>
             -- else
-            optionMaybe (pMTok Else *> parseBlock) <*
+            optionMaybe (annotated MElse $ pMTok Else *> parseBlock) <*
             pMTok End <?> "if statement"
 
 parseFor :: AParser Stat

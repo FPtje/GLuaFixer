@@ -16,7 +16,7 @@ type ExprSuffixList = [PFExprSuffix]
 data MElseIf | MElseIf pos :: Region elif :: ElseIf
 type ElseIf    = (MExpr, Block)
 type ElseIfList = [MElseIf]
-data MElse | MElse pos :: Region elif :: Block
+data MElse | MElse pos :: Region body :: Block
 type Else      = maybe MElse
 
 
