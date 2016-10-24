@@ -13,9 +13,11 @@ type MaybeMExpr = maybe MExpr
 type Declaration = (PrefixExp, MaybeMExpr)
 type VarsList  = [Declaration]
 type ExprSuffixList = [PFExprSuffix]
+data MElseIf | MElseIf pos :: Region elif :: ElseIf
 type ElseIf    = (MExpr, Block)
-type ElseIfList = [ElseIf]
-type Else      = maybe Block
+type ElseIfList = [MElseIf]
+data MElse | MElse pos :: Region elif :: Block
+type Else      = maybe MElse
 
 
 -- Root of the Abstract Syntax Tree
@@ -125,9 +127,13 @@ data UnOp         | UnMinus
                   | ANot
                   | AHash
 
+
+
 deriving AST : Show
 deriving Block : Show
 deriving MStat : Show
+deriving MElse : Show
+deriving MElseIf : Show
 deriving Stat : Show
 deriving AReturn : Show
 deriving FuncName : Show
@@ -140,12 +146,11 @@ deriving Field : Show
 deriving BinOp : Show, Eq, Ord
 deriving UnOp : Show
 
-
 set StatementStuff  = Block MStatList MStat Stat AReturn
-set IfStuff         = ElseIf ElseIfList Else
+set IfStuff         = MElseIf ElseIf ElseIfList Else MElse
 set ExprStuff       = PrefixExp PFExprSuffix MaybeMExpr MExpr Expr MExprList ExprSuffixList
 set VarStuff        = Args Field FieldList Declaration VarsList
-set AllStuff        = MStatList MExprList FieldList Declaration MaybeMExpr VarsList ExprSuffixList ElseIf ElseIfList Else AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
+set AllStuff        = MStatList MExprList FieldList Declaration MaybeMExpr VarsList ExprSuffixList MElseIf ElseIf ElseIfList MElse Else AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
 -- Semantics
 {-
 

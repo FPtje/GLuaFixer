@@ -144,7 +144,7 @@ attr FuncName
     syn isMeta :: Bool
     syn hasSuffixes :: Bool
 
-attr ElseIfList Else
+attr ElseIfList Else MElse
     -- Whether there is any kind of "else" or "elseif" in an if
     syn elseExists use {||} {False} :: Bool
 

@@ -200,7 +200,7 @@ attr MStat Stat
 attr MStat MExprList MExpr Field
     syn pos :: Region
 
-attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList ElseIf ElseIfList Else Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
+attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList ElseIf MElseIf ElseIfList Else MElse Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
     chn comments :: {[MToken]}
 
 attr FieldList
@@ -212,10 +212,10 @@ attr Block MStat MStatList AReturn
 attr Block AReturn Stat MStat MStatList
     syn hasBreaking use {||} {False} :: Bool -- whether it contains control flow breaking code (continue/return/break)
 
-attr ElseIfList Else
+attr ElseIfList Else MElse
     syn elsesExist use {||} {False} :: Bool
 
-attr Stat Block MStatList Else Expr
+attr Stat Block MStatList Else MElse Expr
     inh statRegion :: Region
 
 sem MStatList

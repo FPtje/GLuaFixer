@@ -230,9 +230,9 @@ parseIf :: AParser Stat
 parseIf = AIf <$ pMTok If <*> parseExpression <* pMTok Then <*>
             parseBlock <*>
             -- elseif
-            pMany ((,) <$ pMTok Elseif <*> parseExpression <* pMTok Then <*> parseBlock) <*>
+            pMany (annotated MElseIf $ (,) <$ pMTok Elseif <*> parseExpression <* pMTok Then <*> parseBlock) <*>
             -- else
-            optional (pMTok Else *> parseBlock) <*
+            optional (annotated MElse $ pMTok Else *> parseBlock) <*
             pMTok End
 
 -- | Parse numeric and generic for loops
