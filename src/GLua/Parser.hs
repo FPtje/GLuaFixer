@@ -30,7 +30,7 @@ instance Show MTokenPos where
   show (MTokenPos tok _) = show tok
 
 -- | Custom parser that parses MTokens
-type AParser a = forall state. (IsLocationUpdatedBy RegionProgression MTokenPos, LL.ListLike state MTokenPos) => P (Str MTokenPos state RegionProgression) a
+type AParser a = forall state. LL.ListLike state MTokenPos => P (Str MTokenPos state RegionProgression) a
 
 -- | RegionProgression is a location that can be updated by MTokens
 instance IsLocationUpdatedBy RegionProgression MTokenPos where

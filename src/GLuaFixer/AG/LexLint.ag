@@ -22,18 +22,6 @@ include "../../GLua/AG/Token.ag"
 
 
 {
-----------------------------------------
---  Correcting token positions
-----------------------------------------
-customAdvanceChr :: LineColPos -> Char -> LineColPos
-customAdvanceChr (LineColPos line _ abs') '\n' = LineColPos (line + 1) 0 (abs' + 1)
-customAdvanceChr (LineColPos line pos abs') _    = LineColPos line (pos + 1) (abs' + 1)
-
-customAdvanceStr :: LineColPos -> String -> LineColPos
-customAdvanceStr lp str = foldl' customAdvanceChr lp str
-
-customAdvanceToken :: LineColPos -> Token -> LineColPos
-customAdvanceToken (LineColPos line pos abs') t = let len = tokenSize t in LineColPos line (pos + len) (abs' + len)
 
 ----------------------------------------
 --  C-style / Lua-style syntax inconsistencies

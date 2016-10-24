@@ -87,15 +87,6 @@ getAReturnPos NoReturn = "<unknown>"
 getMExprPos :: MExpr -> String
 getMExprPos (MExpr p _) = renderRegion p
 
-before :: Region -> Region -> Bool
-before (Region _ (LineColPos _ _ p)) (Region (LineColPos _ _ p') _ ) = p < p'
-
-beforeOrOnLine :: Region -> Region -> Bool
-beforeOrOnLine (Region _ (LineColPos l _ _)) (Region (LineColPos l' _ _) _) = l <= l'
-
-beforeEnd :: Region -> Region -> Bool
-beforeEnd (Region _ (LineColPos _ _ p)) (Region _ (LineColPos _ _ p')) = p < p'
-
 renderError :: Error LineColPos -> String
 renderError (Inserted str pos strs)       = renderPos pos ++ ": Inserted '" ++ str ++ "'." ++ render_expecting strs
 renderError (Deleted str pos strs)        = renderPos pos ++ ": Removed '" ++ str ++ "'. " ++render_expecting strs

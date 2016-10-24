@@ -44,11 +44,41 @@ mtok (MToken _ t) = t
 emptyRg :: Region
 emptyRg = Region (LineColPos 0 0 0) (LineColPos 0 0 0)
 
+----------------------------------------
+--  Correcting token positions
+----------------------------------------
+customAdvanceChr :: LineColPos -> Char -> LineColPos
+customAdvanceChr (LineColPos line _ abs') '\n' = LineColPos (line + 1) 0 (abs' + 1)
+customAdvanceChr (LineColPos line pos' abs') _    = LineColPos line (pos' + 1) (abs' + 1)
+
+customAdvanceStr :: LineColPos -> String -> LineColPos
+customAdvanceStr = foldl' customAdvanceChr
+
+customAdvanceToken :: LineColPos -> Token -> LineColPos
+customAdvanceToken (LineColPos line pos' abs') t = let len = tokenSize t in LineColPos line (pos' + len) (abs' + len)
+
+-- | Whether the first region ends strictly before the second region starts
+before :: Region -> Region -> Bool
+before (Region _ (LineColPos _ _ p)) (Region (LineColPos _ _ p') _ ) = p < p'
+
+-- | Whether the first region ends before or on the same line as the second region
+beforeOrOnLine :: Region -> Region -> Bool
+beforeOrOnLine (Region _ (LineColPos l _ _)) (Region (LineColPos l' _ _) _) = l <= l'
+
+-- | Whether the first region ends before the second region ends
+beforeEnd :: Region -> Region -> Bool
+beforeEnd (Region _ (LineColPos _ _ p)) (Region _ (LineColPos _ _ p')) = p < p'
+
 rgStart :: Region -> LineColPos
 rgStart (Region s _) = s
 
 rgEnd :: Region -> LineColPos
 rgEnd (Region _ e) = e
+
+-- | Returns a region that starts at the start of the first region
+-- and ends BEFORE the start of the second region
+upto :: Region -> Region -> Region
+upto l r = Region (rgStart l) (rgEnd r)
 
 -- | Fold over metatoken
 foldMToken :: MTokenAlgebra t -> MToken -> t
