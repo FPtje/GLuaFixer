@@ -488,6 +488,7 @@ sem PFExprSuffix
         index.isNegation        = False
         index.inParentheses     = True
         index.topLevel          = True
+        index.ignoreVarUse      = Nothing
     | DotIndex
 
 sem MExpr
