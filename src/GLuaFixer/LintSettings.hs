@@ -10,6 +10,7 @@ data LintSettings = LintSettings {
                         lint_syntaxErrors :: Bool,
                         lint_syntaxInconsistencies :: Bool,
                         lint_deprecated :: Bool,
+                        lint_trailingWhitespace :: Bool,
                         lint_whitespaceStyle :: Bool,
                         lint_beginnerMistakes :: Bool,
                         lint_emptyBlocks :: Bool,
@@ -40,6 +41,7 @@ defaultLintSettings =   LintSettings {
                             lint_syntaxErrors = True,
                             lint_syntaxInconsistencies = True,
                             lint_deprecated = True,
+                            lint_trailingWhitespace = True,
                             lint_whitespaceStyle = True,
                             lint_beginnerMistakes = True,
                             lint_emptyBlocks = True,
@@ -70,6 +72,7 @@ instance FromJSON LintSettings where
                                v .:? "lint_syntaxErrors" .!= (lint_syntaxErrors defaultLintSettings) <*>
                                v .:? "lint_syntaxInconsistencies" .!= (lint_syntaxInconsistencies defaultLintSettings) <*>
                                v .:? "lint_deprecated" .!= (lint_deprecated defaultLintSettings) <*>
+                               v .:? "lint_trailingWhitespace" .!= (lint_trailingWhitespace defaultLintSettings) <*>
                                v .:? "lint_whitespaceStyle" .!= (lint_whitespaceStyle defaultLintSettings) <*>
                                v .:? "lint_beginnerMistakes" .!= (lint_beginnerMistakes defaultLintSettings) <*>
                                v .:? "lint_emptyBlocks" .!= (lint_emptyBlocks defaultLintSettings) <*>
@@ -112,6 +115,7 @@ instance ToJSON LintSettings where
                         "lint_syntaxErrors" .= lint_syntaxErrors ls,
                         "lint_syntaxInconsistencies" .= lint_syntaxInconsistencies ls,
                         "lint_deprecated" .= lint_deprecated ls,
+                        "lint_trailingWhitespace" .= lint_trailingWhitespace ls,
                         "lint_whitespaceStyle" .= lint_whitespaceStyle ls,
                         "lint_beginnerMistakes" .= lint_beginnerMistakes ls,
                         "lint_emptyBlocks" .= lint_emptyBlocks ls,

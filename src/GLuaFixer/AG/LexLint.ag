@@ -128,7 +128,7 @@ sem Token
         -- Start and end of indentation at the start of a line
         loc.indentationRg = Region (indentationStart @loc.curTokenPos @space) @loc.nextTokenPos
 
-        +customWarnings = if not (lint_whitespaceStyle @lhs.config) || (not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space)) then id else (:) $ mTokenWarning (Region (fst @loc.whitespaceStart) @loc.whitespaceEnd) "Trailing whitespace"
+        +customWarnings = if not (lint_trailingWhitespace @lhs.config) || (not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space)) then id else (:) $ mTokenWarning (Region (fst @loc.whitespaceStart) @loc.whitespaceEnd) "Trailing whitespace"
 
         +customWarnings = if not (lint_whitespaceStyle @lhs.config) || not @loc.inconsistent then id else
                             (:) $ mTokenWarning @loc.indentationRg "Inconsistent use of tabs and spaces for indentation"
