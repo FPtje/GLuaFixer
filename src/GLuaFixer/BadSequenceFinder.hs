@@ -133,12 +133,12 @@ metaFuncWarnings = do
      const "Only used in deprecated Derma controls"                         <$> ident "SetActionFunction"                   <|>
      const "Use :SetKeyboardInputEnabled instead"                           <$> ident "SetKeyBoardInputEnabled"             <|>
      const "The function is broken"                                         <$> ident "SetPaintFunction"                    <|>
-     const "Use :SetTooltip instead, notice the lowercase fucking t"        <$> ident "SetToolTip"                          <|>
-     const "use :SetTooltipPanel instead, notice the lowercase fucking t"   <$> ident "SetToolTipPanel"                     <|>
+     const "Use :SetTooltip instead, notice the lowercase t"                <$> ident "SetToolTip"                          <|>
+     const "use :SetTooltipPanel instead, notice the lowercase t"           <$> ident "SetToolTipPanel"                     <|>
      const "Use :IsValid instead"                                           <$> ident "Valid"                               <|>
 
      -- Entity functions
-     const "Use :GetHitBoxBone instead, note the capital fucking B"         <$> ident "GetHitboxBone"                       <|>
+     const "Use :GetHitBoxBone instead, note the capital B"                 <$> ident "GetHitboxBone"                       <|>
      const "Use :GetNWAngle instead"                                        <$> ident "GetNetworkedAngle"                   <|>
      const "Use :GetNWBool instead"                                         <$> ident "GetNetworkedBool"                    <|>
      const "Use :GetNWEntity instead"                                       <$> ident "GetNetworkedEntity"                  <|>
@@ -200,7 +200,7 @@ deprecatedSequence opts = if not (lint_deprecated opts) then parserZero else (++
 -- | Parser for all beginner mistakes
 beginnerMistakeSequence :: LintSettings -> AParser String
 beginnerMistakeSequence opts = if not (lint_beginnerMistakes opts) then parserZero else
-    try (const "There's little fucking reason to use ';' in the first place, don't use it twice in a row" <$> pMTok Semicolon <* pMTok Semicolon) <|>
+    try (const "There's little reason to use ';' in the first place, don't use it twice in a row" <$> pMTok Semicolon <* pMTok Semicolon) <|>
     try (const "The server already knows who sent the net message, use the first parameter of net.Receive" <$> do
         ident "net"
         pMTok Dot
