@@ -556,6 +556,7 @@ sem Field
     | NamedField
         loc.mtokenPos           = @key.mtokenPos
         lhs.fieldNames          = S.insert @key.mtok @lhs.fieldNames
+        value.ignoreVarUse      = Nothing
         value.isNegation        = False
         value.inParentheses     = True
         value.topLevel          = True
