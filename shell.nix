@@ -1,4 +1,4 @@
-{pkgs ? import <nixpkgs> {}, stdenv ? pkgs.stdenv, pinNixDown ? false}:
+{pkgs ? import <nixpkgs> {}, stdenv ? pkgs.stdenv, pinNixDown ? true}:
 let
   # Pin nixpkgs version down by default, but allow building with another version
   nixpkgs = if !pinNixDown then pkgs else import (pkgs.fetchgit {
