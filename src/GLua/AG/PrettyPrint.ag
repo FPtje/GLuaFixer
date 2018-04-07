@@ -365,7 +365,7 @@ sem Stat
     | ARepeat    lhs.pretty = zeroWidthText "repeat" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "until" <-> @cond.pretty)
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
-    | AIf        loc.isMultiline = @cond.isMultiline || @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking || @elifs.elsesExist || @els.elsesExist
+    | AIf        loc.isMultiline = @cond.isMultiline || @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking || @elifs.elsesExist || @els.elsesExist || length @lhs.comments > 0
                  loc.singleLinePretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" <-> @body.pretty <-> zeroWidthText "end"
                  loc.multilinePretty  = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
