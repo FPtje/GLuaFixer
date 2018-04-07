@@ -398,7 +398,7 @@ sem Stat
 
 sem AReturn
     | AReturn    lhs.pretty = @loc.prettyCommentsBefore $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "return") <-> @values.pretty <> @loc.semicolon <-> @loc.prettyCommentsAfter
-                 lhs.isMultiline = @values.isMultiline || not (null $ fst @loc.commentsBefore) || not (null @loc.commentsAfter)
+                 lhs.isMultiline = @values.isMultiline
                  loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  loc.prettyCommentsBefore = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
                  loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
