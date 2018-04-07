@@ -14,6 +14,7 @@ import Data.Maybe (fromMaybe, fromJust)
 import System.Directory (doesDirectoryExist, getCurrentDirectory)
 import System.Environment (getArgs)
 import System.Exit (exitWith, exitSuccess, ExitCode (..))
+import System.IO (hPutStrLn, stderr)
 
 
 version :: String
@@ -21,20 +22,38 @@ version = "1.9.6"
 
 
 -- | Pretty print, uses the uu-parsinglib library
-prettyPrint :: Maybe Indentation -> IO ()
-prettyPrint ind = do
+prettyPrintStdin :: Maybe Indentation -> IO ()
+prettyPrintStdin ind = do
     lua <- getContents
 
     cwd <- getCurrentDirectory
     lintsettings <- getSettings cwd
-    let parsed = parseGLuaFromString lua
-    let ast = fst parsed
-    let ppconf = lint2ppSetting lintsettings
-    let ppconf' = ppconf {indentation = fromMaybe (indentation ppconf) ind}
-    let pretty = prettyprintConf ppconf' . fixOldDarkRPSyntax $ ast
 
-    putStr pretty
+    putStr $ prettyPrint ind lintsettings lua
 
+prettyPrintFiles :: Maybe Indentation -> [FilePath] -> IO ()
+prettyPrintFiles ind = mapM_ pp
+  where
+    pp :: FilePath -> IO ()
+    pp f = do
+      isDirectory <- doesDirectoryExist f
+      if isDirectory then do
+        luaFiles <- findLuaFiles f
+        prettyPrintFiles ind luaFiles
+      else do
+        hPutStrLn stderr $ "Pretty printing " ++ f
+        lintsettings <- getSettings f
+        lua <- doReadFile f
+        doWriteFile f $ prettyPrint ind lintsettings lua
+
+-- | Pure pretty print function
+prettyPrint :: Maybe Indentation -> LintSettings -> String -> String
+prettyPrint ind lintsettings lua =
+    prettyprintConf ppconf' . fixOldDarkRPSyntax $ ast
+  where
+    (ast, _errors) = parseGLuaFromString lua
+    ppconf = lint2ppSetting lintsettings
+    ppconf' = ppconf {indentation = fromMaybe (indentation ppconf) ind}
 
 -- | Lint a single file, using parsec
 lintFile :: LintSettings -> FilePath -> String -> [LintMessage]
@@ -81,7 +100,8 @@ type Indentation = String
 -- | Simple argument parser
 parseCLArgs :: Maybe Indentation -> [String] -> IO (Maybe LintSettings, [FilePath])
 parseCLArgs _ [] = return (Nothing, [])
-parseCLArgs ind ("--pretty-print" : _) = prettyPrint ind >> exitSuccess
+parseCLArgs ind ("--pretty-print-files" : fs) = prettyPrintFiles ind fs >> exitSuccess
+parseCLArgs ind ("--pretty-print" : _) = prettyPrintStdin ind >> exitSuccess
 parseCLArgs _ ("--analyse-globals" : fs) = analyseGlobals fs >> exitSuccess
 parseCLArgs _ ("--version" : _) = putStrLn version >> exitSuccess
 parseCLArgs ind ("--stdin" : xs) = do

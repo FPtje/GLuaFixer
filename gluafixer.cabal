@@ -37,6 +37,7 @@ library
     , vector
     , filemanip
     , mtl
+    , deepseq
 
   hs-source-dirs: src
 
@@ -71,7 +72,6 @@ library
     , FlexibleContexts
     , NoMonomorphismRestriction
     , CPP
-
 
 
 executable glualint

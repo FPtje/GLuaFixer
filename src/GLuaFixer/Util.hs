@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 module GLuaFixer.Util where
 
 import GLua.AG.AST
@@ -9,12 +10,13 @@ import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 import GLuaFixer.BadSequenceFinder
 
+import Control.DeepSeq (force)
 import qualified Data.ByteString.Lazy as BS
 import System.Exit (exitWith, ExitCode (..))
 import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory)
 import System.FilePath (takeDirectory, (</>), (<.>))
 import System.FilePath.Find (find, always, fileName, (~~?))
-import System.IO (openFile, hSetEncoding, utf8_bom, hGetContents, IOMode (..))
+import System.IO (openFile, withFile, hSetEncoding, utf8_bom, hGetContents, hClose, hPutStr, IOMode (..))
 import Text.Parsec.Error (errorPos)
 
 import Control.Applicative ((<|>))
@@ -31,7 +33,15 @@ doReadFile :: FilePath -> IO String
 doReadFile f = do
     handle <- openFile f ReadMode
     hSetEncoding handle utf8_bom
-    hGetContents handle
+    !contents <- force <$> hGetContents handle
+    hClose handle
+    pure contents
+
+-- | write file in utf8_bom mode
+doWriteFile :: FilePath -> String -> IO ()
+doWriteFile fp contents = withFile fp WriteMode $ \handle -> do
+    hSetEncoding handle utf8_bom
+    hPutStr handle contents
 
 -- | Parse a single file using parsec
 parseFile :: LintSettings -> FilePath -> String -> Either [LintMessage] ([LintMessage], AST)

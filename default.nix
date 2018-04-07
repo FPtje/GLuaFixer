@@ -1,5 +1,5 @@
 { mkDerivation, aeson, array, base, bytestring, containers
-, directory, filemanip, filepath, ListLike, MissingH, mtl, parsec
+, directory, deepseq, filemanip, filepath, ListLike, MissingH, mtl, parsec
 , pretty, stdenv, uu-parsinglib, uuagc, uuagc-cabal, vector
 , pkgs
 }:
@@ -12,7 +12,7 @@ mkDerivation {
   buildDepends = [uuagc uuagc-cabal];
   libraryHaskellDepends = [
     aeson array base bytestring containers directory filemanip filepath
-    ListLike MissingH mtl parsec pretty uu-parsinglib uuagc uuagc-cabal
+    ListLike MissingH mtl parsec pretty uu-parsinglib uuagc uuagc-cabal deepseq
 
     # Require haskellPackages' uuagc and uuagc-cabal specifically
     # Otherwise compilation with ghcjs will fuck up.
