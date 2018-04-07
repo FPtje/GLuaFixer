@@ -8,6 +8,7 @@ imports
 import GLua.AG.AST
 import GLua.TokenTypes
 import Data.List
+import Control.Monad (guard)
 }
 include "../../GLua/AG/AST.ag"
 
@@ -76,6 +77,9 @@ attr PFExprSuffix Args ExprSuffixList
 attr MExprList PFExprSuffix ExprSuffixList Args
     syn count use {+} {0} :: Int
 
+attr PFExprSuffix ExprSuffixList
+    syn isFunctionCall use {||} {False} :: Bool
+
 sem MExprList
     | Cons
         lhs.count = @tl.count + 1
@@ -84,7 +88,7 @@ sem MExprList
 
 sem PrefixExp
     | PFVar
-        loc.isOld = isOldSyntax @name
+        loc.isOld = guard @suffixes.isFunctionCall >> isOldSyntax @name
         loc.shouldReplace = @suffixes.count > 2
         lhs.repl = case @loc.isOld of
                         Nothing -> PFVar @name @suffixes.repl
@@ -107,6 +111,16 @@ sem Args
                                     TableArg [NamedField (MToken emptyRg (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) @args.repl]
                                    else
                                     convertSyntax i @args.repl
+
+sem ExprSuffixList
+    | Cons
+        lhs.isFunctionCall = @hd.isFunctionCall -- Just need the first PFExprSuffix
+
+sem PFExprSuffix
+    | Call
+        lhs.isFunctionCall = True
+    -- Don't set isFunctionCall for MetaCall, since it's only about the
+    -- functions in rewriteNames
 
 {
 fixOldDarkRPSyntax :: AST -> AST
