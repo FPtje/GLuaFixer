@@ -8,6 +8,7 @@ import Data.List (sortOn)
 data LintMessage
   = LintError { err_rg :: Region, err_msg :: String, err_file :: String }
   | LintWarning {warn_rg :: Region, warn_msg :: String, warn_file :: String }
+  deriving ( Eq )
 
 instance Show LintMessage where
     show (LintError rg msg file) = showString file . showString ": [Error] " . showString (renderRegion rg) . showString ": " . showString msg $ ""
