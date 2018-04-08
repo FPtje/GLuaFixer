@@ -13,7 +13,7 @@ import GLuaFixer.BadSequenceFinder
 import Control.DeepSeq (force)
 import qualified Data.ByteString.Lazy as BS
 import System.Exit (exitWith, ExitCode (..))
-import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory)
+import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory, makeAbsolute)
 import System.FilePath (takeDirectory, (</>), (<.>))
 import System.FilePath.Find (find, always, fileName, (~~?))
 import System.IO (openFile, withFile, hSetEncoding, utf8_bom, hGetContents, hClose, hPutStr, IOMode (..))
@@ -82,34 +82,35 @@ homeSettingsFile = ".glualint" <.> "json"
 -- | Search upwards in the file path until a settings file is found
 searchSettings :: FilePath -> IO (Maybe LintSettings)
 searchSettings f = do
-                        let up = takeDirectory f
-                        dirExists <- doesDirectoryExist up
+    let up = takeDirectory f
+    dirExists <- doesDirectoryExist up
 
-                        if not dirExists || up == takeDirectory up then
-                            return Nothing
-                        else do
-                            exists <- doesFileExist (f </> settingsFile)
-                            if exists then
-                                settingsFromFile (f </> settingsFile)
-                            else do
-                                dotExists <- doesFileExist (f </> homeSettingsFile)
-                                if dotExists then settingsFromFile (f </> homeSettingsFile) else searchSettings up
+    if not dirExists || up == takeDirectory up then
+        return Nothing
+    else do
+        exists <- doesFileExist (f </> settingsFile)
+        if exists then
+            settingsFromFile (f </> settingsFile)
+        else do
+            dotExists <- doesFileExist (f </> homeSettingsFile)
+            if dotExists then settingsFromFile (f </> homeSettingsFile) else searchSettings up
 
 
 -- | Look for the file in the home directory
 searchHome :: IO (Maybe LintSettings)
 searchHome = do
-                home <- getHomeDirectory
-                exists <- doesFileExist (home </> homeSettingsFile)
-                if exists then
-                    settingsFromFile (home </> homeSettingsFile)
-                else do
-                    nonDotExists <- doesFileExist (home </> settingsFile)
-                    if nonDotExists then settingsFromFile (home </> settingsFile) else return Nothing
+    home <- getHomeDirectory
+    exists <- doesFileExist (home </> homeSettingsFile)
+    if exists then
+        settingsFromFile (home </> homeSettingsFile)
+    else do
+        nonDotExists <- doesFileExist (home </> settingsFile)
+        if nonDotExists then settingsFromFile (home </> settingsFile) else return Nothing
 
 -- | Search the various known places for settings files
 getSettings :: FilePath -> IO LintSettings
 getSettings f = do
-    searchedSettings <- searchSettings f
+    f' <- makeAbsolute f
+    searchedSettings <- searchSettings f'
     homeSettings <- searchHome
     return . fromJust $ searchedSettings <|> homeSettings <|> Just defaultLintSettings
