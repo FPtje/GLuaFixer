@@ -226,8 +226,14 @@ sem MStatList
 
                  loc.prettyCommentsBefore = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
                  loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
-                 loc.commentsBefore = span (\(MToken pos' _) -> pos' `before` @hd.pos) @lhs.comments
-                 loc.commentsAfter  = span (\(MToken pos' _) -> pos' `beforeOrOnLine` @hd.pos) (snd @loc.commentsBefore)
+                 loc.commentsBefore =
+                    if @hd.isMultiline
+                    then span (\(MToken pos' _) -> pos' `beforeOrOnLine` @hd.pos) @lhs.comments
+                    else span (\(MToken pos' _) -> pos' `before`         @hd.pos) @lhs.comments
+                 loc.commentsAfter  =
+                    if @hd.isMultiline
+                    then span (\(MToken pos' _) -> pos' `beforeOrOnLine` @hd.pos) (snd @loc.commentsBefore)
+                    else span (\(MToken pos' _) -> pos' `beforeEndLine`  @hd.pos) (snd @loc.commentsBefore)
                  hd.comments = snd @loc.commentsAfter
                  tl.comments = @hd.comments
 
@@ -365,7 +371,7 @@ sem Stat
     | ARepeat    lhs.pretty = zeroWidthText "repeat" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "until" <-> @cond.pretty)
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
-    | AIf        loc.isMultiline = @cond.isMultiline || @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking || @elifs.elsesExist || @els.elsesExist || length @lhs.comments > 0
+    | AIf        loc.isMultiline = @cond.isMultiline || @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking || @elifs.elsesExist || @els.elsesExist
                  loc.singleLinePretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" <-> @body.pretty <-> zeroWidthText "end"
                  loc.multilinePretty  = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0

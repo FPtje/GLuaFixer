@@ -69,6 +69,10 @@ beforeOrOnLine (Region _ (LineColPos l _ _)) (Region (LineColPos l' _ _) _) = l 
 beforeEnd :: Region -> Region -> Bool
 beforeEnd (Region _ (LineColPos _ _ p)) (Region _ (LineColPos _ _ p')) = p < p'
 
+-- | Whether the first region ends before or on the same line as the END of the second region
+beforeEndLine :: Region -> Region -> Bool
+beforeEndLine (Region _ (LineColPos l _ _)) (Region _ (LineColPos l' _ _)) = l <= l'
+
 rgStart :: Region -> LineColPos
 rgStart (Region s _) = s
 
