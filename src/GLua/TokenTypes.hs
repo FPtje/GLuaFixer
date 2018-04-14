@@ -44,6 +44,11 @@ mtok (MToken _ t) = t
 emptyRg :: Region
 emptyRg = Region (LineColPos 0 0 0) (LineColPos 0 0 0)
 
+rgOr :: Region -> Region -> Region
+rgOr l r
+  | l == emptyRg = r
+  | otherwise = l
+
 ----------------------------------------
 --  Correcting token positions
 ----------------------------------------
@@ -82,7 +87,11 @@ rgEnd (Region _ e) = e
 -- | Returns a region that starts at the start of the first region
 -- and ends BEFORE the start of the second region
 upto :: Region -> Region -> Region
-upto l r = Region (rgStart l) (rgEnd r)
+upto lr rr = case (rgEnd lr, rgStart rr) of
+    (_, LineColPos 0 0 0) -> lr
+    (LineColPos l c _, LineColPos l' c' _)
+        | l' > l || (l' == l && c' > c) -> lr
+        | otherwise -> Region (rgStart lr) (rgStart rr)
 
 -- | Fold over metatoken
 foldMToken :: MTokenAlgebra t -> MToken -> t

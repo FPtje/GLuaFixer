@@ -197,7 +197,7 @@ attr MStatList
 attr MStat Stat
     inh isLastStatement :: Bool
 
-attr MStat MExprList MExpr Field
+attr MStat MExprList MExpr Field MElseIf ElseIfList MElse Else
     syn pos :: Region
 
 attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList ElseIf MElseIf ElseIfList Else MElse Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
@@ -315,16 +315,28 @@ sem ElseIf
                 x2.indent = @lhs.indent + 1
                 x2.statRegion = emptyRg
 
+sem MElseIf
+    | MElseIf   lhs.pos = @pos
+
 sem ElseIfList
     | Cons      lhs.pretty = indent @lhs.ppconf @lhs.indent @hd.pretty $+$ @tl.pretty
                 lhs.elsesExist = True
+                lhs.pos = @hd.pos
     | Nil       lhs.pretty = empty
+                lhs.pos = emptyRg
 
 sem Else
-    | Just      lhs.pretty = indent @lhs.ppconf @lhs.indent (zeroWidthText "else") $+$ @just.pretty
-                just.indent = @lhs.indent + 1
-                lhs.elsesExist = True
+    | Just      lhs.elsesExist = True
     | Nothing   lhs.pretty = empty
+                lhs.pos = emptyRg
+
+sem MElse
+    | MElse     lhs.pretty = indent @lhs.ppconf @lhs.indent (zeroWidthText "else") <-> @loc.prettyCommentsAfter $+$ @body.pretty
+                body.indent = @lhs.indent + 1
+                loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
+                loc.commentsAfter = span (\(MToken pos _) -> pos `beforeOrOnLine` @pos) @lhs.comments
+                lhs.pos = @pos
+                body.comments = snd @loc.commentsAfter
 
 sem ExprSuffixList
     | Cons       lhs.pretty = @hd.pretty <> @tl.pretty
@@ -375,6 +387,7 @@ sem Stat
                  loc.singleLinePretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" <-> @body.pretty <-> zeroWidthText "end"
                  loc.multilinePretty  = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
+                 body.statRegion = @lhs.statRegion `upto` @elifs.pos `upto` @els.pos
                  lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
                  lhs.hasBreaking = False
     | ANFor      lhs.isMultiline = True
@@ -408,8 +421,8 @@ sem AReturn
                  loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  loc.prettyCommentsBefore = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
                  loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
-                 loc.commentsBefore = span (\(MToken pos _) -> pos `before` @values.pos) @lhs.comments
-                 loc.commentsAfter  = span (\(MToken pos _) -> pos `beforeOrOnLine` @values.pos) (snd @loc.commentsBefore)
+                 loc.commentsBefore = span (\(MToken pos _) -> pos `before` @pos) @lhs.comments
+                 loc.commentsAfter  = span (\(MToken pos _) -> pos `beforeOrOnLine` (rgOr @values.pos @pos)) (snd @loc.commentsBefore)
                  values.comments = snd @loc.commentsAfter
                  lhs.comments = @values.comments
                  values.isHead = True
