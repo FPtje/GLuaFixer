@@ -135,7 +135,7 @@ attr MExpr Expr PrefixExp MExprList
     inh inParentheses :: Bool -- Whether an expression is directly between parentheses (used to check double parentheses)
     inh topLevel :: Bool -- Whether a expression is a sub-expression or a top level expression
 
-attr MExpr Expr
+attr MExpr Expr PrefixExp ExprSuffixList PFExprSuffix
     -- Whether an expression is "simple" (i.e. number, bool, string, variable, table constant, anonymous function)
     syn isSimpleExpression use {&&} {True} :: Bool
 
@@ -197,7 +197,7 @@ sem MExprList
 
 sem MaybeMExpr
     | Just
-        just.inParentheses      = True
+        just.inParentheses      = False
         just.topLevel           = False
 
 
@@ -470,16 +470,15 @@ sem PrefixExp
         lhs.hasSuffixes         = False
         expr.inParentheses      = True
         expr.topLevel           = True
-
-        +warnings               = if not (lint_redundantParentheses @lhs.config) || not (null @suffixes.copy) || not @lhs.inParentheses then id else
-                                    (:) $ warn @lhs.mtokenPos "Unnecessary parentheses"
-
-        +warnings               = if not (lint_redundantParentheses @lhs.config) || not (null @suffixes.copy) || @lhs.topLevel || not @expr.isSimpleExpression then id else
-                                    (:) $ warn @lhs.mtokenPos "Unnecessary parentheses"
+        +warnings               = if lint_redundantParentheses @lhs.config && null @suffixes.copy && (@lhs.inParentheses || (not @lhs.topLevel && @expr.isSimpleExpression))
+                                  then (:) $ warn @lhs.mtokenPos "Unnecessary parentheses"
+                                  else id
 
 sem PFExprSuffix
     | Call
+        lhs.isSimpleExpression  = False
     | MetaCall
+        lhs.isSimpleExpression  = False
     | ExprIndex
         index.isNegation        = False
         index.inParentheses     = True
@@ -499,6 +498,7 @@ sem Expr
     | ANumber
     | AString
     | AVarArg
+        lhs.isSimpleExpression  = False
     | AnonymousFunc
         loc.introduces          = M.fromList $ map (\mt -> (tokenLabel mt, (not . lint_unusedParameters $ @lhs.config, mpos mt))) @pars
         body.scopes             = @loc.introduces : @lhs.scopes
