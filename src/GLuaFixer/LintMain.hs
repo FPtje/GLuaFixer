@@ -18,7 +18,7 @@ import System.IO (hPutStrLn, stderr)
 
 
 version :: String
-version = "1.9.11"
+version = "1.10.0"
 
 
 -- | Pretty print, uses the uu-parsinglib library
