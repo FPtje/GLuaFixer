@@ -8,6 +8,7 @@ module {GLuaFixer.AG.ASTLint}{}{}
 imports
 {
 import GLua.AG.AST
+import qualified GLua.AG.PrettyPrint as PP
 import qualified GLua.AG.Token as T
 import GLua.TokenTypes
 import qualified Data.Set as S
@@ -40,12 +41,16 @@ oppositeBinOp _ = Nothing
 checkShadows :: [M.Map String (Bool, Region)] -> MToken -> Maybe (String -> LintMessage)
 checkShadows [] _ = Nothing
 checkShadows _ (MToken _ (Identifier "_")) = Nothing -- Exception for vars named '_'
-checkShadows (scope : scs) mtok' = if M.member lbl scope then
-                                    Just $ warn (mpos mtok') ("Variable shadows existing binding of '" ++ lbl ++ "'")
-                                   else
-                                    checkShadows scs mtok'
+checkShadows (scope : scs) mtok' =
+    if M.member lbl scope then
+      Just $ warn (mpos mtok')
+      ("Variable '" ++ lbl ++ "' shadows existing binding, defined at " ++ location)
+    else
+      checkShadows scs mtok'
     where
         lbl = tokenLabel mtok'
+        location = case snd $ fromJust $ M.lookup lbl scope of
+            Region start _ -> PP.renderPos start
 
 -- Determines whether a variable is local
 -- It is local if it does not exist in any but the topmost (global) scope
