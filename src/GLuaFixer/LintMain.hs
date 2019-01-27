@@ -13,12 +13,12 @@ import Control.Applicative ((<|>))
 import Data.Maybe (fromMaybe, fromJust)
 import System.Directory (doesDirectoryExist, getCurrentDirectory)
 import System.Environment (getArgs)
-import System.Exit (exitWith, exitSuccess, ExitCode (..))
+import System.Exit (exitWith, exitSuccess, exitFailure, ExitCode (..))
 import System.IO (hPutStrLn, stderr)
 
 
 version :: String
-version = "1.10.0"
+version = "1.11.0"
 
 
 -- | Pretty print, uses the uu-parsinglib library
@@ -69,8 +69,9 @@ lintFile config f contents =
 
 
 -- | Lint a set of files, uses parsec's parser library
-lint :: Maybe LintSettings -> [FilePath] -> IO ()
-lint _ [] = return ()
+-- Bool return value indicates whether there were either warnings or errors
+lint :: Maybe LintSettings -> [FilePath] -> IO Bool
+lint _ [] = pure False
 lint ls (f : fs) = do
     settings <- getSettings f
     let config = fromJust $ ls <|> Just settings
@@ -78,20 +79,20 @@ lint ls (f : fs) = do
     -- When we're dealing with a directory, lint all the files in it recursively.
     isDirectory <- doesDirectoryExist f
 
-    if isDirectory then do
-        luaFiles <- findLuaFiles f
-        lint ls luaFiles
-    else if f == "stdin" then do
-        contents <- getContents
+    hasMsgs <- if isDirectory then findLuaFiles f >>= lint ls
+        else if f == "stdin" then do
+            msgs <- lintFile config f <$> getContents
 
-        mapM_ print (lintFile config f contents)
-    else do
-        contents <- doReadFile f
+            mapM_ print msgs
+            pure $ not $ null msgs
+        else do
+            msgs <- lintFile config f <$> doReadFile f
 
-        mapM_ print (lintFile config f contents)
+            mapM_ print msgs
+            pure $ not $ null msgs
 
     -- Lint the other files
-    lint ls fs
+    (|| hasMsgs) <$> lint ls fs
 
 -- | Indentation used for pretty printing code
 type Indentation = String
@@ -126,4 +127,6 @@ main = do
     args <- getArgs
     (settings, files) <- parseCLArgs Nothing args
 
-    lint settings files
+    hasMessages <- lint settings files
+    if hasMessages then exitFailure
+    else exitSuccess
