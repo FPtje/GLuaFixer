@@ -68,7 +68,11 @@ isVariableLocal (scope : scs) var =
 -- introduced in any of the visible scopes
 registerVariable :: [M.Map String (Bool, Region)] -> Region -> String -> Bool -> [M.Map String (Bool, Region)]
 registerVariable [] _ _ _ = error "cannot register top level variable"
-registerVariable (scope : []) pos var used = [M.insert var (used, pos) scope] -- global scope
+registerVariable (scope : []) pos var used =
+    [ case M.lookup var scope of
+        Just (used', pos') -> M.insert var (used || used', pos') scope
+        Nothing -> M.insert var (used, pos) scope
+    ] -- global scope
 registerVariable (scope : scs) pos var used = case M.lookup var scope of
                                                 Just (True, _) -> scope : scs
                                                 Just (False, pos') -> M.insert var (used, pos') scope : scs
