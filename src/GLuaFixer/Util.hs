@@ -13,7 +13,7 @@ import GLuaFixer.BadSequenceFinder
 import Control.DeepSeq (force)
 import qualified Data.ByteString.Lazy as BS
 import System.Exit (exitWith, ExitCode (..))
-import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory, makeAbsolute)
+import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory, makeAbsolute, getCurrentDirectory)
 import System.FilePath (takeDirectory, (</>), (<.>))
 import System.FilePath.Find (find, always, fileName, (~~?))
 import System.IO (openFile, withFile, hSetEncoding, utf8_bom, hGetContents, hClose, hPutStr, IOMode (..))
@@ -110,7 +110,7 @@ searchHome = do
 -- | Search the various known places for settings files
 getSettings :: FilePath -> IO LintSettings
 getSettings f = do
-    f' <- makeAbsolute f
+    f' <- if f == "stdin" then getCurrentDirectory else makeAbsolute f
     searchedSettings <- searchSettings f'
     homeSettings <- searchHome
     return . fromJust $ searchedSettings <|> homeSettings <|> Just defaultLintSettings
