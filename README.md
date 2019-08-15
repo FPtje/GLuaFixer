@@ -9,7 +9,7 @@ glualint - Linter and pretty printer for Garry's Mod's variant of Lua.
 3. Add the folder you put `glualint` in to your `PATH`. How this is done differs per operating system. If you're not sure how to do this, please Google `"Add to path <YOUR OS>"`.
 4. Make sure you restart any terminals or text editors you currently have open.
 
-After performing these steps, you can run `glualint` from the terminal or let your text editor use it as your linter. **Failing to specifically perform the third step will make `glualint` very unlikely to work**. 
+After performing these steps, you can run `glualint` from the terminal or let your text editor use it as your linter. **Failing to specifically perform the third step will make `glualint` very unlikely to work**.
 
 # Command line parameters
 
@@ -36,12 +36,15 @@ Example `glualint.json` with the default options:
     "lint_syntaxErrors":                true,
     "lint_syntaxInconsistencies":       true,
     "lint_deprecated":                  true,
+    "lint_trailingWhitespace":          true,
     "lint_whitespaceStyle":             true,
     "lint_beginnerMistakes":            true,
     "lint_emptyBlocks":                 true,
     "lint_shadowing":                   true,
     "lint_gotos":                       true,
     "lint_doubleNegations":             true,
+    "lint_redundantIfStatements",       true,
+    "lint_redundantParentheses",        true,
     "lint_duplicateTableKeys":          true,
     "lint_profanity":                   true,
     "lint_unusedVars":                  true,
