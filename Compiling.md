@@ -21,6 +21,8 @@ Run the following commands in order:
 ```bash
 cabal sandbox init
 cabal install --only-dependencies
+# Depending on OS, for Linux run AGGenerator.sh, on Windows run the AGGenerator.bat
+./AGGenerator.sh
 cabal build glualint
 ```
 
@@ -50,7 +52,7 @@ This happens when MinGW isn't installed properly. Ghc comes with MinGW, add the 
 
 I had this once, it was terrible. Turns out this happens when there are multiple versions of cabal installed.
 
-1. Open a terminal (or command prompt) somewhere (**not** in the glualint folder). 
+1. Open a terminal (or command prompt) somewhere (**not** in the glualint folder).
 2. run `ghc-pkg list`
 3. Find the oldest version of cabal you can find
 4. Copy its name (with the version tag probably)
@@ -62,9 +64,9 @@ If that doesn't work, go look in your home folder's cabal folder and try to find
 
 > Build error, type error on `cabal build`
 
-Hold on, that shouldn't fucking happen. Glualint is known to compile on ghc 7.10 and 7.10.3. It *probably* won't work on ghc versions below that. 
+Hold on, that shouldn't fucking happen. Glualint is known to compile on ghc 7.10 and 7.10.3. It *probably* won't work on ghc versions below that.
 
-1. Run `ghc --version`. 
+1. Run `ghc --version`.
 2. If the reported version is anything below 7.10, upgrade ghc and don't complain to me.
 3. If it's *over* 7.10.3, hold on tight to your balls and wait for an update.
 4. If you think by now my shit should work for the newer version because it has been around for long enough, create an issue.
