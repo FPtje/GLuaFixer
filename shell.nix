@@ -4,8 +4,8 @@ let
   nixpkgs = if !pinNixDown then pkgs else import (pkgs.fetchFromGitHub {
     owner = "NixOS";
     repo = "nixpkgs";
-    rev = "af0fec6d0a3e28c815e38296f3758e7d0916eba9";
-    sha256 = "0knbmva5bmilhz4w3xi55dg22m7g44viawxa5n5x228av3bcmy5i";
+    rev = "c5aabb0d603e2c1ea05f5a93b3be82437f5ebf31";
+    sha256 = "15fwszhn6078sbrb8qk83g8afvh4qnmvff0qbkbvq3cm1fxni2w1";
   }) {};
 
   drv = nixpkgs.haskellPackages.callPackage ./. {};

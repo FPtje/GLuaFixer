@@ -2,6 +2,7 @@ module {GLua.AG.PrettyPrint}{}{}
 
 imports
 {
+import Prelude hiding ((<>))
 import GLua.AG.AST
 import Text.PrettyPrint hiding (parens, brackets, braces)
 import GLua.TokenTypes

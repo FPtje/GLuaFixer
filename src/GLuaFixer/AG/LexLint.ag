@@ -29,6 +29,9 @@ include "../../GLua/AG/Token.ag"
 -- For detecting the usage of Lua/C syntax inconsistently
 data SyntaxUsed = SyntaxUsed { luaUsed :: Bool, cUsed :: Bool } deriving (Show)
 
+instance Semigroup SyntaxUsed where
+    (SyntaxUsed l1 c1) <> (SyntaxUsed l2 c2)  = SyntaxUsed (l1 || l2) (c1 || c2)
+
 -- Monoid instance
 instance Monoid SyntaxUsed where
     mempty = SyntaxUsed False False
