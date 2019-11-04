@@ -47,6 +47,7 @@ library
     , GLua.Parser
     , GLua.PSParser
     , GLua.TokenTypes
+    , GLua.ASTInstances
     , GLuaFixer.AnalyseProject
     , GLuaFixer.BadSequenceFinder
     , GLuaFixer.LintMessage
@@ -86,7 +87,9 @@ executable glualint
     , CPP
 
   build-depends:
-      base
+      aeson
+    , base
+    , bytestring
     , glualint-lib
     , directory
 

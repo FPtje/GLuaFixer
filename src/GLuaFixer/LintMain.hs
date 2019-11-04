@@ -2,6 +2,8 @@ module Main where
 
 import "glualint-lib" GLua.AG.PrettyPrint
 import "glualint-lib" GLua.Parser
+import "glualint-lib" GLua.ASTInstances ()
+import "glualint-lib" GLua.TokenTypes ()
 import "glualint-lib" GLuaFixer.AG.ASTLint
 import "glualint-lib" GLuaFixer.AG.DarkRPRewrite
 import "glualint-lib" GLuaFixer.AnalyseProject
@@ -15,10 +17,12 @@ import System.Directory (doesDirectoryExist, getCurrentDirectory)
 import System.Environment (getArgs)
 import System.Exit (exitWith, exitSuccess, exitFailure, ExitCode (..))
 import System.IO (hPutStrLn, stderr)
-
+import qualified Data.Aeson as JSON
+import qualified Data.ByteString.Lazy as BL
+import Data.Foldable
 
 version :: String
-version = "1.11.2"
+version = "1.12.0"
 
 
 -- | Pretty print, uses the uu-parsinglib library
@@ -94,6 +98,20 @@ lint ls (f : fs) = do
     -- Lint the other files
     (|| hasMsgs) <$> lint ls fs
 
+dumpAST :: [FilePath] -> IO ()
+dumpAST fs =
+    for_ fs $ \f -> do
+        isDirectory <- doesDirectoryExist f
+        if isDirectory then findLuaFiles f >>= dumpAST
+        else do
+            contents <- if f == "stdin" then getContents else doReadFile f
+            config <- getSettings f
+
+            case parseFile config f contents of
+                Left errs -> mapM_ print errs
+                Right (_lexWarnings, ast) ->
+                    BL.putStr $ JSON.encode ast
+
 -- | Indentation used for pretty printing code
 type Indentation = String
 
@@ -104,6 +122,7 @@ parseCLArgs _ [] = return (Nothing, [])
 parseCLArgs ind ("--pretty-print-files" : fs) = prettyPrintFiles ind fs >> exitSuccess
 parseCLArgs ind ("--pretty-print" : _) = prettyPrintStdin ind >> exitSuccess
 parseCLArgs _ ("--analyse-globals" : fs) = analyseGlobals fs >> exitSuccess
+parseCLArgs _ ("--dump-ast" : fs) = dumpAST fs >> exitSuccess
 parseCLArgs _ ("--version" : _) = putStrLn version >> exitSuccess
 parseCLArgs ind ("--stdin" : xs) = do
                                  (sets, pths) <- parseCLArgs ind xs

@@ -1,11 +1,15 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE StandaloneDeriving #-}
 -- | Contains class instances and functions related to tokens
 module GLua.TokenTypes where
 
 import Data.List
 import Text.ParserCombinators.UU.BasicInstances
 import GLua.AG.Token
-
+import Data.Aeson
+import GHC.Generics
 
 instance Show MToken where
     show (MToken _ tok) = show tok
@@ -18,6 +22,11 @@ instance Eq MToken where
 instance Ord MToken where
     compare (MToken _ t1) (MToken _ t2) = compare t1 t2
 
+deriving instance Generic MToken
+
+instance ToJSON MToken where
+instance FromJSON MToken where
+
 instance Eq LineColPos where
     (LineColPos l c p) == (LineColPos l' c' p') = l == l' && c == c' && p == p'
 
@@ -25,12 +34,33 @@ instance Ord LineColPos where
     compare (LineColPos l c _) (LineColPos l' c' _) =
         compare l l' `mappend` compare c c'
 
+instance ToJSON LineColPos where
+    -- this generates a Value
+    toJSON (LineColPos line col p) =
+        object ["line" .= line, "column" .= col, "pos" .= p]
+
+    -- this encodes directly to a bytestring Builder
+    toEncoding (LineColPos line col p) =
+        pairs ("line" .= line <> "column" .= col <> "pos" .= p)
+
+instance FromJSON LineColPos where
+    parseJSON = withObject "LineColPos" $ \v -> LineColPos
+            <$> v .: "line"
+            <*> v .: "column"
+            <*> v .: "pos"
+
 instance Eq Region where
     Region s e == Region s' e' = s == s' && e == e'
 
 instance Ord Region where
     compare (Region s e) (Region s' e') =
         compare s s' `mappend` compare e e'
+
+instance ToJSON Region where
+instance FromJSON Region where
+
+instance ToJSON Token where
+instance FromJSON Token where
 
 -- | Metatoken algebra
 type MTokenAlgebra mtok = Region -> Token -> mtok

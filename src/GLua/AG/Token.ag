@@ -1,8 +1,14 @@
+optpragmas
+{
+{-# LANGUAGE DeriveGeneric #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
+}
 module {GLua.AG.Token}{}{}
 
 imports
 {
 import Text.ParserCombinators.UU.BasicInstances hiding (pos)
+import GHC.Generics
 }
 
 type TokenList = [Token]
@@ -89,5 +95,5 @@ data MToken
 data Region
     | Region start :: LineColPos end :: LineColPos
 
-deriving Token : Eq, Ord
-deriving Region : Show
+deriving Token : Generic, Eq, Ord
+deriving Region : Generic, Show
