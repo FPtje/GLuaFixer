@@ -58,6 +58,7 @@ Example `glualint.json` with the default options:
     "prettyprint_spaceAfterComma":      true,
     "prettyprint_semicolons":           false,
     "prettyprint_cStyle":               false,
+    "prettyprint_rejectInvalidCode":    false,
     "prettyprint_indentation":          "    "
 }
 ```

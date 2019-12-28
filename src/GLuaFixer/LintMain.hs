@@ -33,7 +33,8 @@ prettyPrintStdin ind = do
     cwd <- getCurrentDirectory
     lintsettings <- getSettings cwd
 
-    putStr $ prettyPrint ind lintsettings lua
+    for_ (prettyPrint ind lintsettings lua) $ \result ->
+        putStr result
 
 prettyPrintFiles :: Maybe Indentation -> [FilePath] -> IO ()
 prettyPrintFiles ind = mapM_ pp
@@ -48,14 +49,17 @@ prettyPrintFiles ind = mapM_ pp
         hPutStrLn stderr $ "Pretty printing " ++ f
         lintsettings <- getSettings f
         lua <- doReadFile f
-        doWriteFile f $ prettyPrint ind lintsettings lua
+        for_ (prettyPrint ind lintsettings lua) $ \result ->
+            doWriteFile f result
 
 -- | Pure pretty print function
-prettyPrint :: Maybe Indentation -> LintSettings -> String -> String
+prettyPrint :: Maybe Indentation -> LintSettings -> String -> Maybe String
 prettyPrint ind lintsettings lua =
-    prettyprintConf ppconf' . fixOldDarkRPSyntax $ ast
+    if prettyprint_rejectInvalidCode lintsettings && not (null errors)
+    then Nothing
+    else Just $ prettyprintConf ppconf' $ fixOldDarkRPSyntax ast
   where
-    (ast, _errors) = parseGLuaFromString lua
+    (ast, errors) = parseGLuaFromString lua
     ppconf = lint2ppSetting lintsettings
     ppconf' = ppconf {indentation = fromMaybe (indentation ppconf) ind}
 
