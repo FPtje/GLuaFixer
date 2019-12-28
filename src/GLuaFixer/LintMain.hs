@@ -22,7 +22,7 @@ import qualified Data.ByteString.Lazy as BL
 import Data.Foldable
 
 version :: String
-version = "1.12.0"
+version = "1.13.0"
 
 
 -- | Pretty print, uses the uu-parsinglib library
