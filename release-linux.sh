@@ -4,7 +4,7 @@ set -o errexit \
 
 cabal clean
 
-nix-shell --run "cabal build"
+nix-shell --run "cabal v1-build"
 
 VERSION=$(dist/build/glualint/glualint --version)
 echo "Packing glualint version $VERSION"
