@@ -15,10 +15,13 @@ After performing these steps, you can run `glualint` from the terminal or let yo
 
 Parameter | Description
 ----------|------------
-`--version` | Returns the version of glualint
-`--config` | Set to a `glualing.json` file for glualint configuration. See "Configuring glualint"
+`--version` | Returns the version of glualint.
+`--config` | Set to a `glualint.json` file for glualint configuration. See "Configuring glualint".
 `--pretty-print` | Will pretty-print (re-structure/re-indent) all code given in stdin. When entering code in terminal, press Ctrl+D to finish the input.
+`--pretty-print-files` | As above but pretty-prints the specified file or directory instead of stdin.
 `--indentation='something'` | For pretty-print: indents all pretty-printed code with the given string. Four spaces by default, should probably some amount of tabs or spaces.
+`--stdin` | Process stdin instead of specified file or directory when linting.
+`--analyse-globals` | Show global variables/functions that this file defines.
 
 # Configuring glualint
 `glualint` Allows some configuration. This is done through a file called `glualint.json` or `.glualint.json`. `glualint` looks for this file in three places (in order of priority)
