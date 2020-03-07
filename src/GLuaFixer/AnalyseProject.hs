@@ -44,7 +44,7 @@ analyseGlobals (f : fs) =
 
     if isDirectory then
       do
-        luaFiles <- findLuaFiles f
+        luaFiles <- findLuaFiles [] f
         globals <- mapM (analyseGlobalsFile settings) luaFiles
         let globals' = M.unionsWith (++) globals
         reportGlobals globals'

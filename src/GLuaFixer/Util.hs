@@ -15,7 +15,8 @@ import qualified Data.ByteString.Lazy as BS
 import System.Exit (exitWith, ExitCode (..))
 import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory, makeAbsolute, getCurrentDirectory)
 import System.FilePath (takeDirectory, (</>), (<.>))
-import System.FilePath.Find (find, always, fileName, (~~?))
+import System.FilePath.GlobPattern (GlobPattern)
+import System.FilePath.Find (find, always, fileName, (~~?), (&&?), (/~?))
 import System.IO (openFile, withFile, hSetEncoding, utf8_bom, hGetContents, hClose, hPutStr, IOMode (..))
 import Text.Parsec.Error (errorPos)
 
@@ -25,8 +26,11 @@ import Data.Maybe (fromJust)
 
 
 -- | Finds all Lua files in a folder
-findLuaFiles :: FilePath -> IO [FilePath]
-findLuaFiles = find always (fileName ~~? "*.lua")
+findLuaFiles :: [GlobPattern] -> FilePath -> IO [FilePath]
+findLuaFiles ignoreFiles =
+    find always (fileName ~~? "*.lua" &&? ignoredGlobs)
+  where
+    ignoredGlobs = foldl (&&?) always $ map (fileName /~?) ignoreFiles
 
 -- | Read file in utf8_bom because that seems to work better
 doReadFile :: FilePath -> IO String

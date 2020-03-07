@@ -43,7 +43,7 @@ prettyPrintFiles ind = mapM_ pp
     pp f = do
       isDirectory <- doesDirectoryExist f
       if isDirectory then do
-        luaFiles <- findLuaFiles f
+        luaFiles <- findLuaFiles [] f
         prettyPrintFiles ind luaFiles
       else do
         hPutStrLn stderr $ "Pretty printing " ++ f
@@ -87,7 +87,7 @@ lint ls (f : fs) = do
     -- When we're dealing with a directory, lint all the files in it recursively.
     isDirectory <- doesDirectoryExist f
 
-    hasMsgs <- if isDirectory then findLuaFiles f >>= lint ls
+    hasMsgs <- if isDirectory then findLuaFiles (lint_ignoreFiles config) f >>= lint ls
         else if f == "stdin" then do
             msgs <- lintFile config f <$> getContents
 
@@ -106,7 +106,7 @@ dumpAST :: [FilePath] -> IO ()
 dumpAST fs =
     for_ fs $ \f -> do
         isDirectory <- doesDirectoryExist f
-        if isDirectory then findLuaFiles f >>= dumpAST
+        if isDirectory then findLuaFiles [] f >>= dumpAST
         else do
             contents <- if f == "stdin" then getContents else doReadFile f
             config <- getSettings f

@@ -7,34 +7,35 @@ import GLua.AG.PrettyPrint
 
 data LintSettings =
     LintSettings
-    { lint_maxScopeDepth             :: Int
-    , lint_syntaxErrors              :: Bool
-    , lint_syntaxInconsistencies     :: Bool
-    , lint_deprecated                :: Bool
-    , lint_trailingWhitespace        :: Bool
-    , lint_whitespaceStyle           :: Bool
-    , lint_beginnerMistakes          :: Bool
-    , lint_emptyBlocks               :: Bool
-    , lint_shadowing                 :: Bool
-    , lint_gotos                     :: Bool
-    , lint_doubleNegations           :: Bool
-    , lint_redundantIfStatements     :: Bool
-    , lint_redundantParentheses      :: Bool
-    , lint_duplicateTableKeys        :: Bool
-    , lint_profanity                 :: Bool
-    , lint_unusedVars                :: Bool
-    , lint_unusedParameters          :: Bool
-    , lint_unusedLoopVars            :: Bool
+    { lint_maxScopeDepth             :: !Int
+    , lint_syntaxErrors              :: !Bool
+    , lint_syntaxInconsistencies     :: !Bool
+    , lint_deprecated                :: !Bool
+    , lint_trailingWhitespace        :: !Bool
+    , lint_whitespaceStyle           :: !Bool
+    , lint_beginnerMistakes          :: !Bool
+    , lint_emptyBlocks               :: !Bool
+    , lint_shadowing                 :: !Bool
+    , lint_gotos                     :: !Bool
+    , lint_doubleNegations           :: !Bool
+    , lint_redundantIfStatements     :: !Bool
+    , lint_redundantParentheses      :: !Bool
+    , lint_duplicateTableKeys        :: !Bool
+    , lint_profanity                 :: !Bool
+    , lint_unusedVars                :: !Bool
+    , lint_unusedParameters          :: !Bool
+    , lint_unusedLoopVars            :: !Bool
+    , lint_ignoreFiles               :: ![String]
 
-    , prettyprint_spaceAfterParens   :: Bool
-    , prettyprint_spaceAfterBrackets :: Bool
-    , prettyprint_spaceAfterBraces   :: Bool
-    , prettyprint_spaceBeforeComma   :: Bool
-    , prettyprint_spaceAfterComma    :: Bool
-    , prettyprint_semicolons         :: Bool
-    , prettyprint_cStyle             :: Bool
-    , prettyprint_rejectInvalidCode  :: Bool
-    , prettyprint_indentation        :: String
+    , prettyprint_spaceAfterParens   :: !Bool
+    , prettyprint_spaceAfterBrackets :: !Bool
+    , prettyprint_spaceAfterBraces   :: !Bool
+    , prettyprint_spaceBeforeComma   :: !Bool
+    , prettyprint_spaceAfterComma    :: !Bool
+    , prettyprint_semicolons         :: !Bool
+    , prettyprint_cStyle             :: !Bool
+    , prettyprint_rejectInvalidCode  :: !Bool
+    , prettyprint_indentation        :: !String
     } deriving (Show)
 
 defaultLintSettings :: LintSettings
@@ -58,6 +59,7 @@ defaultLintSettings =
     , lint_unusedVars                = True
     , lint_unusedParameters          = False
     , lint_unusedLoopVars            = False
+    , lint_ignoreFiles               = []
 
     , prettyprint_spaceAfterParens   = False
     , prettyprint_spaceAfterBrackets = False
@@ -91,6 +93,7 @@ instance FromJSON LintSettings where
           v .:? "lint_unusedVars"                .!= lint_unusedVars defaultLintSettings                <*>
           v .:? "lint_unusedParameters"          .!= lint_unusedParameters defaultLintSettings          <*>
           v .:? "lint_unusedLoopVars"            .!= lint_unusedLoopVars defaultLintSettings            <*>
+          v .:? "lint_ignoreFiles"               .!= lint_ignoreFiles defaultLintSettings               <*>
           v .:? "prettyprint_spaceAfterParens"   .!= prettyprint_spaceAfterParens defaultLintSettings   <*>
           v .:? "prettyprint_spaceAfterBrackets" .!= prettyprint_spaceAfterBrackets defaultLintSettings <*>
           v .:? "prettyprint_spaceAfterBraces"   .!= prettyprint_spaceAfterBraces defaultLintSettings   <*>
