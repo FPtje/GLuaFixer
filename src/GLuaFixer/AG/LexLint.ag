@@ -1,6 +1,7 @@
 optpragmas
 {
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
+{-# LANGUAGE CPP #-}
 }
 
 module {GLuaFixer.AG.LexLint}
@@ -29,8 +30,10 @@ include "../../GLua/AG/Token.ag"
 -- For detecting the usage of Lua/C syntax inconsistently
 data SyntaxUsed = SyntaxUsed { luaUsed :: Bool, cUsed :: Bool } deriving (Show)
 
+#if MIN_VERSION_base(4,11,0)
 instance Semigroup SyntaxUsed where
     (SyntaxUsed l1 c1) <> (SyntaxUsed l2 c2)  = SyntaxUsed (l1 || l2) (c1 || c2)
+#endif
 
 -- Monoid instance
 instance Monoid SyntaxUsed where

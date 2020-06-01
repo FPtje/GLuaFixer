@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE CPP #-}
 -- | Contains class instances and functions related to tokens
 module GLua.TokenTypes where
 
@@ -39,9 +40,11 @@ instance ToJSON LineColPos where
     toJSON (LineColPos line col p) =
         object ["line" .= line, "column" .= col, "pos" .= p]
 
+#if MIN_VERSION_aeson(0,10,0)
     -- this encodes directly to a bytestring Builder
     toEncoding (LineColPos line col p) =
         pairs ("line" .= line <> "column" .= col <> "pos" .= p)
+#endif
 
 instance FromJSON LineColPos where
     parseJSON = withObject "LineColPos" $ \v -> LineColPos
