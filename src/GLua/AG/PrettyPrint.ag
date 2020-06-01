@@ -464,6 +464,7 @@ sem Expr
     | APrefixExpr       lhs.pretty = @pexpr.pretty
     | ATableConstructor
                         lhs.pretty = if @fields.isMultiline then @loc.prettyMulti else @loc.prettySingle
+                        lhs.isMultiline = not $ null $ @fields.copy
                         loc.prettyMulti = zchr '{' $+$ @fields.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
                         loc.prettySingle = braces @lhs.ppconf @fields.pretty
                         fields.indent = @lhs.indent + (if @fields.isMultiline then 1 else 0)
