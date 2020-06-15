@@ -417,7 +417,7 @@ parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly <?> "tabl
 -- | A list of table entries
 -- Grammar: field {separator field} [separator]
 parseFieldList :: AParser [Field]
-parseFieldList = sepEndBy parseField parseFieldSep <* many parseFieldSep
+parseFieldList = sepEndBy parseField parseFieldSep <* optional parseFieldSep
 
 -- | Parse a named field (e.g. {named = field})
 -- Contains try to avoid conflict with unnamed fields
