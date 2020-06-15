@@ -116,6 +116,10 @@ utilWarnings = libraryWarnings "util" $
     const "Use tobool, without the util bit" <$> ident "tobool" <|>
     const "The function is broken" <$> ident "TraceEntityHull"
 
+-- | Warnings for things to do with self
+selfWarnings :: AParser String
+selfWarnings = libraryWarnings "self" $
+    const "Use self:GetOwner() instead" <$> ident "Owner"
 
 -- | Warnings for meta functions
 metaFuncWarnings :: AParser String
@@ -186,6 +190,7 @@ deprecatedSequence opts = if not (lint_deprecated opts) then parserZero else (++
     try timerWarnings                                                                                           <|>
     try umsgWarnings                                                                                            <|>
     try utilWarnings                                                                                            <|>
+    try selfWarnings                                                                                            <|>
 
     -- Global functions
     const "Use collectgarbage(\"count\") instead"                   <$> ident "gcinfo"                          <|>
