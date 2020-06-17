@@ -107,10 +107,15 @@ data Args         | ListArgs            args   :: MExprList
 
 
 -- Fields of a table: {[expr] = expr, namedfield = expr, expr}
-data Field        | ExprField          key   :: MExpr  value        :: MExpr
-                  | NamedField         key   :: MToken value        :: MExpr
-                  | UnnamedField       value :: MExpr
+data Field        | ExprField          key   :: MExpr  value        :: MExpr sep :: FieldSep
+                  | NamedField         key   :: MToken value        :: MExpr sep :: FieldSep
+                  | UnnamedField       value :: MExpr  sep          :: FieldSep
 
+-- Separator of fields in a table. Can be either a comma or semicolon. For the
+-- last field the separator is optional.
+data FieldSep     | CommaSep
+                  | SemicolonSep
+                  | NoSep
 
 -- Binary operators
 data BinOp
@@ -151,6 +156,7 @@ deriving MExpr : Generic, Show
 deriving Expr : Generic, Show
 deriving Args : Generic, Show
 deriving Field : Generic, Show
+deriving FieldSep : Generic, Show, Eq
 deriving BinOp : Generic, Show, Eq, Ord
 deriving UnOp : Generic, Show
 
@@ -158,7 +164,7 @@ set StatementStuff  = Block MStatList MStat Stat AReturn
 set IfStuff         = MElseIf ElseIf ElseIfList Else MElse
 set ExprStuff       = PrefixExp PFExprSuffix MaybeMExpr MExpr Expr MExprList ExprSuffixList
 set VarStuff        = Args Field FieldList Declaration VarsList
-set AllStuff        = MStatList MExprList FieldList Declaration MaybeMExpr VarsList ExprSuffixList MElseIf ElseIf ElseIfList MElse Else AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
+set AllStuff        = MStatList MExprList FieldList Declaration MaybeMExpr VarsList ExprSuffixList MElseIf ElseIf ElseIfList MElse Else AST Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field FieldSep BinOp UnOp
 
 -- Semantics
 {-

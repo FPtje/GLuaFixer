@@ -50,6 +50,9 @@ instance FromJSON Args where
 instance ToJSON Field where
 instance FromJSON Field where
 
+instance ToJSON FieldSep where
+instance FromJSON FieldSep where
+
 instance ToJSON BinOp where
 instance FromJSON BinOp where
 

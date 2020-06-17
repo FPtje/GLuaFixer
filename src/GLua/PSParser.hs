@@ -417,11 +417,16 @@ parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly <?> "tabl
 -- | A list of table entries
 -- Grammar: field {separator field} [separator]
 parseFieldList :: AParser [Field]
-parseFieldList = sepEndBy parseField parseFieldSep <* optional parseFieldSep
+parseFieldList = option [] $ do
+    field <- parseField
+    sep <- parseOptionalFieldSep
+    case sep of
+        NoSep -> pure [field NoSep]
+        _ -> (field sep :) <$> parseFieldList
 
 -- | Parse a named field (e.g. {named = field})
 -- Contains try to avoid conflict with unnamed fields
-parseNamedField :: AParser Field
+parseNamedField :: AParser (FieldSep -> Field)
 parseNamedField = do
     name <- try $ do
         n <- pName
@@ -433,12 +438,18 @@ parseNamedField = do
     return $ NamedField name expr
 
 -- | A field in a table
-parseField :: AParser Field
+parseField :: AParser (FieldSep -> Field)
 parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <|>
              parseNamedField <|>
              UnnamedField <$> parseExpression <?> "field"
 
--- | Field separator
-parseFieldSep :: AParser MToken
-parseFieldSep = pMTok Comma <|> pMTok Semicolon
+-- | Field separator, either comma or semicolon
+parseFieldSep :: AParser FieldSep
+parseFieldSep =
+    CommaSep <$ pMTok Comma <|>
+    SemicolonSep <$ pMTok Semicolon
 
+-- | Optional field separator, returns NoSep when no separator is found
+-- Used at the end of a field list
+parseOptionalFieldSep :: AParser FieldSep
+parseOptionalFieldSep = option NoSep parseFieldSep

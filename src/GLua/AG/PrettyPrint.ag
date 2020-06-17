@@ -207,6 +207,9 @@ attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixLis
 attr FieldList
     syn isNil :: Bool
 
+attr Field FieldSep
+    syn isSemiColon use {||} {False} :: Bool
+
 attr Block MStat MStatList AReturn
     syn statementCount use {+} {1} :: Int
 
@@ -260,11 +263,9 @@ sem MExprList
                  lhs.pos    = emptyRg
 
 sem FieldList
-    | Cons       lhs.pretty = @loc.prettyCommentsBefore `@loc.sep` @loc.ind (@hd.pretty <> @loc.comma <-> @loc.prettyCommentsAfter) `@loc.sep` @tl.pretty
-                 loc.comma = if @tl.isNil then empty else
-                                (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <>
-                                (if spaceAfterComma @lhs.ppconf && not @loc.isMultiline then zchr ' ' else empty)
-                 loc.sep = if @loc.isMultiline then ($+$) else (<>)
+    | Cons       lhs.pretty = @loc.prettyCommentsBefore `@loc.sep` @loc.ind (@hd.pretty <-> @loc.prettyCommentsAfter) `@loc.sep` @tl.pretty
+                 loc.afterFieldSep = if spaceAfterComma @lhs.ppconf && not @loc.isMultiline then (<->) else (<>)
+                 loc.sep = if @loc.isMultiline then ($+$) else @loc.afterFieldSep
                  loc.ind = if @loc.isMultiline then indent @lhs.ppconf @lhs.indent else id
                  loc.isMultiline = @hd.isMultiline || @tl.isMultiline
                  lhs.isMultiline = @loc.isMultiline
@@ -481,11 +482,17 @@ sem Args
     | StringArg lhs.pretty = tok @arg
 
 sem Field
-    | ExprField     lhs.pretty = brackets @lhs.ppconf @key.pretty <-> zchr '=' <-> @value.pretty
+    | ExprField     lhs.pretty = brackets @lhs.ppconf @key.pretty <-> zchr '=' <-> @value.pretty <> @sep.pretty
                     lhs.isMultiline = True
-    | NamedField    lhs.pretty = tok @key <-> zchr '=' <-> @value.pretty
+    | NamedField    lhs.pretty = tok @key <-> zchr '=' <-> @value.pretty <> @sep.pretty
                     lhs.isMultiline = True
-    | UnnamedField  lhs.pretty = @value.pretty
+    | UnnamedField  lhs.pretty = @value.pretty <> @sep.pretty
+
+sem FieldSep
+    | CommaSep      lhs.pretty = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ','
+    | SemicolonSep  lhs.pretty = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ';'
+                    lhs.isSemiColon = True
+    | NoSep         lhs.pretty = empty
 
 sem BinOp
     | APlus         lhs.pretty = zeroWidthText "+"

@@ -62,7 +62,7 @@ convertSyntax _ [] = ListArgs []
 convertSyntax i (name : args) = ListArgs (name : [MExpr emptyRg tbl])
     where
         tbl :: Expr
-        tbl = ATableConstructor [NamedField (MToken emptyRg (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) args]
+        tbl = ATableConstructor [NamedField (MToken emptyRg (Identifier k)) v CommaSep | (k, v) <- zip (rewriteParams !! i) args]
 }
 
 attr AllStuff
@@ -108,7 +108,7 @@ sem Args
         lhs.repl = case @lhs.shouldReplace of
                         Nothing -> ListArgs @args.repl
                         Just i  -> if @lhs.customItemKind == "AddCustomVehicle" then
-                                    TableArg [NamedField (MToken emptyRg (Identifier k)) v | (k, v) <- zip (rewriteParams !! i) @args.repl]
+                                    TableArg [NamedField (MToken emptyRg (Identifier k)) v CommaSep | (k, v) <- zip (rewriteParams !! i) @args.repl]
                                    else
                                     convertSyntax i @args.repl
 

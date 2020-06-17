@@ -462,18 +462,19 @@ parseTableConstructor = pMTok LCurly *> parseFieldList <* pMTok RCurly
 -- | A list of table entries
 -- Grammar: field {separator field} [separator]
 parseFieldList :: AParser [Field]
-parseFieldList = (:) <$> parseField <*> otherFields <<|> pReturn []
-  where
-    otherFields :: AParser [Field]
-    otherFields = parseFieldSep <**>
-                    ((\f o _ -> f : o) <$> parseField <*> otherFields <<|> const <$> pReturn [])
-                  <<|> pReturn []
+parseFieldList =
+    parseField <**>
+      ( parseFieldSep <**>
+          ((\rest sep field -> field sep : rest) <$> (parseFieldList <<|> pure [])) <<|>
+        pure (\field -> [field NoSep])
+      ) <<|>
+    pure []
 
 -- | Makes an unnamed field out of a list of suffixes, a position and a name.
 -- This function gets called when we know a field is unnamed and contains an expression that
 -- starts with a PrefixExp
 -- See the parseField parser where it is used
-makeUnNamedField :: Maybe (BinOp, MExpr) -> ExprSuffixList -> (Region, MToken) -> Field
+makeUnNamedField :: Maybe (BinOp, MExpr) -> ExprSuffixList -> (Region, MToken) -> (FieldSep -> Field)
 makeUnNamedField Nothing sfs (p, nm) = UnnamedField $ MExpr p $ APrefixExpr $ PFVar nm sfs
 makeUnNamedField (Just (op, mexpr)) sfs (p, nm) = UnnamedField $ MExpr p $ (merge (APrefixExpr $ PFVar nm sfs) mexpr)
   where
@@ -486,7 +487,7 @@ makeUnNamedField (Just (op, mexpr)) sfs (p, nm) = UnnamedField $ MExpr p $ (merg
     merge pf e = BinOpExpr op (MExpr p pf) e
 
 -- | A field in a table
-parseField :: AParser Field
+parseField :: AParser (FieldSep -> Field)
 parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression <<|>
               ((,) <$> pPos' <*> pName <**>
                 -- Named field has equals sign immediately after the name
@@ -508,5 +509,7 @@ parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* 
               UnnamedField <$> parseExpression
 
 -- | Field separator
-parseFieldSep :: AParser MToken
-parseFieldSep = pMTok Comma <<|> pMTok Semicolon
+parseFieldSep :: AParser FieldSep
+parseFieldSep =
+    CommaSep <$ pMTok Comma <<|>
+    SemicolonSep <$ pMTok Semicolon
