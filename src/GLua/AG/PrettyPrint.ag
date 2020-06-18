@@ -210,6 +210,10 @@ attr FieldList
 attr Field FieldSep
     syn isSemiColon use {||} {False} :: Bool
 
+attr FieldList Field FieldSep
+    -- Some entries of a multiline tables can be put on the same line
+    syn canFitOnSameLine use {||} {False} :: Bool
+
 attr Block MStat MStatList AReturn
     syn statementCount use {+} {1} :: Int
 
@@ -263,18 +267,22 @@ sem MExprList
                  lhs.pos    = emptyRg
 
 sem FieldList
-    | Cons       lhs.pretty = @loc.prettyCommentsBefore `@loc.sep` @loc.ind (@hd.pretty <-> @loc.prettyCommentsAfter) `@loc.sep` @tl.pretty
-                 loc.afterFieldSep = if spaceAfterComma @lhs.ppconf && not @loc.isMultiline then (<->) else (<>)
-                 loc.sep = if @loc.isMultiline then ($+$) else @loc.afterFieldSep
-                 loc.ind = if @loc.isMultiline then indent @lhs.ppconf @lhs.indent else id
-                 loc.isMultiline = @hd.isMultiline || @tl.isMultiline
-                 lhs.isMultiline = @loc.isMultiline
+    | Cons       lhs.pretty = @loc.prettyCommentsBefore $+$ @loc.indentAfterComment (@hd.pretty <-> @loc.prettyCommentsAfter) `@loc.sep` @loc.ind @tl.pretty
+                 lhs.canFitOnSameLine = @hd.canFitOnSameLine
                  lhs.isNil  = False
 
-                 loc.prettyCommentsBefore = if @loc.isMultiline then
-                                                renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
-                                            else
-                                                renderSLComments @lhs.ppconf (fst @loc.commentsBefore)
+                 hd.comments = snd @loc.commentsAfter
+
+                 loc.sep = if @loc.onSameLine then @loc.optionalSpaceAfterSep else ($+$)
+                 loc.ind = if @loc.onSameLine then id else indent @lhs.ppconf @lhs.indent
+                 loc.onSameLine = (@hd.canFitOnSameLine || @tl.isNil) && null (fst @loc.commentsAfter)
+
+                 loc.optionalSpaceAfterSep = if spaceAfterComma @lhs.ppconf then (<->) else (<>)
+                 loc.indentAfterComment = if null $ fst @loc.commentsBefore then id else indent @lhs.ppconf @lhs.indent
+
+                 loc.isMultiline = @hd.isMultiline || @tl.isMultiline
+
+                 loc.prettyCommentsBefore = renderSLComments @lhs.ppconf (fst @loc.commentsBefore)
                  loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
                  loc.commentsBefore =
                     if @loc.isMultiline then
@@ -287,9 +295,9 @@ sem FieldList
                         span (\(MToken pos _) -> pos `beforeOrOnLine` @hd.pos) (snd @loc.commentsBefore)
                     else
                         @loc.commentsBefore
-                 hd.comments = snd @loc.commentsAfter
     | Nil        lhs.pretty = empty
                  lhs.isNil  = True
+                 lhs.canFitOnSameLine = True
 
 sem MaybeMExpr
     | Just
@@ -466,7 +474,7 @@ sem Expr
     | ATableConstructor
                         lhs.pretty = if @fields.isMultiline then @loc.prettyMulti else @loc.prettySingle
                         lhs.isMultiline = not $ null $ @fields.copy
-                        loc.prettyMulti = zchr '{' $+$ @fields.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
+                        loc.prettyMulti = zchr '{' $+$ indent @lhs.ppconf (@lhs.indent + 1) @fields.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
                         loc.prettySingle = braces @lhs.ppconf @fields.pretty
                         fields.indent = @lhs.indent + (if @fields.isMultiline then 1 else 0)
     | BinOpExpr         lhs.pretty = @left.pretty <-> @op.pretty <-> @right.pretty
@@ -476,7 +484,7 @@ sem Args
     | ListArgs  lhs.pretty = parens @lhs.ppconf @args.pretty
                 args.isHead = True
     | TableArg  lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
-                loc.prettyMulti = zchr '{' $+$ @arg.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
+                loc.prettyMulti = zchr '{' $+$ indent @lhs.ppconf (@lhs.indent + 1) @arg.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
                 loc.prettySingle = braces @lhs.ppconf @arg.pretty
                 arg.indent = @lhs.indent + (if @arg.isMultiline then 1 else 0)
     | StringArg lhs.pretty = tok @arg
@@ -484,15 +492,24 @@ sem Args
 sem Field
     | ExprField     lhs.pretty = brackets @lhs.ppconf @key.pretty <-> zchr '=' <-> @value.pretty <> @sep.pretty
                     lhs.isMultiline = True
+                    lhs.canFitOnSameLine = False
     | NamedField    lhs.pretty = tok @key <-> zchr '=' <-> @value.pretty <> @sep.pretty
                     lhs.isMultiline = True
+                    lhs.canFitOnSameLine = False
     | UnnamedField  lhs.pretty = @value.pretty <> @sep.pretty
+                    lhs.canFitOnSameLine = @sep.canFitOnSameLine && not @value.isMultiline
 
 sem FieldSep
     | CommaSep      lhs.pretty = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ','
+                    lhs.canFitOnSameLine = True
     | SemicolonSep  lhs.pretty = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ';'
                     lhs.isSemiColon = True
+                    -- Separate fields with a semicolon on newline
+                    -- See https://github.com/FPtje/GLuaFixer/issues/82
+                    lhs.canFitOnSameLine = False
+                    lhs.isMultiline = True
     | NoSep         lhs.pretty = empty
+                    lhs.canFitOnSameLine = True
 
 sem BinOp
     | APlus         lhs.pretty = zeroWidthText "+"
