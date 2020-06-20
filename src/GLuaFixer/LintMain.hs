@@ -12,6 +12,7 @@ import "glualint-lib" GLuaFixer.LintSettings
 import "glualint-lib" GLuaFixer.Util
 
 import Control.Applicative ((<|>))
+import Control.Monad (unless)
 import Data.Maybe (fromMaybe, fromJust)
 import System.Directory (doesDirectoryExist, getCurrentDirectory)
 import System.Environment (getArgs)
@@ -115,6 +116,44 @@ dumpAST fs =
                 Right (_lexWarnings, ast) ->
                     BL.putStr $ JSON.encode ast
 
+runTest :: [FilePath] -> IO ()
+runTest fs = do
+    putStrLn "Running tests"
+    for_ fs $ \f -> do
+        isDirectory <- doesDirectoryExist f
+        if isDirectory then do
+          luaFiles <- findLuaFiles [] f
+          runTest luaFiles
+        else do
+            contents <- doReadFile f
+            let (uu_ast, uu_parseErrs) = parseGLuaFromString contents
+            lintsettings <- getSettings f
+            putStrLn $ "Testing " <> f
+            unless (null uu_parseErrs) $ do
+                putStrLn $ "Errors when trying to parse '" <> f <>
+                    "' with uu-parsinglib parser!"
+                print uu_parseErrs
+
+            case parseFile lintsettings f contents of
+                Right _ -> pure ()
+                Left errs -> do
+                    putStrLn $ "Errors when trying to parse '" <> f <> "' with parsec parser!"
+                    print errs
+
+            let pretty_printed = prettyprintConf (lint2ppSetting lintsettings) $ fixOldDarkRPSyntax uu_ast
+            let (_uu_ast_pp, uu_parseErrs_pp) = parseGLuaFromString pretty_printed
+            unless (null uu_parseErrs_pp) $ do
+                putStrLn $ "Errors when trying to parse '" <> f <>
+                    "' with uu-parsinglib parser after pretty print!"
+                print uu_parseErrs
+
+            case parseFile lintsettings f pretty_printed of
+                Right _ -> pure ()
+                Left errs -> do
+                    putStrLn $ "Errors when trying to parse '" <> f <>
+                        "' with parsec parser after pretty print!"
+                    print errs
+
 -- | Indentation used for pretty printing code
 type Indentation = String
 
@@ -127,6 +166,7 @@ parseCLArgs ind ("--pretty-print" : _) = prettyPrintStdin ind >> exitSuccess
 parseCLArgs _ ("--analyse-globals" : fs) = analyseGlobals fs >> exitSuccess
 parseCLArgs _ ("--dump-ast" : fs) = dumpAST fs >> exitSuccess
 parseCLArgs _ ("--version" : _) = putStrLn version >> exitSuccess
+parseCLArgs _ ("--test" : fs) = runTest fs >> exitSuccess
 parseCLArgs ind ("--stdin" : xs) = do
                                  (sets, pths) <- parseCLArgs ind xs
                                  return (sets, "stdin" : pths)

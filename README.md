@@ -22,6 +22,7 @@ Parameter | Description
 `--indentation='something'` | For pretty-print: indents all pretty-printed code with the given string. Four spaces by default, should probably some amount of tabs or spaces.
 `--stdin` | Process stdin instead of specified file or directory when linting.
 `--analyse-globals` | Show global variables/functions that this file defines.
+`--test` | For debugging: test whether glualint works correctly on the given files and/or folders. Tries to parse with the two available parsers, then pretty prints and tries to parse the pretty printed result. It will show errors when it fails.
 
 # Configuring glualint
 `glualint` Allows some configuration. This is done through a file called `glualint.json` or `.glualint.json`. `glualint` looks for this file in three places (in order of priority)
