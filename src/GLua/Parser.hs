@@ -14,7 +14,6 @@ import qualified GLua.Lexer as Lex
 
 import Text.ParserCombinators.UU
 import Text.ParserCombinators.UU.BasicInstances
-import qualified Data.ListLike as LL
 
 -- | MTokens with the positions of the next MToken (used in the advance of parser)
 data MTokenPos = MTokenPos MToken Region
@@ -30,7 +29,7 @@ instance Show MTokenPos where
   show (MTokenPos tok _) = show tok
 
 -- | Custom parser that parses MTokens
-type AParser a = forall state. LL.ListLike state MTokenPos => P (Str MTokenPos state RegionProgression) a
+type AParser a = P (Str MTokenPos [MTokenPos] RegionProgression) a
 
 -- | RegionProgression is a location that can be updated by MTokens
 instance IsLocationUpdatedBy RegionProgression MTokenPos where
