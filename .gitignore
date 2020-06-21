@@ -10,3 +10,4 @@ glualint-prof.*
 .cabal-sandbox/
 cabal.sandbox.config
 /result
+dist-newstyle
