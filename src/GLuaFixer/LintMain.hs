@@ -128,29 +128,29 @@ runTest fs = do
             contents <- doReadFile f
             let (uu_ast, uu_parseErrs) = parseGLuaFromString contents
             lintsettings <- getSettings f
-            putStrLn $ "Testing " <> f
+            putStrLn $ "Testing " ++ f
             unless (null uu_parseErrs) $ do
-                putStrLn $ "Errors when trying to parse '" <> f <>
+                putStrLn $ "Errors when trying to parse '" ++ f ++
                     "' with uu-parsinglib parser!"
                 print uu_parseErrs
 
             case parseFile lintsettings f contents of
                 Right _ -> pure ()
                 Left errs -> do
-                    putStrLn $ "Errors when trying to parse '" <> f <> "' with parsec parser!"
+                    putStrLn $ "Errors when trying to parse '" ++ f ++ "' with parsec parser!"
                     print errs
 
             let pretty_printed = prettyprintConf (lint2ppSetting lintsettings) $ fixOldDarkRPSyntax uu_ast
             let (_uu_ast_pp, uu_parseErrs_pp) = parseGLuaFromString pretty_printed
             unless (null uu_parseErrs_pp) $ do
-                putStrLn $ "Errors when trying to parse '" <> f <>
+                putStrLn $ "Errors when trying to parse '" ++ f ++
                     "' with uu-parsinglib parser after pretty print!"
                 print uu_parseErrs
 
             case parseFile lintsettings f pretty_printed of
                 Right _ -> pure ()
                 Left errs -> do
-                    putStrLn $ "Errors when trying to parse '" <> f <>
+                    putStrLn $ "Errors when trying to parse '" ++ f ++
                         "' with parsec parser after pretty print!"
                     print errs
 
