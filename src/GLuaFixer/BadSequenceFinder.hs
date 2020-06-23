@@ -76,7 +76,7 @@ stringWarnings = libraryWarnings "string" $
 
 -- | Warnings for the surface library
 surfaceWarnings :: AParser String
-surfaceWarnings = libraryWarnings "libraryWarnings" $
+surfaceWarnings = libraryWarnings "surface" $
     const "Use ScrH instead" <$> ident "ScreenHeight" <|>
     const "Use ScrW instead" <$> ident "ScreenWidth"
 
