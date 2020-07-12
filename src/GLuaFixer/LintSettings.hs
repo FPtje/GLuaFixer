@@ -30,6 +30,7 @@ data LintSettings =
     , prettyprint_spaceAfterParens   :: !Bool
     , prettyprint_spaceAfterBrackets :: !Bool
     , prettyprint_spaceAfterBraces   :: !Bool
+    , prettyprint_spaceAfterLabel    :: !Bool
     , prettyprint_spaceBeforeComma   :: !Bool
     , prettyprint_spaceAfterComma    :: !Bool
     , prettyprint_semicolons         :: !Bool
@@ -64,6 +65,7 @@ defaultLintSettings =
     , prettyprint_spaceAfterParens   = False
     , prettyprint_spaceAfterBrackets = False
     , prettyprint_spaceAfterBraces   = False
+    , prettyprint_spaceAfterLabel    = False
     , prettyprint_spaceBeforeComma   = False
     , prettyprint_spaceAfterComma    = True
     , prettyprint_semicolons         = False
@@ -97,6 +99,7 @@ instance FromJSON LintSettings where
           v .:? "prettyprint_spaceAfterParens"   .!= prettyprint_spaceAfterParens defaultLintSettings   <*>
           v .:? "prettyprint_spaceAfterBrackets" .!= prettyprint_spaceAfterBrackets defaultLintSettings <*>
           v .:? "prettyprint_spaceAfterBraces"   .!= prettyprint_spaceAfterBraces defaultLintSettings   <*>
+          v .:? "prettyprint_spaceAfterLabel"    .!= prettyprint_spaceAfterLabel defaultLintSettings    <*>
           v .:? "prettyprint_spaceBeforeComma"   .!= prettyprint_spaceBeforeComma defaultLintSettings   <*>
           v .:? "prettyprint_spaceAfterComma"    .!= prettyprint_spaceAfterComma defaultLintSettings    <*>
           v .:? "prettyprint_semicolons"         .!= prettyprint_semicolons defaultLintSettings         <*>
@@ -112,6 +115,7 @@ lint2ppSetting ls =
     { spaceAfterParens   = prettyprint_spaceAfterParens ls
     , spaceAfterBrackets = prettyprint_spaceAfterBrackets ls
     , spaceAfterBraces   = prettyprint_spaceAfterBraces ls
+    , spaceAfterLabel    = prettyprint_spaceAfterLabel ls
     , spaceBeforeComma   = prettyprint_spaceBeforeComma ls
     , spaceAfterComma    = prettyprint_spaceAfterComma ls
     , semicolons         = prettyprint_semicolons ls
@@ -142,6 +146,7 @@ instance ToJSON LintSettings where
         , "prettyprint_spaceAfterParens"   .= prettyprint_spaceAfterParens ls
         , "prettyprint_spaceAfterBrackets" .= prettyprint_spaceAfterBrackets ls
         , "prettyprint_spaceAfterBraces"   .= prettyprint_spaceAfterBraces ls
+        , "prettyprint_spaceAfterLabel"    .= prettyprint_spaceAfterLabel ls
         , "prettyprint_spaceBeforeComma"   .= prettyprint_spaceBeforeComma ls
         , "prettyprint_spaceAfterComma"    .= prettyprint_spaceAfterComma ls
         , "prettyprint_semicolons"         .= prettyprint_semicolons ls

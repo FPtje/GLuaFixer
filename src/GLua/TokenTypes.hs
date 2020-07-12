@@ -357,7 +357,7 @@ instance Show Token where
         "]" -- RSquare
         ),
         (
-        \s -> "::" ++ s ++ "::", -- Label
+        id, -- Label
         id -- Identifier
         )
         )

@@ -30,6 +30,7 @@ data PrettyPrintConfig = PPConfig {
     spaceAfterParens :: Bool,
     spaceAfterBrackets :: Bool,
     spaceAfterBraces :: Bool,
+    spaceAfterLabel :: Bool,
     spaceBeforeComma :: Bool,
     spaceAfterComma :: Bool,
     semicolons :: Bool,
@@ -42,6 +43,7 @@ defaultPPConfig = PPConfig {
     spaceAfterParens = False,
     spaceAfterBrackets = False,
     spaceAfterBraces = False,
+    spaceAfterLabel = False,
     spaceBeforeComma = False,
     spaceAfterComma = True,
     semicolons = False,
@@ -395,7 +397,8 @@ sem Stat
                  vars.isHead = True
     | AFuncCall  lhs.pretty = @fn.pretty <> @loc.semicolon
                  loc.semicolon = if semicolons @lhs.ppconf || @lhs.potentiallyAmbiguousAsStatement then zchr ';' else empty
-    | ALabel     lhs.pretty = tok @lbl
+    | ALabel     lhs.pretty = zeroWidthText "::" <> @loc.whitespace <> tok @lbl <> @loc.whitespace <> zeroWidthText "::"
+                 loc.whitespace = if spaceAfterLabel @lhs.ppconf then zeroWidthText " " else empty
     | ABreak     lhs.pretty = zeroWidthText "break" <> @loc.semicolon
                  loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  lhs.hasBreaking = True

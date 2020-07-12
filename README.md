@@ -59,6 +59,7 @@ Example `glualint.json` with the default options:
     "prettyprint_spaceAfterParens":     false,
     "prettyprint_spaceAfterBrackets":   false,
     "prettyprint_spaceAfterBraces":     false,
+    "prettyprint_spaceAfterLabel":      false,
     "prettyprint_spaceBeforeComma":     false,
     "prettyprint_spaceAfterComma":      true,
     "prettyprint_semicolons":           false,
