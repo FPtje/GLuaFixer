@@ -3,13 +3,15 @@ module Main where
 import "glualint-lib" GLua.AG.PrettyPrint
 import "glualint-lib" GLua.Parser
 import "glualint-lib" GLua.ASTInstances ()
-import "glualint-lib" GLua.TokenTypes ()
+import "glualint-lib" GLua.TokenTypes (isWhitespace)
 import "glualint-lib" GLuaFixer.AG.ASTLint
 import "glualint-lib" GLuaFixer.AG.DarkRPRewrite
 import "glualint-lib" GLuaFixer.AnalyseProject
 import "glualint-lib" GLuaFixer.LintMessage
 import "glualint-lib" GLuaFixer.LintSettings
 import "glualint-lib" GLuaFixer.Util
+
+import qualified "glualint-lib" GLua.Lexer as Lex
 
 import Control.Applicative ((<|>))
 import Control.Monad (unless)
@@ -126,7 +128,14 @@ runTest fs = do
           runTest luaFiles
         else do
             contents <- doReadFile f
-            let (uu_ast, uu_parseErrs) = parseGLuaFromString contents
+            let (uu_lex, uu_lex_errors) = Lex.execParseTokens contents
+
+            unless (null uu_lex_errors) $ do
+                putStrLn $ "Errors when trying to lex '" ++ f ++
+                    "' with uu-parsinglib lexer!"
+                print uu_lex_errors
+
+            let (uu_ast, uu_parseErrs) = parseGLua $ filter (not . isWhitespace) uu_lex
             lintsettings <- getSettings f
             putStrLn $ "Testing " ++ f
             unless (null uu_parseErrs) $ do
