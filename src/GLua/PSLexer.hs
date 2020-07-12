@@ -146,7 +146,7 @@ parseIdentifier = (:) <$> (letter <|> underscore) <*> many allowed <?> "Identifi
 
 -- | Parse a label.
 parseLabel :: Parser String
-parseLabel = string "::" *> parseIdentifier <* string "::" <?> "Label"
+parseLabel = string "::" *> (optionMaybe parseWhitespace *> parseIdentifier <* optionMaybe parseWhitespace) <* string "::" <?> "Label"
 
 -- | Parse anything to do with dots. Indexaction (.), concatenation (..), varargs (...) or numbers that start with a dot
 parseDots :: Parser Token
