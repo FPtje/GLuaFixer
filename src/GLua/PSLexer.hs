@@ -110,7 +110,7 @@ parseString = SQString <$> parseLineString '\'' <|>
 -- | Parse any kind of number.
 -- Except for numbers that start with a '.'. That's handled by parseDots to solve ambiguity.
 parseNumber :: Parser Token
-parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pNumber) <*> option "" parseNumberSuffix) <?> "Number"
+parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pBinary <|> pNumber) <*> (pLLULL <|> option "" parseNumberSuffix)) <?> "Number"
     where
         pNumber :: Parser String
         pNumber = (++) <$> many1 digit <*> option "" pDecimal
@@ -119,10 +119,27 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pNumber) <*> option "" par
         pDecimal = (:) <$> char '.' <*> many digit
 
         pHexadecimal :: Parser String
-        pHexadecimal = (++) <$> try (string "0x") <*> ((++) <$> many1 pHex <*> option "" pDecimal)
+        pHexadecimal = (++) <$> (try (string "0x") <|> try (string "0X")) <*> ((++) <$> many1 pHex <*> option "" pDecimal)
 
         pHex :: Parser Char
         pHex = digit <|> oneOf ['a', 'b', 'c', 'd', 'e', 'f', 'A', 'B', 'C', 'D', 'E', 'F']
+
+        pBinary :: Parser String
+        pBinary = (++) <$> (try (string "0b") <|> try (string "0B")) <*> ((++) <$> many1 pBin <*> option "" pDecimal)
+
+        pBin :: Parser Char
+        pBin = digit <|> oneOf ['0', '1']
+
+        -- LL/ULL suffix of a number, making it signed/unsigned int64 respectively
+        -- http://luajit.org/ext_ffi_api.html#literals
+        pLLULL :: Parser String
+        pLLULL = pULL <|> pLL
+
+        pLL :: Parser String
+        pLL = "LL" <$ oneOf ['L', 'l'] <* oneOf ['L', 'l']
+
+        pULL :: Parser String
+        pULL = "ULL" <$ oneOf ['U', 'u'] <* pLL
 
 -- Parse the suffix of a number
 parseNumberSuffix :: Parser String

@@ -127,3 +127,23 @@ bar
 ::
 
 ::baz::
+
+foo = 0000010
+hex = 0X01234567890abcdef
+hex_decimal = 0X01234567890abcdef.5
+
+-- Binary literals, added in LuaJIT 2.1.0
+-- https://github.com/FPtje/GLuaFixer/issues/88
+a = 0b100101010
+b = 0b0
+c = 0b01010101
+d = 0b11111
+d = 0b00000
+
+-- LL and ULL for signed and unsigned 64 bit integers respectively
+a = 10LL
+b = 10ULL
+c = 0xaefAEFlL
+d = 0XaefAEFull
+e = 0b0110ll
+f = 0b0110uLl

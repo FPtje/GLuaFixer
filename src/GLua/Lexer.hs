@@ -112,9 +112,18 @@ parseString = DQString <$> parseLineString '"' <<|>
 
 -- | Parse any kind of number.
 parseNumber :: LParser Token
-parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber) <*> opt parseNumberSuffix "")
-
+parseNumber = TNumber <$> ((++) <$> (pZeroPrefixedNumber <<|> pNumber) <*> (pLLULL <<|> opt parseNumberSuffix ""))
     where
+        -- Numbers starting with 0 can be regular numbers, hexadecimals or binary
+        pZeroPrefixedNumber :: LParser String
+        pZeroPrefixedNumber =
+            pSym '0' <**> (
+                (\hex _0 -> _0 : hex) <$> pHexadecimal <<|>
+                (\bin _0 -> _0 : bin) <$> pBinary <<|>
+                (\digits _0 -> _0 : digits) <$> pNumber <<|>
+                pure (:[])
+            )
+
         pNumber :: LParser String
         pNumber = (++) <$> pSome pDigit <*> opt pDecimal ""
 
@@ -122,11 +131,28 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <<|> pNumber) <*> opt parseNum
         pDecimal = (:) <$> pSym '.' <*> pMany pDigit
 
         pHexadecimal :: LParser String
-        pHexadecimal = (++) <$> pToken "0x" <*> ((++) <$> pSome pHex <*> opt pDecimal "")
+        pHexadecimal = (:) <$> (pSym 'x' <<|> pSym 'X') <*> ((++) <$> pSome pHex <*> opt pDecimal "")
+
+        pBinary :: LParser String
+        pBinary = (:) <$> (pSym 'b' <<|> pSym 'B') <*> ((++) <$> pSome pBin <*> opt pDecimal "")
 
         pHex :: LParser Char
         pHex = pDigit <<|> pSym 'a' <<|> pSym 'b' <<|> pSym 'c' <<|> pSym 'd' <<|> pSym 'e' <<|> pSym 'f'
                       <<|> pSym 'A' <<|> pSym 'B' <<|> pSym 'C' <<|> pSym 'D' <<|> pSym 'E' <<|> pSym 'F'
+
+        pBin :: LParser Char
+        pBin = pSym '0' <<|> pSym '1'
+
+        -- LL/ULL suffix of a number, making it signed/unsigned int64 respectively
+        -- http://luajit.org/ext_ffi_api.html#literals
+        pLLULL :: LParser String
+        pLLULL = pULL <<|> pLL
+
+        pLL :: LParser String
+        pLL = "LL" <$ (pSym 'L' <<|> pSym 'l') <* (pSym 'L' <<|> pSym 'l')
+
+        pULL :: LParser String
+        pULL = "ULL" <$ (pSym 'U' <<|> pSym 'u') <* pLL
 
 -- Parse the suffix of a number
 parseNumberSuffix :: LParser String
