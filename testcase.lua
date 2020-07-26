@@ -64,6 +64,7 @@ local t = {
 }
 
 -- Ambiguous without ; as bruh(print)(a) is a valid call
+bruh = function() end
 a, b = bruh;
 (print)(a)
 
@@ -102,6 +103,8 @@ if (amount and isnumber(amount) and amount > 0 and char) then
         -- Fee 10%
     end
 else
+    client = {notify = function() end}
+    L = function() end
     client:notify(L("provideValidNumber", client))
 end
 
