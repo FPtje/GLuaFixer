@@ -118,6 +118,7 @@ foo = 5^#tbl
 
 -- https://github.com/FPtje/GLuaFixer/issues/2
 a = -.5
+f = 0.5
 
 :: foo ::
 ::

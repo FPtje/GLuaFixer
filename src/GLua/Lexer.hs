@@ -120,7 +120,7 @@ parseNumber = TNumber <$> ((++) <$> (pZeroPrefixedNumber <<|> pNumber) <*> (pLLU
             pSym '0' <**> (
                 (\hex _0 -> _0 : hex) <$> pHexadecimal <<|>
                 (\bin _0 -> _0 : bin) <$> pBinary <<|>
-                (\digits _0 -> _0 : digits) <$> pNumber <<|>
+                (\digits _0 -> _0 : digits) <$> (pDecimal <<|> pNumber) <<|>
                 pure (:[])
             )
 
