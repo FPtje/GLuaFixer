@@ -156,7 +156,11 @@ parseNumber = TNumber <$> ((++) <$> (pZeroPrefixedNumber <<|> pNumber) <*> (pLLU
 
 -- Parse the suffix of a number
 parseNumberSuffix :: LParser String
-parseNumberSuffix = (\e s d -> e : s ++ d) <$> (pSym 'e' <<|> pSym 'E' <<|> pSym 'p' <<|> pSym 'P')
+parseNumberSuffix = imaginary <<|> extension
+    where
+        imaginary = (:[]) <$> (pSym 'i' <<|> pSym 'I')
+
+        extension = (\e s d -> e : s ++ d) <$> (pSym 'e' <<|> pSym 'E' <<|> pSym 'p' <<|> pSym 'P')
             <*> opt (pToken "+" <<|> pToken "-") ""
             <*> pSome pDigit
 

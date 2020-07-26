@@ -143,7 +143,10 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pBinary <|> pNumber) <*> (
 
 -- Parse the suffix of a number
 parseNumberSuffix :: Parser String
-parseNumberSuffix = (\e s d -> e : s ++ d) <$> oneOf ['e', 'E', 'p', 'P']
+parseNumberSuffix = imaginary <|> extension
+    where
+        imaginary = (:[]) <$> oneOf ['i', 'I']
+        extension = (\e s d -> e : s ++ d) <$> oneOf ['e', 'E', 'p', 'P']
             <*> option "" (string "+" <|> string "-")
             <*> many1 digit
 

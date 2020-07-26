@@ -1,4 +1,4 @@
--- Lua test file for basic regression testing.
+﻿-- Lua test file for basic regression testing.
 -- Run glualint --test testcase.lua to run the test
 
 a = {}
@@ -148,3 +148,11 @@ c = 0xaefAEFlL
 d = 0XaefAEFull
 e = 0b0110ll
 f = 0b0110uLl
+
+-- Imaginary numbers
+a = 10i
+b = 10I
+c = 0xfi
+d = 0xfI
+e = 0b01i
+
