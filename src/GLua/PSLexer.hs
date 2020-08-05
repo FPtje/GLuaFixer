@@ -5,6 +5,7 @@ module GLua.PSLexer where
 
 import GLua.AG.Token
 
+import Data.Char(ord)
 import Text.Parsec
 import Text.Parsec.String
 import Text.Parsec.Pos
@@ -34,9 +35,31 @@ sp2lcp pos = LineColPos (sourceLine pos - 1) (sourceColumn pos - 1) 0
 pPos :: Parser LineColPos
 pPos = sp2lcp <$> getPosition
 
--- | Underscore character
-underscore :: Parser Char
-underscore = char '_'
+-- See luajit's src/lj_char.c and src/lj_char.h
+pIdentifierCharacter :: Parser Char
+pIdentifierCharacter = satisfy validChar
+    where
+        validChar :: Char -> Bool
+        validChar c =
+            cBetween c '0' '9' ||
+            cBetween c 'A' 'Z' ||
+            c == '_'          ||
+            cBetween c 'a' 'z' ||
+            ord c >= 128
+
+
+pNonDigitIdentifierCharacter :: Parser Char
+pNonDigitIdentifierCharacter = satisfy validChar
+    where
+        validChar :: Char -> Bool
+        validChar c =
+            cBetween c 'A' 'Z' ||
+            c == '_'          ||
+            cBetween c 'a' 'z' ||
+            ord c >= 128
+
+cBetween :: Char -> Char -> Char -> Bool
+cBetween c left right = c >= left && c <= right
 
 -- | Parse the string until the end. Used in parseLineComment among others.
 pUntilEnd :: Parser String
@@ -154,15 +177,13 @@ parseNumberSuffix = imaginary <|> extension
 parseKeyword :: Token -> String -> Parser Token
 parseKeyword tok str = try (do
     _ <- string str
-    (\s -> Identifier (str ++ s)) <$> many1 (underscore <|> alphaNum) <|>
+    (\s -> Identifier (str ++ s)) <$> many1 (pIdentifierCharacter) <|>
         return tok
     <?> "Keyword " ++ str)
 
 -- | Parse just an identifier.
 parseIdentifier :: Parser String
-parseIdentifier = (:) <$> (letter <|> underscore) <*> many allowed <?> "Identifier"
-    where
-        allowed = letter <|> digit <|> underscore
+parseIdentifier = (:) <$> pNonDigitIdentifierCharacter <*> many pIdentifierCharacter <?> "Identifier"
 
 -- | Parse a label.
 parseLabel :: Parser String

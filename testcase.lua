@@ -156,3 +156,8 @@ c = 0xfi
 d = 0xfI
 e = 0b01i
 
+🔞 = "Emoji: 🔞"
+_👨‍💻 = "👨‍💻"
+function💩 = "💩"
+print(🔞, _👨‍💻, function💩)
+

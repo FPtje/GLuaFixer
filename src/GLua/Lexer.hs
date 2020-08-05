@@ -9,6 +9,7 @@ module GLua.Lexer where
 
 import GLua.AG.Token
 
+import Data.Char (ord)
 import Text.ParserCombinators.UU
 import Text.ParserCombinators.UU.Utils
 import Text.ParserCombinators.UU.BasicInstances
@@ -24,6 +25,32 @@ parseWhitespace = pSome $ pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' 
 -- | Blanco parser. Parses anything. Used in parsing comments.
 parseAnyChar :: LParser Char
 parseAnyChar = pSatisfy (const True) (Insertion "Any character" 'y' 5)
+
+-- See luajit's src/lj_char.c and src/lj_char.h
+pIdentifierCharacter :: LParser Char
+pIdentifierCharacter = pSatisfy validChar (Insertion "Identifying character (letter, number, emoji)" 'a' 5)
+    where
+        validChar :: Char -> Bool
+        validChar c =
+            between c '0' '9' ||
+            between c 'A' 'Z' ||
+            c == '_'          ||
+            between c 'a' 'z' ||
+            ord c >= 128
+
+
+pNonDigitIdentifierCharacter :: LParser Char
+pNonDigitIdentifierCharacter = pSatisfy validChar (Insertion "Identifying character (letter, emoji)" 'a' 5)
+    where
+        validChar :: Char -> Bool
+        validChar c =
+            between c 'A' 'Z' ||
+            c == '_'          ||
+            between c 'a' 'z' ||
+            ord c >= 128
+
+between :: Char -> Char -> Char -> Bool
+between c left right = c >= left && c <= right
 
 -- | Parses a C-style block comment.
 parseCBlockComment :: LParser String
@@ -168,15 +195,11 @@ parseNumberSuffix = imaginary <<|> extension
 -- it's actually an identifier that starts with that keyword.
 parseKeyword :: Token -> String -> LParser Token
 parseKeyword tok word = pToken word <**>
-                            ((\k -> Identifier . (++) k) <$$> pSome allowed <<|> const <$> pReturn tok)
-    where
-        allowed = pSym '_' <<|> pLetter <<|> pDigit
+                            ((\k -> Identifier . (++) k) <$$> pSome pIdentifierCharacter <<|> const <$> pReturn tok)
 
 -- | Parse just an identifier.
 parseIdentifier :: LParser String
-parseIdentifier = (:)  <$> (pSym '_' <<|> pLetter) <*> pMany allowed
-    where
-        allowed = pSym '_' <<|> pLetter <<|> pDigit
+parseIdentifier = (:) <$> pNonDigitIdentifierCharacter <*> pMany pIdentifierCharacter
 
 -- | Parse a label.
 parseLabel :: LParser String
