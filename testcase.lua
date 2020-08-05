@@ -109,8 +109,8 @@ else
 end
 
 -- https://github.com/FPtje/GLuaFixer/issues/41
-if true then
-return false end -- a
+if false then
+return true end -- a
 
 -- https://github.com/FPtje/GLuaFixer/issues/25
 tbl={1,2}
