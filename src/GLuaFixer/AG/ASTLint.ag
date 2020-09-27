@@ -170,6 +170,11 @@ attr Stat MStat MStatList Block
     -- AND holds no else or elseif bits
     syn isIfStatement use {||} {False} :: Bool
 
+attr PrefixExp MExpr Expr MaybeMExpr
+    -- Whether an expression is just a single variable. The Maybe contains the
+    -- optional variable name if it is indeed just a single variable
+    syn isSingleVar use {const (const Nothing)} {Nothing} :: {Maybe MToken}
+
 ---------------------------------------
 --  Semantics
 ---------------------------------------
@@ -225,7 +230,9 @@ sem Declaration
         loc.var                 = tokenLabel . fromJust $ @x1.varName
         loc.shadowWarning       = do
                                     var <- @x1.varName
-                                    checkShadows @lhs.scopes var
+                                    if (Just var /= @x2.isSingleVar) then
+                                        checkShadows @lhs.scopes var
+                                    else Nothing
 
         x1.scopes               = if @lhs.localDefinition then
                                     M.insert @loc.var (False, @x1.mtokenPos) (head @lhs.scopes) : tail @lhs.scopes
@@ -458,6 +465,7 @@ sem PrefixExp
     | PFVar
         lhs.mtokenPos           = @name.mtokenPos
         lhs.hasSuffixes         = not . null $ @suffixes.copy
+        lhs.isSingleVar         = if null @suffixes.copy then @loc.varName else Nothing
         loc.varName             = Just @name.copy
         -- When using variables, register them. Find out more about the global scope
         -- Also register the usage of variables when this prefixExpr is not part of a declaration
@@ -475,6 +483,7 @@ sem PrefixExp
                                     (:) $ warn @name.mtokenPos "'self.Weapon' is the same as just 'self' in SWEPs"
     | ExprVar
         lhs.mtokenPos           = @expr.mtokenPos
+        lhs.isSingleVar         = Nothing
         lhs.varName             = Nothing
         lhs.hasSuffixes         = False
         expr.inParentheses      = True
