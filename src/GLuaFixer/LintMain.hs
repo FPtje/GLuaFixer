@@ -25,7 +25,7 @@ import qualified Data.ByteString.Lazy as BL
 import Data.Foldable
 
 version :: String
-version = "1.16.3"
+version = "1.16.4"
 
 -- | Pretty print, uses the uu-parsinglib library
 prettyPrintStdin :: Maybe Indentation -> IO ()
