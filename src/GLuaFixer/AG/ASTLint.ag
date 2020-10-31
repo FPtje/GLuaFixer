@@ -133,12 +133,14 @@ attr UnOp
 attr MExpr Expr PrefixExp MaybeMExpr
     inh isNegation :: Bool
 
+    -- Which variable is being defined by a LocDef statement. Note: Only LocDef!
+    -- Not global (Def) statements!
     -- Exception for "unused variable".
     -- Don't register a variable as used in this scenario:
     -- local a = a
     -- It should still register in e.g. this scenario:
     -- local a = run(function() a() end)
-    inh ignoreVarUse :: {Maybe MToken}
+    inh varBeingDefined :: {Maybe MToken}
 
 attr MExpr Expr PrefixExp MExprList
     inh inParentheses :: Bool -- Whether an expression is directly between parentheses (used to check double parentheses)
@@ -206,7 +208,7 @@ sem MStatList
 sem MExprList
     | Cons
         hd.isNegation           = False
-        hd.ignoreVarUse         = Nothing
+        hd.varBeingDefined      = Nothing
     | Nil
 
 sem MaybeMExpr
@@ -223,9 +225,9 @@ sem Declaration
         x1.inParentheses        = False
         x1.topLevel             = False
         x2.isNegation           = False
-        x1.ignoreVarUse         = Nothing
+        x1.varBeingDefined      = Nothing
 
-        x2.ignoreVarUse         = if @x1.hasSuffixes || not @lhs.localDefinition then Nothing else @x1.varName
+        x2.varBeingDefined      = if @x1.hasSuffixes || not @lhs.localDefinition then Nothing else @x1.varName
 
         loc.var                 = tokenLabel . fromJust $ @x1.varName
         loc.shadowWarning       = do
@@ -280,7 +282,7 @@ sem Stat
         fn.registerVarUse       = True
         fn.inParentheses        = False
         fn.topLevel             = True
-        fn.ignoreVarUse         = Nothing
+        fn.varBeingDefined      = Nothing
         loc.isModuleCall        = (tokenLabel . fromJust $ @fn.varName) == "module"
         lhs.isInModule          = @lhs.isInModule || @loc.isModuleCall
     | ALabel
@@ -301,7 +303,7 @@ sem Stat
         cond.isNegation         = False
         cond.inParentheses      = False
         cond.topLevel           = True
-        cond.ignoreVarUse       = Nothing
+        cond.varBeingDefined    = Nothing
         body.isRepeat           = False
         body.scopes             = M.empty : @cond.scopes
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
@@ -313,7 +315,7 @@ sem Stat
         cond.isNegation         = False
         cond.inParentheses      = False
         cond.topLevel           = True
-        cond.ignoreVarUse       = Nothing
+        cond.varBeingDefined    = Nothing
         body.isRepeat           = True
         body.scopes             = M.empty : @lhs.scopes
         lhs.scopes              = tail @cond.scopes -- Manually pop off a scope after the condition
@@ -328,7 +330,7 @@ sem Stat
         cond.isNegation         = False
         cond.inParentheses      = False
         cond.topLevel           = True
-        cond.ignoreVarUse       = Nothing
+        cond.varBeingDefined    = Nothing
         body.scopes             = M.empty : @cond.scopes
         body.isRepeat           = False
         elifs.mtokenPos         = @lhs.mtokenPos
@@ -348,16 +350,16 @@ sem Stat
         val.isNegation          = False
         val.inParentheses       = False
         val.topLevel            = True
-        val.ignoreVarUse        = Nothing
+        val.varBeingDefined     = Nothing
         to.isNegation           = False
         to.inParentheses        = False
         to.topLevel             = True
-        to.ignoreVarUse         = Nothing
+        to.varBeingDefined      = Nothing
         body.isRepeat           = False
         step.isNegation         = False
         step.inParentheses      = False
         step.topLevel           = True
-        step.ignoreVarUse       = Nothing
+        step.varBeingDefined    = Nothing
         body.scopes             = M.singleton @var.identifier (not (lint_unusedLoopVars @lhs.config), @var.mtokenPos) : @step.scopes
         loc.shadowWarning       = checkShadows @lhs.scopes @var.copy
         +warnings               = if not (lint_shadowing @lhs.config) || isNothing @loc.shadowWarning then id else
@@ -427,7 +429,7 @@ sem ElseIf
         x1.isNegation           = False
         x1.inParentheses        = False
         x1.topLevel             = True
-        x1.ignoreVarUse         = Nothing
+        x1.varBeingDefined      = Nothing
         x2.scopes               = M.empty : @x1.scopes
         x2.isRepeat             = False
         loc.keywordPos          = Region (rgStart @lhs.mtokenPos) (customAdvanceToken (rgStart @lhs.mtokenPos) T.Elseif)
@@ -470,7 +472,15 @@ sem PrefixExp
         -- When using variables, register them. Find out more about the global scope
         -- Also register the usage of variables when this prefixExpr is not part of a declaration
         -- Don't register the usage of a variable when it's directly the variable being defined
-        loc.foundVars           = registerVariable @lhs.scopes @name.mtokenPos (show @name.mtok) (@lhs.registerVarUse && (isNothing @lhs.ignoreVarUse || @lhs.ignoreVarUse /= @loc.varName))
+        loc.foundVars           = if isJust @lhs.varBeingDefined && @lhs.varBeingDefined == @loc.varName then
+                                    -- When coming across a variable that is being defined, assume it comes from a higher scope and register usage there.
+                                    -- This assumption doesn't always hold, but when it doesn't another warning (shadowing) should pop up instead
+                                    case @lhs.scopes of
+                                      deepestScope : otherScopes -> deepestScope : registerVariable otherScopes @name.mtokenPos (show @name.mtok) @lhs.registerVarUse
+                                      noScopes -> noScopes
+                                  else
+                                    registerVariable @lhs.scopes @name.mtokenPos (show @name.mtok) @lhs.registerVarUse
+
         loc.name                = tokenLabel @name.copy
         name.scopes             = @loc.foundVars
         +warnings               = if not (lint_beginnerMistakes @lhs.config) || @lhs.isMeta || @loc.name /= "self" then id else
@@ -501,7 +511,7 @@ sem PFExprSuffix
         index.isNegation        = False
         index.inParentheses     = True
         index.topLevel          = True
-        index.ignoreVarUse      = Nothing
+        index.varBeingDefined   = Nothing
     | DotIndex
 
 sem MExpr
@@ -535,11 +545,11 @@ sem Expr
         left.isNegation         = False
         left.inParentheses      = False
         left.topLevel           = False
-        left.ignoreVarUse       = Nothing
+        left.varBeingDefined    = Nothing
         right.isNegation        = False
         right.inParentheses     = False
         right.topLevel          = False
-        right.ignoreVarUse      = Nothing
+        right.varBeingDefined   = Nothing
 
         -- Wheter someone is doing "not (a == b)" or "not (a ~= b)"
         loc.stupidNegation      = oppositeBinOp @op.copy
@@ -550,7 +560,7 @@ sem Expr
         right.isNegation        = @op.isNegation
         right.inParentheses     = False
         right.topLevel          = False
-        right.ignoreVarUse      = Nothing
+        right.varBeingDefined   = Nothing
 
 sem Args
     | ListArgs
@@ -566,15 +576,15 @@ sem Field
         key.isNegation          = False
         key.inParentheses       = True
         key.topLevel            = True
-        key.ignoreVarUse        = Nothing
+        key.varBeingDefined     = Nothing
         value.isNegation        = False
         value.inParentheses     = True
         value.topLevel          = True
-        value.ignoreVarUse      = Nothing
+        value.varBeingDefined   = Nothing
     | NamedField
         loc.mtokenPos           = @key.mtokenPos
         lhs.fieldNames          = S.insert @key.mtok @lhs.fieldNames
-        value.ignoreVarUse      = Nothing
+        value.varBeingDefined   = Nothing
         value.isNegation        = False
         value.inParentheses     = True
         value.topLevel          = True
@@ -584,7 +594,7 @@ sem Field
         value.isNegation        = False
         value.inParentheses     = True
         value.topLevel          = True
-        value.ignoreVarUse      = Nothing
+        value.varBeingDefined   = Nothing
 
 sem UnOp
     | UnMinus
