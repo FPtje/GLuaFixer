@@ -93,12 +93,12 @@ lint ls (f : fs) = do
         else if f == "stdin" then do
             msgs <- lintFile config f <$> getContents
 
-            mapM_ print msgs
+            mapM_ (\x -> print (formatLintMessage x (log_format config))) msgs
             pure $ not $ null msgs
         else do
             msgs <- lintFile config f <$> doReadFile f
 
-            mapM_ print msgs
+            mapM_ (\x -> print (formatLintMessage x (log_format config))) msgs
             pure $ not $ null msgs
 
     -- Lint the other files
