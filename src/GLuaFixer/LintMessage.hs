@@ -13,25 +13,26 @@ data LintMessage
   deriving ( Eq )
 
 instance Show LintMessage where
-    show (LintError rg msg file) = formatLintMessageDefault "Error" rg msg file
-    show (LintWarning rg msg file) = formatLintMessageDefault "Warning" rg msg file
-
-getLintMessageData :: LintMessage -> (Region, String, String, String)
-getLintMessageData (LintError rg msg file) = (rg, msg, file, "Error")
-getLintMessageData (LintWarning rg msg file) = (rg, msg, file, "Warning")
+    show lintMsg = formatLintMessageDefault lintMsg
 
 formatLintMessage :: LintMessage -> String -> String
 formatLintMessage lintMsg format = do
-  let (rg, msg, file, level) = getLintMessageData lintMsg
   case format of
-    "github" -> formatLintMessageGithub level rg msg file
-    _ -> formatLintMessageDefault level rg msg file
+    "github" -> formatLintMessageGithub lintMsg
+    _ -> formatLintMessageDefault lintMsg
 
-formatLintMessageDefault :: String -> Region -> String -> String -> String
-formatLintMessageDefault level rg msg file = file ++ ": [" ++ level ++ "] " ++ (renderRegion rg) ++ ": " ++ msg
+formatLintMessageDefault :: LintMessage -> String
+formatLintMessageDefault lintMsg = do
+  let (rg, msg, file, level) = case lintMsg of
+        LintError _rg _msg _file -> (_rg, _msg, _file, "Error")
+        LintWarning _rg _msg _file -> (_rg, _msg, _file, "Warning")
+  file ++ ": [" ++ level ++ "] " ++ (renderRegion rg) ++ ": " ++ msg
 
-formatLintMessageGithub :: String -> Region -> String -> String -> String
-formatLintMessageGithub level rg msg file = do
+formatLintMessageGithub :: LintMessage -> String
+formatLintMessageGithub lintMsg = do
+  let (rg, msg, file, level) = case lintMsg of
+        LintError _rg _msg _file -> (_rg, _msg, _file, "Error")
+        LintWarning _rg _msg _file -> (_rg, _msg, _file, "Warning")
   let (Region start _) = rg
   let (LineColPos line col _) = start
   "::" ++ map toLower level ++ " file=" ++ file ++ ",line=" ++ show (succ line) ++ ",col=" ++ show (succ col) ++ "::" ++ msg
