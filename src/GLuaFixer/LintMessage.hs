@@ -1,10 +1,30 @@
+{-# LANGUAGE OverloadedStrings #-}
 module GLuaFixer.LintMessage where
 
 import GLua.AG.Token
 import GLua.AG.PrettyPrint
+import Data.Aeson
+import Control.Monad
 import Data.Char
 import Data.List (sortOn)
 import Text.ParserCombinators.UU.BasicInstances hiding (msgs)
+
+data LogFormat = StandardLogFormat | GithubLogFormat
+
+instance Show LogFormat where
+  show (StandardLogFormat) = "standard"
+  show (GithubLogFormat) = "github"
+
+instance ToJSON LogFormat where
+  toJSON StandardLogFormat = "standard"
+  toJSON GithubLogFormat = "github"
+
+instance FromJSON LogFormat where
+  parseJSON (String logFormat) = case logFormat of
+    "standard" -> return ( StandardLogFormat )
+    "github" -> return ( GithubLogFormat )
+    _ -> fail ( "Please use either \"standard\" or \"github\" but was " ++ show logFormat )
+  parseJSON _ = mzero
 
 -- | Represents lint messages
 data LintMessage
@@ -15,10 +35,10 @@ data LintMessage
 instance Show LintMessage where
     show lintMsg = formatLintMessageDefault lintMsg
 
-formatLintMessage :: LintMessage -> String -> String
+formatLintMessage :: LintMessage -> LogFormat -> String
 formatLintMessage lintMsg format = do
   case format of
-    "github" -> formatLintMessageGithub lintMsg
+    GithubLogFormat -> formatLintMessageGithub lintMsg
     _ -> formatLintMessageDefault lintMsg
 
 formatLintMessageDefault :: LintMessage -> String

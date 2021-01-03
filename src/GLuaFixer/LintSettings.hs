@@ -4,6 +4,7 @@ module GLuaFixer.LintSettings where
 import Data.Aeson
 import Control.Monad
 import GLua.AG.PrettyPrint
+import GLuaFixer.LintMessage
 
 data LintSettings =
     LintSettings
@@ -38,7 +39,7 @@ data LintSettings =
     , prettyprint_rejectInvalidCode  :: !Bool
     , prettyprint_indentation        :: !String
 
-    , log_format                     :: !String
+    , log_format                     :: !LogFormat
     } deriving (Show)
 
 defaultLintSettings :: LintSettings
@@ -75,7 +76,7 @@ defaultLintSettings =
     , prettyprint_rejectInvalidCode  = False
     , prettyprint_indentation        = "    "
 
-    , log_format                     = "standard"
+    , log_format                     = StandardLogFormat
   }
 
 instance FromJSON LintSettings where
