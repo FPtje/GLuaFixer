@@ -36,17 +36,16 @@ instance Show LintMessage where
     show lintMsg = formatLintMessageDefault lintMsg
 
 formatLintMessage :: LintMessage -> LogFormat -> String
-formatLintMessage lintMsg format = do
-  case format of
-    GithubLogFormat -> formatLintMessageGithub lintMsg
-    _ -> formatLintMessageDefault lintMsg
+formatLintMessage lintMsg GithubLogFormat = formatLintMessageGithub lintMsg
+formatLintMessage lintMsg _ = formatLintMessageDefault lintMsg
 
 formatLintMessageDefault :: LintMessage -> String
-formatLintMessageDefault lintMsg = do
+formatLintMessageDefault lintMsg =
   let (rg, msg, file, level) = case lintMsg of
         LintError _rg _msg _file -> (_rg, _msg, _file, "Error")
         LintWarning _rg _msg _file -> (_rg, _msg, _file, "Warning")
-  file ++ ": [" ++ level ++ "] " ++ (renderRegion rg) ++ ": " ++ msg
+  in
+    file ++ ": [" ++ level ++ "] " ++ (renderRegion rg) ++ ": " ++ msg
 
 formatLintMessageGithub :: LintMessage -> String
 formatLintMessageGithub lintMsg = do
