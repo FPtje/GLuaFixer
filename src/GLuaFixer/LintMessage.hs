@@ -5,7 +5,6 @@ import GLua.AG.Token
 import GLua.AG.PrettyPrint
 import Data.Aeson
 import Control.Monad
-import Data.Char
 import Data.List (sortOn)
 import Text.ParserCombinators.UU.BasicInstances hiding (msgs)
 
@@ -26,42 +25,54 @@ instance FromJSON LogFormat where
     _ -> fail ( "Please use either \"standard\" or \"github\" but was " ++ show logFormat )
   parseJSON _ = mzero
 
+data Severity = LintWarning | LintError
+  deriving (Eq)
+
 -- | Represents lint messages
 data LintMessage
-  = LintError { err_rg :: Region, err_msg :: String, err_file :: String }
-  | LintWarning { warn_rg :: Region, warn_msg :: String, warn_file :: String }
-  deriving ( Eq )
+  = LintMessage
+    { lintmsg_severity :: !Severity
+    , lintmsg_region   :: !Region
+    , lintmsg_message  :: !String
+    , lintmsg_file     :: !FilePath
+    }
+  deriving (Eq)
 
 instance Show LintMessage where
     show lintMsg = formatLintMessageDefault lintMsg
 
-formatLintMessage :: LintMessage -> LogFormat -> String
-formatLintMessage lintMsg GithubLogFormat = formatLintMessageGithub lintMsg
-formatLintMessage lintMsg _ = formatLintMessageDefault lintMsg
+formatLintMessage :: LogFormat -> LintMessage -> String
+formatLintMessage StandardLogFormat lintMsg = formatLintMessageDefault lintMsg
+formatLintMessage GithubLogFormat lintMsg = formatLintMessageGithub lintMsg
 
 formatLintMessageDefault :: LintMessage -> String
-formatLintMessageDefault lintMsg =
-  let (rg, msg, file, level) = case lintMsg of
-        LintError _rg _msg _file -> (_rg, _msg, _file, "Error")
-        LintWarning _rg _msg _file -> (_rg, _msg, _file, "Warning")
+formatLintMessageDefault (LintMessage severity region msg file) =
+  let
+    level = case severity of
+      LintWarning -> "Warning"
+      LintError -> "Error"
   in
-    file ++ ": [" ++ level ++ "] " ++ (renderRegion rg) ++ ": " ++ msg
+    showString file .
+    showString ": [" . showString level . showString "] " .
+    showString (renderRegion region) . showString ": " .
+    showString msg $
+    ""
 
 formatLintMessageGithub :: LintMessage -> String
-formatLintMessageGithub lintMsg = do
-  let (rg, msg, file, level) = case lintMsg of
-        LintError _rg _msg _file -> (_rg, _msg, _file, "Error")
-        LintWarning _rg _msg _file -> (_rg, _msg, _file, "Warning")
-  let (Region start _) = rg
-  let (LineColPos line col _) = start
-  "::" ++ map toLower level ++ " file=" ++ file ++ ",line=" ++ show (succ line) ++ ",col=" ++ show (succ col) ++ "::" ++ msg
+formatLintMessageGithub (LintMessage severity (Region (LineColPos line col _) _) msg file) =
+  let
+    level = case severity of
+      LintWarning -> "warning"
+      LintError -> "error"
+  in
+    showString "::" . showString level .
+    showString " file=" . showString file .
+    showString ",line=" . shows (succ line) .
+    showString ",col=" . shows (succ col) .
+    showString "::" . showString msg $
+    ""
 
 -- | Sort lint messages on file and then region
 sortLintMessages :: [LintMessage] -> [LintMessage]
 sortLintMessages msgs =
-  let
-    mapper :: LintMessage -> (String, Region)
-    mapper (LintError rg _ f) = (f, rg)
-    mapper (LintWarning rg _ f) = (f, rg)
-  in
-    sortOn mapper msgs
+    sortOn (\(LintMessage _ rg _ f) -> (f, rg)) msgs

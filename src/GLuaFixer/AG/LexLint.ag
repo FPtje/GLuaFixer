@@ -44,8 +44,8 @@ instance Monoid SyntaxUsed where
 syntaxInconsistency :: String -> String -> String
 syntaxInconsistency l c = "Inconsistent use of '" ++ l ++ "' and '" ++ c ++ "'"
 
-mTokenWarning :: Region -> String -> String -> LintMessage
-mTokenWarning pos str = LintWarning pos str
+mTokenWarning :: Region -> String -> FilePath -> LintMessage
+mTokenWarning pos message = LintMessage LintWarning pos message
 
 isSingleChar :: String -> Bool
 isSingleChar [] = True

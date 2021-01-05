@@ -24,8 +24,8 @@ include "../../GLua/AG/Token.ag"
 --  Helper functions
 ----------------------------------------
 {
-warn :: Region -> String -> String -> LintMessage
-warn pos str = LintWarning pos str
+warn :: Region -> String -> FilePath -> LintMessage
+warn pos message = LintMessage LintWarning pos message
 
 -- Used in detecting "not (a == b)" kind of things
 oppositeBinOp :: BinOp -> Maybe String

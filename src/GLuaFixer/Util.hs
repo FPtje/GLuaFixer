@@ -52,7 +52,7 @@ parseFile :: LintSettings -> FilePath -> String -> Either [LintMessage] ([LintMe
 parseFile config f contents =
     case PSL.execParseTokens contents of
         Left lexErr ->
-            Left [LintError (PSL.sp2Rg $ errorPos lexErr) (renderPSError lexErr) f | lint_syntaxErrors config]
+            Left [LintMessage LintError (PSL.sp2Rg $ errorPos lexErr) (renderPSError lexErr) f | lint_syntaxErrors config]
 
         Right tokens -> do
             let fixedTokens = fixedLexPositions tokens
@@ -62,7 +62,7 @@ parseFile config f contents =
             case parsed of
                 Left err ->
                     -- Return syntax errors
-                    Left [LintError (PSL.sp2Rg $ errorPos err) (renderPSError err) f | lint_syntaxErrors config]
+                    Left [LintMessage LintError (PSL.sp2Rg $ errorPos err) (renderPSError err) f | lint_syntaxErrors config]
                 Right ast ->
                     Right (lexWarnings, ast)
 

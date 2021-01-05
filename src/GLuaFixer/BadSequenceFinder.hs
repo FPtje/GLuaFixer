@@ -280,8 +280,8 @@ badSequence opts = deprecatedSequence opts          <|>
                     whiteSpaceStyleSequence opts
 
 -- | Creates a warning for a certain sequence at any position
-badSequenceWarning :: Region -> String -> [String -> LintMessage] -> [String -> LintMessage]
-badSequenceWarning pos wrn = (:) (LintWarning pos wrn)
+badSequenceWarning :: Region -> String -> [FilePath -> LintMessage] -> [FilePath -> LintMessage]
+badSequenceWarning pos message = (:) (LintMessage LintWarning pos message)
 
 -- | Searches for all the bad sequences
 badSequenceParser :: LintSettings -> AParser [String -> LintMessage]
