@@ -65,7 +65,8 @@ Example `glualint.json` with the default options:
     "prettyprint_semicolons":           false,
     "prettyprint_cStyle":               false,
     "prettyprint_rejectInvalidCode":    false,
-    "prettyprint_indentation":          "    "
+    "prettyprint_indentation":          "    ",
+    "log_format":                       "standard"
 }
 ```
 
@@ -100,3 +101,8 @@ These options affect the pretty printing functionality of `glualint`.
 - `prettyprint_indentation`: What to use for indentation. Any string is valid, but some amount of spaces or `"\t"` is recommended
 - `prettyprint_spaceBeforeComma`: Whether to place a space before every comma
 - `prettyprint_spaceAfterComma`: Whether to place a space after every comma
+
+
+## Other options
+
+- `log_format`: Decides how to format linter warnings and error messages. Possible values are `"standard"` and `"github"`. The `"github"` output format is specifically designed for usage with GitHub actions.
