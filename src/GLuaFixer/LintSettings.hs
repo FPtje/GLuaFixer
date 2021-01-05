@@ -4,6 +4,7 @@ module GLuaFixer.LintSettings where
 import Data.Aeson
 import Control.Monad
 import GLua.AG.PrettyPrint
+import GLuaFixer.LintMessage
 
 data LintSettings =
     LintSettings
@@ -37,6 +38,8 @@ data LintSettings =
     , prettyprint_cStyle             :: !Bool
     , prettyprint_rejectInvalidCode  :: !Bool
     , prettyprint_indentation        :: !String
+
+    , log_format                     :: !LogFormat
     } deriving (Show)
 
 defaultLintSettings :: LintSettings
@@ -72,6 +75,8 @@ defaultLintSettings =
     , prettyprint_cStyle             = False
     , prettyprint_rejectInvalidCode  = False
     , prettyprint_indentation        = "    "
+
+    , log_format                     = StandardLogFormat
   }
 
 instance FromJSON LintSettings where
@@ -105,7 +110,8 @@ instance FromJSON LintSettings where
           v .:? "prettyprint_semicolons"         .!= prettyprint_semicolons defaultLintSettings         <*>
           v .:? "prettyprint_cStyle"             .!= prettyprint_cStyle defaultLintSettings             <*>
           v .:? "prettyprint_rejectInvalidCode"  .!= prettyprint_rejectInvalidCode defaultLintSettings  <*>
-          v .:? "prettyprint_indentation"        .!= prettyprint_indentation defaultLintSettings
+          v .:? "prettyprint_indentation"        .!= prettyprint_indentation defaultLintSettings        <*>
+          v .:? "log_format"                     .!= log_format defaultLintSettings
 
     parseJSON _          = mzero
 
@@ -152,4 +158,5 @@ instance ToJSON LintSettings where
         , "prettyprint_semicolons"         .= prettyprint_semicolons ls
         , "prettyprint_cStyle"             .= prettyprint_cStyle ls
         , "prettyprint_indentation"        .= prettyprint_indentation ls
+        , "log_format"                     .= log_format ls
         ]
