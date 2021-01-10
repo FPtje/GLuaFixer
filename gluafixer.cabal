@@ -92,6 +92,7 @@ executable glualint
     , bytestring
     , glualint-lib
     , directory
+    , optparse-applicative
 
   hs-source-dirs:      src
   ghc-options:         -O3 -Wall

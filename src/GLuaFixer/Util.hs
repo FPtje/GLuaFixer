@@ -11,7 +11,10 @@ import GLuaFixer.LintSettings
 import GLuaFixer.BadSequenceFinder
 
 import Control.DeepSeq (force)
+import Control.Monad (void)
 import qualified Data.ByteString.Lazy as BS
+import Data.Maybe(fromMaybe)
+import Data.Traversable (for)
 import System.Exit (exitWith, ExitCode (..))
 import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory, makeAbsolute, getCurrentDirectory)
 import System.FilePath (takeDirectory, (</>), (<.>))
@@ -22,8 +25,14 @@ import Text.Parsec.Error (errorPos)
 
 import Control.Applicative ((<|>))
 import Data.Aeson (eitherDecode)
-import Data.Maybe (fromJust)
 
+data StdInOrFiles
+  = UseStdIn
+  | UseFiles [FilePath]
+  deriving (Show)
+
+-- | Indentation used for pretty printing code
+type Indentation = String
 
 -- | Finds all Lua files in a folder
 findLuaFiles :: [GlobPattern] -> FilePath -> IO [FilePath]
@@ -117,4 +126,49 @@ getSettings f = do
     f' <- if f == "stdin" then getCurrentDirectory else makeAbsolute f
     searchedSettings <- searchSettings f'
     homeSettings <- searchHome
-    return . fromJust $ searchedSettings <|> homeSettings <|> Just defaultLintSettings
+    return . fromMaybe defaultLintSettings $ searchedSettings <|> homeSettings <|> Just defaultLintSettings
+
+
+forEachInput
+    :: Maybe Indentation
+    -> Maybe LogFormat
+    -> StdInOrFiles
+    -> (LintSettings -> String -> IO a)
+    -> (LintSettings -> FilePath -> String -> IO a)
+    -> IO [a]
+forEachInput mbIndent mbOutputFormat stdInOrFiles onStdIn onFile =
+    case stdInOrFiles of
+      UseStdIn -> do
+        cwd <- getCurrentDirectory
+        lintSettings <- overrideSettings <$> getSettings cwd
+        stdinData <- getContents
+        (:[]) <$> onStdIn lintSettings stdinData
+      UseFiles fs -> do
+        res <- for fs $ \filePath -> do
+          isDirectory <- doesDirectoryExist filePath
+          lintSettings <- overrideSettings <$> getSettings filePath
+          if isDirectory then do
+            luaFiles <- findLuaFiles (lint_ignoreFiles lintSettings) filePath
+            for luaFiles $ \luaFile -> do
+              contents <- doReadFile luaFile
+              onFile lintSettings luaFile contents
+          else do
+            contents <- doReadFile filePath
+            (:[]) <$> onFile lintSettings filePath contents
+        pure $ concat res
+  where
+    overrideSettings :: LintSettings -> LintSettings
+    overrideSettings settings = settings
+      { prettyprint_indentation = fromMaybe (prettyprint_indentation settings) mbIndent
+      , log_format = fromMaybe (log_format settings) mbOutputFormat
+      }
+
+forEachInput_
+    :: Maybe Indentation
+    -> Maybe LogFormat
+    -> StdInOrFiles
+    -> (LintSettings -> String -> IO ())
+    -> (LintSettings -> FilePath -> String -> IO ())
+    -> IO ()
+forEachInput_ mbIndent mbOutputFormat stdInOrFiles onStdIn onFile =
+    void $ forEachInput mbIndent mbOutputFormat stdInOrFiles onStdIn onFile
