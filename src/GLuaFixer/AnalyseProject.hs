@@ -25,7 +25,7 @@ data GlobalAnalysis =
 analyseGlobalsFile :: LintSettings -> FilePath -> IO (M.Map String [GlobalAnalysis])
 analyseGlobalsFile lintSettings f =
   do
-    contents <- readFile f
+    contents <- doReadFile f
 
     case parseFile lintSettings f contents of
       Left errs -> mapM_ print (sortLintMessages errs) >> return M.empty

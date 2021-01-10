@@ -283,7 +283,7 @@ sem Stat
         fn.inParentheses        = False
         fn.topLevel             = True
         fn.varBeingDefined      = Nothing
-        loc.isModuleCall        = (tokenLabel . fromJust $ @fn.varName) == "module"
+        loc.isModuleCall        = (tokenLabel <$> @fn.varName) == Just "module"
         lhs.isInModule          = @lhs.isInModule || @loc.isModuleCall
     | ALabel
     | ABreak
