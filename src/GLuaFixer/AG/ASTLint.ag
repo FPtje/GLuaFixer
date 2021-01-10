@@ -49,7 +49,7 @@ checkShadows (scope : scs) mtok' =
       checkShadows scs mtok'
     where
         lbl = tokenLabel mtok'
-        location = case snd $ fromJust $ M.lookup lbl scope of
+        location = case snd $ fromMaybe (error "checkShadows fromMaybe") $ M.lookup lbl scope of
             Region start _ -> PP.renderPos start
 
 -- Determines whether a variable is local
@@ -229,7 +229,7 @@ sem Declaration
 
         x2.varBeingDefined      = if @x1.hasSuffixes || not @lhs.localDefinition then Nothing else @x1.varName
 
-        loc.var                 = tokenLabel . fromJust $ @x1.varName
+        loc.var                 = tokenLabel . fromMaybe (error "fromMaybe sem Declaration loc.var") $ @x1.varName
         loc.shadowWarning       = do
                                     var <- @x1.varName
                                     if (Just var /= @x2.isSingleVar) then
@@ -247,7 +247,7 @@ sem Declaration
                                     M.insertWith (++) @loc.var [@x1.mtokenPos]
 
         +warnings               = if not (lint_shadowing @lhs.config) || not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
-                                    (:) . fromJust $ @loc.shadowWarning
+                                    (:) . fromMaybe (error "fromMaybe sem Declaration +warnings") $ @loc.shadowWarning
 
 sem AST
     | AST
@@ -363,7 +363,7 @@ sem Stat
         body.scopes             = M.singleton @var.identifier (not (lint_unusedLoopVars @lhs.config), @var.mtokenPos) : @step.scopes
         loc.shadowWarning       = checkShadows @lhs.scopes @var.copy
         +warnings               = if not (lint_shadowing @lhs.config) || isNothing @loc.shadowWarning then id else
-                                    (:) . fromJust $ @loc.shadowWarning
+                                    (:) . fromMaybe (error "fromMaybe ANFor +warnings") $ @loc.shadowWarning
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
                                     (:) $ warn @lhs.mtokenPos "Empty for loop"
     | AGFor
@@ -414,7 +414,7 @@ sem Stat
         -- Function name shadowing
         loc.funcNameShadows     = checkShadows @lhs.scopes @loc.funcname
         +warnings               = if not (lint_shadowing @lhs.config) || isNothing @loc.funcNameShadows then id else
-                                    (:) . fromJust $ @loc.funcNameShadows
+                                    (:) . fromMaybe (error "fromMaybe ALocFunc +warnings") $ @loc.funcNameShadows
 
 sem ElseIfList
     | Cons
@@ -554,7 +554,7 @@ sem Expr
         -- Wheter someone is doing "not (a == b)" or "not (a ~= b)"
         loc.stupidNegation      = oppositeBinOp @op.copy
         +warnings               = if not (lint_doubleNegations @lhs.config) || not @lhs.isNegation || isNothing @loc.stupidNegation then id else
-                                    (:) $ warn @lhs.mtokenPos $ "Silly negation. Use '" ++ fromJust @loc.stupidNegation ++ "'"
+                                    (:) $ warn @lhs.mtokenPos $ "Silly negation. Use '" ++ fromMaybe (error "fromMaybe sem Expr loc.stupidNegation") @loc.stupidNegation ++ "'"
     | UnOpExpr
         lhs.isSimpleExpression  = False
         right.isNegation        = @op.isNegation
