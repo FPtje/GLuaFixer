@@ -53,7 +53,7 @@ data Options
    = Options
      { optsConfigFile :: Maybe FilePath
      , optsIndentation :: Maybe Indentation
-     , optsOutputFormat :: Maybe LogFormat
+     , optsOutputFormat :: Maybe LogFormatChoice
      , optsCommand :: Command
      } deriving (Show)
 
@@ -99,19 +99,20 @@ cliParser = Options
         <> Opt.help "What to use for indentation when pretty printing, 4 spaces by default."
         )
 
-    outputFormatOption :: Opt.Parser (Maybe LogFormat)
+    outputFormatOption :: Opt.Parser (Maybe LogFormatChoice)
     outputFormatOption =
       optional $ Opt.option outputFormatReader
         (  Opt.long "output-format"
         <> Opt.metavar "FORMAT"
-        <> Opt.help "Logging format, either 'standard' or 'github', defaults to 'standard'"
+        <> Opt.help "Logging format, either 'auto', 'standard' or 'github', defaults to 'standard'"
         )
 
-    outputFormatReader :: Opt.ReadM LogFormat
+    outputFormatReader :: Opt.ReadM LogFormatChoice
     outputFormatReader = Opt.eitherReader $ \case
-      "standard" -> Right StandardLogFormat
-      "github" -> Right GithubLogFormat
-      val -> Left $ "Bad output format '" <> val <> "', must be either 'standard' or 'github'."
+      "standard" -> Right $ LogFormatChoice StandardLogFormat
+      "github" -> Right $ LogFormatChoice GithubLogFormat
+      "auto" -> Right AutoLogFormatChoice
+      val -> Left $ "Bad output format '" <> val <> "', must be either 'auto', 'standard' or 'github'."
 
     commandParser :: Opt.Parser Command
     commandParser = Opt.hsubparser
@@ -232,7 +233,8 @@ lintStdin settings contents = do
 lintFile :: LintSettings -> FilePath -> String -> IO Bool
 lintFile settings filePath contents = do
     let msgs = lint settings filePath contents
-    mapM_ (putStrLn . formatLintMessage (log_format settings)) msgs
+    logFormat <- logFormatChoiceToLogFormat $ log_format settings
+    mapM_ (putStrLn . formatLintMessage logFormat) msgs
     pure $ null msgs
 
 -- | Lint a string, using parsec
@@ -286,6 +288,7 @@ legacyLint _ [] = pure False
 legacyLint ls (f : fs) = do
     settings <- getSettings f
     let config = fromJust $ ls <|> Just settings
+    logFormat <- logFormatChoiceToLogFormat $ log_format config
 
     -- When we're dealing with a directory, lint all the files in it recursively.
     isDirectory <- doesDirectoryExist f
@@ -294,12 +297,11 @@ legacyLint ls (f : fs) = do
         else if f == "stdin" then do
             msgs <- lint config f <$> getContents
 
-            mapM_ (putStrLn . formatLintMessage (log_format config)) msgs
+            mapM_ (putStrLn . formatLintMessage logFormat) msgs
             pure $ not $ null msgs
         else do
             msgs <- lint config f <$> doReadFile f
-
-            mapM_ (putStrLn . formatLintMessage (log_format config)) msgs
+            mapM_ (putStrLn . formatLintMessage logFormat) msgs
             pure $ not $ null msgs
 
     -- Lint the other files

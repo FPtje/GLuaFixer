@@ -131,7 +131,7 @@ getSettings f = do
 
 forEachInput
     :: Maybe Indentation
-    -> Maybe LogFormat
+    -> Maybe LogFormatChoice
     -> StdInOrFiles
     -> (LintSettings -> String -> IO a)
     -> (LintSettings -> FilePath -> String -> IO a)
@@ -165,7 +165,7 @@ forEachInput mbIndent mbOutputFormat stdInOrFiles onStdIn onFile =
 
 forEachInput_
     :: Maybe Indentation
-    -> Maybe LogFormat
+    -> Maybe LogFormatChoice
     -> StdInOrFiles
     -> (LintSettings -> String -> IO ())
     -> (LintSettings -> FilePath -> String -> IO ())

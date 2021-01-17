@@ -39,7 +39,7 @@ data LintSettings =
     , prettyprint_rejectInvalidCode  :: !Bool
     , prettyprint_indentation        :: !String
 
-    , log_format                     :: !LogFormat
+    , log_format                     :: !LogFormatChoice
     } deriving (Show)
 
 defaultLintSettings :: LintSettings
@@ -76,7 +76,7 @@ defaultLintSettings =
     , prettyprint_rejectInvalidCode  = False
     , prettyprint_indentation        = "    "
 
-    , log_format                     = StandardLogFormat
+    , log_format                     = AutoLogFormatChoice
   }
 
 instance FromJSON LintSettings where

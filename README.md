@@ -66,7 +66,7 @@ Example `glualint.json` with the default options:
     "prettyprint_cStyle":               false,
     "prettyprint_rejectInvalidCode":    false,
     "prettyprint_indentation":          "    ",
-    "log_format":                       "standard"
+    "log_format":                       "auto"
 }
 ```
 
@@ -105,4 +105,4 @@ These options affect the pretty printing functionality of `glualint`.
 
 ## Other options
 
-- `log_format`: Decides how to format linter warnings and error messages. Possible values are `"standard"` and `"github"`. The `"github"` output format is specifically designed for usage with GitHub actions.
+- `log_format`: Decides how to format linter warnings and error messages. Possible values are `"auto"`, `"standard"` and `"github"`. The `"github"` output format is specifically designed for usage with GitHub actions. The default value is `"auto"`, With `"auto"`, the log format will be `"github"` when the environment variables `GITHUB_ACTIONS` and `GITHUB_WORKFLOW` are both present, and `"standard"` otherwise.

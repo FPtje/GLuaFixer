@@ -1,28 +1,43 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 module GLuaFixer.LintMessage where
+
+import Control.Monad
+import Data.Aeson
+import Data.List (sortOn)
+import Data.Maybe (isJust)
+import System.Environment (lookupEnv)
+import Text.ParserCombinators.UU.BasicInstances hiding (msgs)
 
 import GLua.AG.Token
 import GLua.AG.PrettyPrint
-import Data.Aeson
-import Control.Monad
-import Data.List (sortOn)
-import Text.ParserCombinators.UU.BasicInstances hiding (msgs)
 
+-- | Output formats for logging
 data LogFormat = StandardLogFormat | GithubLogFormat
+data LogFormatChoice = AutoLogFormatChoice | LogFormatChoice !LogFormat
 
 instance Show LogFormat where
-  show (StandardLogFormat) = "standard"
-  show (GithubLogFormat) = "github"
+  show StandardLogFormat = "standard"
+  show GithubLogFormat = "github"
+
+instance Show LogFormatChoice where
+  show (LogFormatChoice choice) = show choice
+  show AutoLogFormatChoice = "auto"
 
 instance ToJSON LogFormat where
   toJSON StandardLogFormat = "standard"
   toJSON GithubLogFormat = "github"
 
-instance FromJSON LogFormat where
+instance ToJSON LogFormatChoice where
+  toJSON (LogFormatChoice choice) = toJSON choice
+  toJSON AutoLogFormatChoice = "auto"
+
+instance FromJSON LogFormatChoice where
   parseJSON (String logFormat) = case logFormat of
-    "standard" -> return ( StandardLogFormat )
-    "github" -> return ( GithubLogFormat )
-    _ -> fail ( "Please use either \"standard\" or \"github\" but was " ++ show logFormat )
+    "standard" -> pure $ LogFormatChoice StandardLogFormat
+    "github" -> pure $ LogFormatChoice GithubLogFormat
+    "auto" -> pure AutoLogFormatChoice
+    _ -> fail ( "Please use either \"auto\" \"standard\" or \"github\" but was " ++ show logFormat )
   parseJSON _ = mzero
 
 data Severity = LintWarning | LintError
@@ -40,6 +55,17 @@ data LintMessage
 
 instance Show LintMessage where
     show lintMsg = formatLintMessageDefault lintMsg
+
+logFormatChoiceToLogFormat :: LogFormatChoice -> IO LogFormat
+logFormatChoiceToLogFormat = \case
+  LogFormatChoice format -> pure format
+  AutoLogFormatChoice -> do
+    actionsExists <- isJust <$> lookupEnv "GITHUB_ACTIONS"
+    workflowExists <- isJust <$> lookupEnv "GITHUB_WORKFLOW"
+    if actionsExists && workflowExists
+    then pure GithubLogFormat
+    else pure StandardLogFormat
+
 
 formatLintMessage :: LogFormat -> LintMessage -> String
 formatLintMessage StandardLogFormat lintMsg = formatLintMessageDefault lintMsg
