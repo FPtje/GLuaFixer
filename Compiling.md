@@ -19,8 +19,6 @@ Open a terminal (or command prompt in Windows) in the root folder of the reposit
 Run the following commands in order:
 
 ```bash
-cabal sandbox init
-cabal install --only-dependencies
 # Depending on OS, for Linux run AGGenerator.sh, on Windows run the AGGenerator.bat
 ./AGGenerator.sh
 cabal build glualint
@@ -72,4 +70,3 @@ Hold on, that shouldn't fucking happen. Glualint is known to compile on ghc 7.10
 4. If you think by now my shit should work for the newer version because it has been around for long enough, create an issue.
 
 ----
-
