@@ -19,7 +19,7 @@ import System.Exit (exitWith, ExitCode (..))
 import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory, makeAbsolute, getCurrentDirectory)
 import System.FilePath (takeDirectory, (</>), (<.>))
 import System.FilePath.GlobPattern (GlobPattern)
-import System.FilePath.Find (find, always, fileName, (~~?), (&&?), (/~?))
+import System.FilePath.Find (find, always, fileName, filePath, (~~?), (&&?), (/~?))
 import System.IO (openFile, withFile, hSetEncoding, utf8_bom, hGetContents, hClose, hPutStr, IOMode (..))
 import Text.Parsec.Error (errorPos)
 
@@ -39,7 +39,7 @@ findLuaFiles :: [GlobPattern] -> FilePath -> IO [FilePath]
 findLuaFiles ignoreFiles =
     find always (fileName ~~? "*.lua" &&? ignoredGlobs)
   where
-    ignoredGlobs = foldl (&&?) always $ map (fileName /~?) ignoreFiles
+    ignoredGlobs = foldl (&&?) always $ map (filePath /~?) ignoreFiles
 
 -- | Read file in utf8_bom because that seems to work better
 doReadFile :: FilePath -> IO String
@@ -144,17 +144,17 @@ forEachInput mbIndent mbOutputFormat stdInOrFiles onStdIn onFile =
         stdinData <- getContents
         (:[]) <$> onStdIn lintSettings stdinData
       UseFiles fs -> do
-        res <- for fs $ \filePath -> do
-          isDirectory <- doesDirectoryExist filePath
-          lintSettings <- overrideSettings <$> getSettings filePath
+        res <- for fs $ \fp -> do
+          isDirectory <- doesDirectoryExist fp
+          lintSettings <- overrideSettings <$> getSettings fp
           if isDirectory then do
-            luaFiles <- findLuaFiles (lint_ignoreFiles lintSettings) filePath
+            luaFiles <- findLuaFiles (lint_ignoreFiles lintSettings) fp
             for luaFiles $ \luaFile -> do
               contents <- doReadFile luaFile
               onFile lintSettings luaFile contents
           else do
-            contents <- doReadFile filePath
-            (:[]) <$> onFile lintSettings filePath contents
+            contents <- doReadFile fp
+            (:[]) <$> onFile lintSettings fp contents
         pure $ concat res
   where
     overrideSettings :: LintSettings -> LintSettings
