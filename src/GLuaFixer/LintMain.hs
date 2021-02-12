@@ -163,10 +163,12 @@ runGluaLint opts = do
           lintFile
 
         unless noErrorsOrWarnings exitFailure
-      PrettyPrint stdinOrFiles ->
-        forEachInput_ mbIndent mbOutputFormat stdinOrFiles
+      PrettyPrint stdinOrFiles -> do
+        noErrors <- and <$> forEachInput mbIndent mbOutputFormat stdinOrFiles
           prettyPrintStdin
           prettyPrintFile
+
+        unless noErrors $ exitFailure
       AnalyseGlobals files ->
         analyseGlobals files
       DumpAst stdinOrFiles ->
@@ -203,16 +205,18 @@ handleCliFailure args (parserHelp, exitCode, terminalColumns) = case exitCode of
         if hasMessages then exitFailure
         else exitSuccess
 
-prettyPrintStdin :: LintSettings -> String -> IO ()
+prettyPrintStdin :: LintSettings -> String -> IO Bool
 prettyPrintStdin settings contents =
-  for_ (prettyPrint settings contents) $ \result ->
-    putStr result
+  case prettyPrint settings contents of
+    Nothing -> pure False
+    Just result -> True <$ putStr result
 
-prettyPrintFile :: LintSettings -> FilePath -> String -> IO ()
+prettyPrintFile :: LintSettings -> FilePath -> String -> IO Bool
 prettyPrintFile settings filePath contents = do
   hPutStrLn stderr $ "Pretty printing " ++ filePath
-  for_ (prettyPrint settings contents) $ \result ->
-    doWriteFile filePath result
+  case prettyPrint settings contents of
+    Nothing -> pure False
+    Just result -> True <$ doWriteFile filePath result
 
 -- | Pure pretty print function
 prettyPrint :: LintSettings -> String -> Maybe String
