@@ -72,7 +72,9 @@ parseWhitespace = many1 space <?> "whitespace"
 -- | An escaped character of a single line string
 -- Takes the delimiter of the string as parameter
 escapedStringChar :: Char -> Parser String
-escapedStringChar delim = (\c -> ['\\', c]) <$ char '\\' <*> noneOf ['\n'] <|> (:[]) <$> noneOf ['\n', delim]
+escapedStringChar delim = (\escaped -> '\\' : escaped) <$ char '\\' <*> escapedChar <|> (:[]) <$> noneOf ['\n', delim]
+    where
+        escapedChar = (:) <$> char 'z' <*> parseWhitespace <|> (:[]) <$> anyChar
 
 -- | The start of a nested string
 -- Returns the amount of =-signs at the start of the nested string

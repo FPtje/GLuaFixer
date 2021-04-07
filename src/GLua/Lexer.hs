@@ -120,9 +120,12 @@ parseLineString c = pSym c *> innerString
     where
         innerString :: LParser String
         innerString = pSym '\\' <**> -- Escaped character in string always starts with backslash
-                         ((\c' str esc -> esc : c' : str) <$> parseAnyChar <*> innerString) <<|>
+                         ((\c' str esc -> esc : c' ++ str) <$> escapeSequence <*> innerString) <<|>
                       const "" <$> pSym c <<|> -- the end of the string
                       (:) <$> pNoNewline <*> innerString -- the next character in the string
+
+        escapeSequence :: LParser String
+        escapeSequence = (:) <$> pSym 'z' <*> parseWhitespace <<|> (:[]) <$> parseAnyChar
 
         pNoNewline :: LParser Char
         pNoNewline = pSatisfy (/= '\n') (Insertion "Anything but a newline" c 5)
@@ -306,4 +309,3 @@ lexFromString p = parse ((,) <$> p <*> pErrors <* pEnd) . createStr (LineColPos 
 -- | Parse a string into MTokens. Also returns parse errors.
 execParseTokens :: String -> ([MToken], [Error LineColPos])
 execParseTokens = parse ((,) <$ parseHashBang <*> parseTokens <*> pErrors <* pEnd) . createStr (LineColPos 0 0 0)
-
