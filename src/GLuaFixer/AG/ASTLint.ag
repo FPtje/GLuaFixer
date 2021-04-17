@@ -1,6 +1,7 @@
 optpragmas
 {
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
+{-# LANGUAGE LambdaCase #-}
 }
 
 module {GLuaFixer.AG.ASTLint}{}{}
@@ -13,6 +14,7 @@ import qualified GLua.AG.Token as T
 import GLua.TokenTypes
 import qualified Data.Set as S
 import qualified Data.Map.Strict as M
+import Data.Char (isLower, isUpper)
 import Data.Maybe
 import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
@@ -81,6 +83,38 @@ registerVariable (scope : scs) pos var used = case M.lookup var scope of
 findSelf :: [MToken] -> Bool
 findSelf ((MToken _ (Identifier "self")) : _) = True
 findSelf _ = False
+
+data VariableStyle
+   = StartsLowerCase
+   | StartsUpperCase
+   | VariableStyleNeither
+   deriving (Eq)
+
+data DeterminedVariableStyle
+   = VarStyleNotDetermined
+   | VarStyleDetermined !VariableStyle
+
+combineDeterminedVarStyle :: DeterminedVariableStyle -> VariableStyle -> DeterminedVariableStyle
+combineDeterminedVarStyle old new = case old of
+    VarStyleNotDetermined -> VarStyleDetermined new
+    VarStyleDetermined VariableStyleNeither -> VarStyleDetermined new
+    _ -> old
+
+determineVariableStyle :: String -> VariableStyle
+determineVariableStyle = \case
+    [] -> VariableStyleNeither
+    (c : _)
+        | isLower c -> StartsLowerCase
+        | isUpper c -> StartsUpperCase
+        | otherwise -> VariableStyleNeither
+
+variableStyleInconsistent :: DeterminedVariableStyle -> VariableStyle -> Bool
+variableStyleInconsistent determinedStyle varStyle = case determinedStyle of
+    VarStyleNotDetermined -> False
+    VarStyleDetermined VariableStyleNeither -> False
+    VarStyleDetermined existing -> case varStyle of
+        VariableStyleNeither -> False
+        _ -> existing /= varStyle
 }
 
 ----------------------------------------
@@ -92,6 +126,9 @@ attr AllStuff
 
     inh scopeLevel :: Int
     inh loopLevel :: Int -- In how many scopes of loops we are. Used in checking labels
+
+    -- The style of variables, used for warning about inconsistencies
+    chn variableStyle :: DeterminedVariableStyle
 
 attr AllStuff MToken MTokenList
     chn mtokenPos :: {Region} -- The location of the warning
@@ -220,6 +257,7 @@ sem MaybeMExpr
 sem Declaration
     | Tuple
         lhs.mtokenPos           = @x1.mtokenPos
+        lhs.variableStyle       = if @lhs.localDefinition then combineDeterminedVarStyle @lhs.variableStyle @loc.varStyle else @lhs.variableStyle
         x1.isNegation           = False
         x1.registerVarUse       = False
         x1.inParentheses        = False
@@ -230,6 +268,7 @@ sem Declaration
         x2.varBeingDefined      = if @x1.hasSuffixes || not @lhs.localDefinition then Nothing else @x1.varName
 
         loc.var                 = tokenLabel . fromMaybe (error "fromMaybe sem Declaration loc.var") $ @x1.varName
+        loc.varStyle            = determineVariableStyle @loc.var
         loc.shadowWarning       = do
                                     var <- @x1.varName
                                     if (Just var /= @x2.isSingleVar) then
@@ -248,6 +287,8 @@ sem Declaration
 
         +warnings               = if not (lint_shadowing @lhs.config) || not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
                                     (:) . fromMaybe (error "fromMaybe sem Declaration +warnings") $ @loc.shadowWarning
+        +warnings               = if not @lhs.localDefinition || not (variableStyleInconsistent @lhs.variableStyle @loc.varStyle) then id else
+                                    (:) $ warn @x1.mtokenPos "Inconsistent variable naming! There are variables that start with a lowercase letter, as well as ones that start with an uppercase letter. Please decide on one style."
 
 sem AST
     | AST
@@ -617,7 +658,8 @@ inh_AST conf = Inh_AST {
                 scopeLevel_Inh_AST              = 0,
                 scopes_Inh_AST                  = [M.empty],
                 funcName_Inh_AST                = "",
-                isInModule_Inh_AST              = False
+                isInModule_Inh_AST              = False,
+                variableStyle_Inh_AST           = VarStyleNotDetermined
                }
 
 allAttributes :: LintSettings -> AST -> Syn_AST

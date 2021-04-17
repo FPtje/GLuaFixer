@@ -26,6 +26,7 @@ data LintSettings =
     , lint_unusedVars                :: !Bool
     , lint_unusedParameters          :: !Bool
     , lint_unusedLoopVars            :: !Bool
+    , lint_inconsistentVariableStyle :: !Bool
     , lint_ignoreFiles               :: ![String]
 
     , prettyprint_spaceAfterParens   :: !Bool
@@ -63,6 +64,7 @@ defaultLintSettings =
     , lint_unusedVars                = True
     , lint_unusedParameters          = False
     , lint_unusedLoopVars            = False
+    , lint_inconsistentVariableStyle = False
     , lint_ignoreFiles               = []
 
     , prettyprint_spaceAfterParens   = False
@@ -100,6 +102,7 @@ instance FromJSON LintSettings where
           v .:? "lint_unusedVars"                .!= lint_unusedVars defaultLintSettings                <*>
           v .:? "lint_unusedParameters"          .!= lint_unusedParameters defaultLintSettings          <*>
           v .:? "lint_unusedLoopVars"            .!= lint_unusedLoopVars defaultLintSettings            <*>
+          v .:? "lint_inconsistentVariableStyle" .!= lint_inconsistentVariableStyle defaultLintSettings <*>
           v .:? "lint_ignoreFiles"               .!= lint_ignoreFiles defaultLintSettings               <*>
           v .:? "prettyprint_spaceAfterParens"   .!= prettyprint_spaceAfterParens defaultLintSettings   <*>
           v .:? "prettyprint_spaceAfterBrackets" .!= prettyprint_spaceAfterBrackets defaultLintSettings <*>
@@ -149,6 +152,7 @@ instance ToJSON LintSettings where
         , "lint_unusedVars"                .= lint_unusedVars ls
         , "lint_unusedParameters"          .= lint_unusedParameters ls
         , "lint_unusedLoopVars"            .= lint_unusedLoopVars ls
+        , "lint_inconsistentVariableStyle" .= lint_inconsistentVariableStyle ls
         , "prettyprint_spaceAfterParens"   .= prettyprint_spaceAfterParens ls
         , "prettyprint_spaceAfterBrackets" .= prettyprint_spaceAfterBrackets ls
         , "prettyprint_spaceAfterBraces"   .= prettyprint_spaceAfterBraces ls
