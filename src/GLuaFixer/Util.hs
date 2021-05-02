@@ -20,7 +20,7 @@ import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory, ma
 import System.FilePath (takeDirectory, (</>), (<.>))
 import System.FilePath.GlobPattern (GlobPattern)
 import System.FilePath.Find (find, always, fileName, filePath, (~~?), (&&?), (/~?))
-import System.IO (openFile, withFile, hSetEncoding, utf8_bom, hGetContents, hClose, hPutStr, IOMode (..))
+import System.IO (openFile, withFile, hSetEncoding, utf8_bom, hGetContents, hClose, hPutStrLn, IOMode (..))
 import Text.Parsec.Error (errorPos)
 
 import Control.Applicative ((<|>))
@@ -51,10 +51,11 @@ doReadFile f = do
     pure contents
 
 -- | write file in utf8_bom mode
+-- Makes sure there's a trailing newline
 doWriteFile :: FilePath -> String -> IO ()
 doWriteFile fp contents = withFile fp WriteMode $ \handle -> do
     hSetEncoding handle utf8_bom
-    hPutStr handle contents
+    hPutStrLn handle contents
 
 -- | Parse a single file using parsec
 parseFile :: LintSettings -> FilePath -> String -> Either [LintMessage] ([LintMessage], AST)
