@@ -160,10 +160,6 @@ braces conf doc = zchr '{' `sep'` doc `sep'` zchr '}'
         sep' :: Doc -> Doc -> Doc
         sep' = if spaceAfterBraces conf then (<->) else (<>)
 
-infixl 5 $-$
-($-$) :: Doc -> Doc -> Doc
-a $-$ b = a <> zchr '\n' <> b
-
 -- Zero width char
 zchr :: Char -> Doc
 zchr c = zeroWidthText [c]
