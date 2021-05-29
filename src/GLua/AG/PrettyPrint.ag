@@ -26,10 +26,21 @@ printList f sep' (e : es) = (f e) <> g es
         g []       = empty
         g (e' : es') = zeroWidthText sep' <> (f e') <> g es'
 
+data IsEmpty = IsEmpty | NonEmpty
+
+fromEmpty :: IsEmpty -> Bool
+fromEmpty IsEmpty = True
+fromEmpty NonEmpty = False
+
+toEmpty :: Bool -> IsEmpty
+toEmpty b = if b then IsEmpty else NonEmpty
+
 data PrettyPrintConfig = PPConfig {
     spaceAfterParens :: Bool,
     spaceAfterBrackets :: Bool,
     spaceAfterBraces :: Bool,
+    spaceEmptyParens :: Bool,
+    spaceEmptyBraces :: Bool,
     spaceAfterLabel :: Bool,
     spaceBeforeComma :: Bool,
     spaceAfterComma :: Bool,
@@ -43,6 +54,8 @@ defaultPPConfig = PPConfig {
     spaceAfterParens = False,
     spaceAfterBrackets = False,
     spaceAfterBraces = False,
+    spaceEmptyParens = False,
+    spaceEmptyBraces = False,
     spaceAfterLabel = False,
     spaceBeforeComma = False,
     spaceAfterComma = True,
@@ -142,11 +155,11 @@ convertComment conf (MToken p t) = MToken p $ convert' t
 indent :: PrettyPrintConfig -> Int -> Doc -> Doc
 indent conf n = (<>) $ zeroWidthText (concat . replicate n $ indentation conf)
 
-parens :: PrettyPrintConfig -> Doc -> Doc
-parens conf doc = zchr '(' `sep'` doc `sep'` zchr ')'
+parens :: PrettyPrintConfig -> IsEmpty -> Doc -> Doc
+parens conf ie doc = zchr '(' `sep'` doc `sep'` zchr ')'
     where
         sep' :: Doc -> Doc -> Doc
-        sep' = if spaceAfterParens conf then (<->) else (<>)
+        sep' = if spaceAfterParens conf && (not (fromEmpty ie) || spaceEmptyParens conf) then (<->) else (<>)
 
 brackets :: PrettyPrintConfig -> Doc -> Doc
 brackets conf doc = zchr '[' `sep'` doc `sep'` zchr ']'
@@ -154,11 +167,11 @@ brackets conf doc = zchr '[' `sep'` doc `sep'` zchr ']'
         sep' :: Doc -> Doc -> Doc
         sep' = if spaceAfterBrackets conf then (<->) else (<>)
 
-braces :: PrettyPrintConfig -> Doc -> Doc
-braces conf doc = zchr '{' `sep'` doc `sep'` zchr '}'
+braces :: PrettyPrintConfig -> IsEmpty -> Doc -> Doc
+braces conf ie doc = zchr '{' `sep'` doc `sep'` zchr '}'
     where
         sep' :: Doc -> Doc -> Doc
-        sep' = if spaceAfterBraces conf then (<->) else (<>)
+        sep' = if spaceAfterBraces conf && (not (fromEmpty ie) || spaceEmptyBraces conf) then (<->) else (<>)
 
 -- Zero width char
 zchr :: Char -> Doc
@@ -437,12 +450,14 @@ sem Stat
                  vals.isHead = True
                  lhs.hasBreaking = False
     | AFunc      lhs.isMultiline = True
-                 lhs.pretty = zeroWidthText "function" <-> @name.pretty <> parens @lhs.ppconf (printList tok (render @loc.comma) @args) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 lhs.pretty = zeroWidthText "function" <-> @name.pretty <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @args) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 loc.emptyParams = toEmpty $ null @args
                  loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
     | ALocFunc   lhs.isMultiline = True
-                 lhs.pretty = zeroWidthText "local function" <-> @name.pretty <> parens @lhs.ppconf (printList tok (render @loc.comma) @args) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 lhs.pretty = zeroWidthText "local function" <-> @name.pretty <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @args) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 loc.emptyParams = toEmpty $ null @args
                  loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
@@ -467,7 +482,7 @@ sem FuncName
 
 sem PrefixExp
     | PFVar      lhs.pretty = tok @name <> @suffixes.pretty
-    | ExprVar    lhs.pretty = parens @lhs.ppconf @expr.pretty <> @suffixes.pretty
+    | ExprVar    lhs.pretty = parens @lhs.ppconf NonEmpty @expr.pretty <> @suffixes.pretty
                  lhs.potentiallyAmbiguousAsStatement = True
 
 sem PFExprSuffix
@@ -488,9 +503,10 @@ sem Expr
     | AString           lhs.pretty = tok @str
     | AVarArg           lhs.pretty = zeroWidthText "..."
     | AnonymousFunc     loc.isMultiline = @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking
-                        loc.singleLinePretty = zeroWidthText "function" <> parens @lhs.ppconf (printList tok (render @loc.comma) @pars) <-> @body.pretty <-> zeroWidthText "end"
-                        loc.multilinePretty = zeroWidthText "function" <> parens @lhs.ppconf (printList tok (render @loc.comma) @pars) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                        loc.singleLinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) <-> @body.pretty <-> zeroWidthText "end"
+                        loc.multilinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                         loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
+                        loc.emptyParams = toEmpty $ null @pars
                         body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
                         lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
     | APrefixExpr       lhs.pretty = @pexpr.pretty
@@ -499,17 +515,20 @@ sem Expr
                         lhs.pretty = if @fields.isMultiline then @loc.prettyMulti else @loc.prettySingle
                         lhs.isMultiline = not $ null $ @fields.copy
                         loc.prettyMulti = zchr '{' $+$ indent @lhs.ppconf (@lhs.indent + 1) @fields.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
-                        loc.prettySingle = braces @lhs.ppconf @fields.pretty
+                        loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @fields.pretty
+                        loc.emptyContents = toEmpty $ null @fields.copy
                         fields.indent = @lhs.indent + (if @fields.isMultiline then 1 else 0)
     | BinOpExpr         lhs.pretty = @left.pretty <-> @op.pretty <-> @right.pretty
     | UnOpExpr          lhs.pretty = @op.pretty <> @right.pretty
 
 sem Args
-    | ListArgs  lhs.pretty = parens @lhs.ppconf @args.pretty
+    | ListArgs  lhs.pretty = parens @lhs.ppconf @loc.emptyParams @args.pretty
+                loc.emptyParams = toEmpty $ null @args.copy
                 args.isHead = True
     | TableArg  lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
                 loc.prettyMulti = zchr '{' $+$ indent @lhs.ppconf (@lhs.indent + 1) @arg.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
-                loc.prettySingle = braces @lhs.ppconf @arg.pretty
+                loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @arg.pretty
+                loc.emptyContents = toEmpty $ null @arg.copy
                 arg.indent = @lhs.indent + (if @arg.isMultiline then 1 else 0)
     | StringArg lhs.pretty = tok @arg
 

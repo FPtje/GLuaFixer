@@ -60,6 +60,7 @@ Example `glualint.json` with the default options:
     "prettyprint_spaceAfterParens":     false,
     "prettyprint_spaceAfterBrackets":   false,
     "prettyprint_spaceAfterBraces":     false,
+    "prettyprint_spaceEmptyBrackets":   true,
     "prettyprint_spaceAfterLabel":      false,
     "prettyprint_spaceBeforeComma":     false,
     "prettyprint_spaceAfterComma":      true,
@@ -98,6 +99,8 @@ These options affect the pretty printing functionality of `glualint`.
 - `prettyprint_spaceAfterParens`: Put a space between all parentheses
 - `prettyprint_spaceAfterBrackets`: Put a space between all brackets
 - `prettyprint_spaceAfterBraces`: Put a space between all curly braces
+- `prettyprint_spaceEmptyParens`: Put a space between empty parentheses (e.g. `( )`). Only applies when `prettyprint_spaceAfterParens` is set
+- `prettyprint_spaceEmptyBraces`: Put a space between empty braces (e.g. `{ }`). Only applies when `prettyprint_spaceAfterBraces` is set
 - `prettyprint_semicolons`: Clutter the script with semicolons after every damn statement
 - `prettyprint_cStyle`: Use C style operators and comments everywhere
 - `prettyprint_indentation`: What to use for indentation. Any string is valid, but some amount of spaces or `"\t"` is recommended
