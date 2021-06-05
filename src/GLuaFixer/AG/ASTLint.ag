@@ -287,7 +287,7 @@ sem Declaration
 
         +warnings               = if not (lint_shadowing @lhs.config) || not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
                                     (:) . fromMaybe (error "fromMaybe sem Declaration +warnings") $ @loc.shadowWarning
-        +warnings               = if not @lhs.localDefinition || not (variableStyleInconsistent @lhs.variableStyle @loc.varStyle) then id else
+        +warnings               = if not (lint_inconsistentVariableStyle @lhs.config) || not @lhs.localDefinition || not (variableStyleInconsistent @lhs.variableStyle @loc.varStyle) then id else
                                     (:) $ warn @x1.mtokenPos "Inconsistent variable naming! There are variables that start with a lowercase letter, as well as ones that start with an uppercase letter. Please decide on one style."
 
 sem AST
