@@ -33,7 +33,7 @@ import qualified Options.Applicative.Help.Types as Opt
 
 
 version :: String
-version = "1.18.0"
+version = "1.18.1"
 
 main :: IO ()
 main = do
