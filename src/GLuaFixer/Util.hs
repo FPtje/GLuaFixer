@@ -10,7 +10,7 @@ import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 import GLuaFixer.BadSequenceFinder
 
-import Control.DeepSeq (force)
+import Control.DeepSeq (deepseq, force)
 import Control.Monad (void)
 import qualified Data.ByteString.Lazy as BS
 import Data.Maybe(fromMaybe)
@@ -51,9 +51,10 @@ doReadFile f = do
     pure contents
 
 -- | write file in utf8_bom mode
--- Makes sure there's a trailing newline
+-- Makes sure there's a trailing newline.
+-- The contents have 'deepseq' run on them, to make sure the write cycle is as short as possible
 doWriteFile :: FilePath -> String -> IO ()
-doWriteFile fp contents = withFile fp WriteMode $ \handle -> do
+doWriteFile fp contents = deepseq contents $ withFile fp WriteMode $ \handle -> do
     hSetEncoding handle utf8_bom
     hPutStrLn handle contents
 
