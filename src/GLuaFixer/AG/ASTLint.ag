@@ -115,6 +115,10 @@ variableStyleInconsistent determinedStyle varStyle = case determinedStyle of
     VarStyleDetermined existing -> case varStyle of
         VariableStyleNeither -> False
         _ -> existing /= varStyle
+
+unknownIdentifier :: String
+unknownIdentifier = "Unknown identifier"
+
 }
 
 ----------------------------------------
@@ -150,7 +154,7 @@ attr Block
 attr AllStuff MToken MTokenList Token TokenList Region
     syn warnings use {++} {[]} :: {[String -> LintMessage]}
     syn copy :: self
-    syn identifier use {const} {"Unknown identifier"} :: String -- identifier of the first token
+    syn identifier use {const} {unknownIdentifier} :: String -- identifier of the first token
 
 attr Token TokenList
     syn tokenWarnings use {++} {[]} :: {[String]}
