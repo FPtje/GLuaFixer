@@ -18,6 +18,7 @@ import qualified "glualint-lib" GLua.Lexer as Lex
 import Control.Applicative ((<|>), optional)
 import Control.Monad (unless, void)
 import Data.Functor ((<&>))
+import Data.IORef (IORef, atomicWriteIORef, newIORef, readIORef)
 import Data.Maybe (fromMaybe, fromJust)
 import Options.Applicative ((<**>))
 import System.Directory (doesDirectoryExist, getCurrentDirectory)
@@ -30,6 +31,7 @@ import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy as BL
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help.Types as Opt
+import qualified System.Signal as Signal
 
 
 version :: String
@@ -37,16 +39,22 @@ version = "1.18.1"
 
 main :: IO ()
 main = do
+  -- Keep track of whether process is cancelled through some signal
+  aborted <- newIORef Continue
+
+  Signal.installHandler Signal.sigTERM $ \_ -> atomicWriteIORef aborted Abort
+  Signal.installHandler Signal.sigINT $ \_ -> atomicWriteIORef aborted Abort
+
   args <- getArgs
   let prefs = Opt.defaultPrefs { Opt.prefShowHelpOnEmpty = True }
   let cliParseResult = Opt.execParserPure prefs cliParserInfo args
 
   case cliParseResult of
-    Opt.Success options -> runGluaLint options
+    Opt.Success options -> runGluaLint options aborted
     Opt.CompletionInvoked _completionResult -> void $ Opt.handleParseResult cliParseResult
     Opt.Failure parserFailure -> do
       progName <- getProgName
-      handleCliFailure args $ Opt.execFailure parserFailure progName
+      handleCliFailure aborted args $ Opt.execFailure parserFailure progName
 
 -- | Command line options of glualint
 data Options
@@ -154,17 +162,17 @@ cliParser = Options
     filesArgument = Opt.some (Opt.argument Opt.str $ Opt.metavar "FILES")
 
 -- | Run subcommands
-runGluaLint :: Options -> IO ()
-runGluaLint opts = do
+runGluaLint :: Options -> IORef Abort -> IO ()
+runGluaLint opts aborted = do
     case optsCommand opts of
       Lint stdinOrFiles -> do
-        noErrorsOrWarnings <- and <$> forEachInput mbIndent mbOutputFormat stdinOrFiles
+        noErrorsOrWarnings <- and <$> forEachInput mbIndent mbOutputFormat stdinOrFiles aborted
           lintStdin
           lintFile
 
         unless noErrorsOrWarnings exitFailure
       PrettyPrint stdinOrFiles -> do
-        noErrors <- and <$> forEachInput mbIndent mbOutputFormat stdinOrFiles
+        noErrors <- and <$> forEachInput mbIndent mbOutputFormat stdinOrFiles aborted
           prettyPrintStdin
           prettyPrintFile
 
@@ -172,7 +180,7 @@ runGluaLint opts = do
       AnalyseGlobals files ->
         analyseGlobals files
       DumpAst stdinOrFiles ->
-        forEachInput_ mbIndent mbOutputFormat stdinOrFiles
+        forEachInput_ mbIndent mbOutputFormat stdinOrFiles aborted
           dumpASTStdin
           dumpASTFile
       Test files ->
@@ -184,13 +192,13 @@ runGluaLint opts = do
     mbOutputFormat = optsOutputFormat opts
 
 -- | When the regulare CLI fails to parse, the legacy one might yet succeed
-handleCliFailure :: [String] -> (Opt.ParserHelp, ExitCode, Int) -> IO ()
-handleCliFailure args (parserHelp, exitCode, terminalColumns) = case exitCode of
+handleCliFailure :: IORef Abort -> [String] -> (Opt.ParserHelp, ExitCode, Int) -> IO ()
+handleCliFailure aborted args (parserHelp, exitCode, terminalColumns) = case exitCode of
   -- This means the help was activated. Print the help
   ExitSuccess -> putStrLn $ Opt.renderHelp terminalColumns parserHelp
   ExitFailure _ -> do
     -- Attempt legacy CLI interface
-    mbRes <- legacyCli Nothing args
+    mbRes <- legacyCli aborted Nothing args
     case mbRes of
       -- Legacy parser failed as well, print help
       Nothing -> do
@@ -264,21 +272,24 @@ legacyPrettyPrintStdin ind = do
     for_ (prettyPrint lintsettings lua) $ \result ->
         putStr result
 
-legacyPrettyPrintFiles :: Maybe Indentation -> [FilePath] -> IO ()
-legacyPrettyPrintFiles ind = mapM_ pp
+legacyPrettyPrintFiles :: IORef Abort -> Maybe Indentation -> [FilePath] -> IO ()
+legacyPrettyPrintFiles aborted ind = mapM_ pp
   where
     pp :: FilePath -> IO ()
     pp f = do
       isDirectory <- doesDirectoryExist f
       if isDirectory then do
         luaFiles <- findLuaFiles [] f
-        legacyPrettyPrintFiles ind luaFiles
+        legacyPrettyPrintFiles aborted ind luaFiles
       else do
-        hPutStrLn stderr $ "Pretty printing " ++ f
         lintsettings <- overrideLintSettingsIndentation ind <$> getSettings f
-        lua <- doReadFile f
-        for_ (prettyPrint lintsettings lua) $ \result ->
-            doWriteFile f result
+        readIORef aborted >>= \case
+          Abort -> pure ()
+          Continue -> do
+            hPutStrLn stderr $ "Pretty printing " ++ f
+            lua <- doReadFile f
+            for_ (prettyPrint lintsettings lua) $ \result ->
+                doWriteFile f result
 
 overrideLintSettingsIndentation :: Maybe Indentation -> (LintSettings -> LintSettings)
 overrideLintSettingsIndentation ind settings = settings
@@ -322,9 +333,9 @@ dumpASTFile settings filePath contents =
       Right (_lexWarnings, ast) ->
         BL.putStr $ JSON.encode ast
 
-dumpAST :: [FilePath] -> IO ()
-dumpAST fs =
-    forEachInput_ Nothing Nothing (UseFiles fs) dumpASTStdin dumpASTFile
+dumpAST :: IORef Abort -> [FilePath] -> IO ()
+dumpAST aborted fs =
+    forEachInput_ Nothing Nothing (UseFiles fs) aborted dumpASTStdin dumpASTFile
 
 runTest :: [FilePath] -> IO ()
 runTest fs = do
@@ -378,8 +389,12 @@ runTest fs = do
 
 -- | Deprecated and naive command line interface, kept in place for backwards
 -- compatibility. Returns Nothing when this parser fails as well.
-legacyCli :: Maybe Indentation -> [String] -> IO (Maybe (Maybe LintSettings, [FilePath]))
-legacyCli ind = \case
+legacyCli
+    :: IORef Abort
+    -> Maybe Indentation
+    -> [String]
+    -> IO (Maybe (Maybe LintSettings, [FilePath]))
+legacyCli aborted ind = \case
   ["--config"] -> pure Nothing
 
   -- fail when a subcommand of the new parser is given as argument
@@ -392,26 +407,26 @@ legacyCli ind = \case
 
   -- End of recursion case
   [] -> pure $ Just (Nothing, [])
-  "--pretty-print-files" : fs -> legacyPrettyPrintFiles ind fs >> exitSuccess
+  "--pretty-print-files" : fs -> legacyPrettyPrintFiles aborted ind fs >> exitSuccess
   "--pretty-print" : _ -> legacyPrettyPrintStdin ind >> exitSuccess
   "--analyse-globals" : fs -> analyseGlobals fs >> exitSuccess
-  "--dump-ast" : fs -> dumpAST fs >> exitSuccess
+  "--dump-ast" : fs -> dumpAST aborted fs >> exitSuccess
   "--version" : _ -> putStrLn version >> exitSuccess
   "--test" : fs -> runTest fs >> exitSuccess
   "--stdin" : xs -> do
-    legacyCli ind xs <&> \case
+    legacyCli aborted ind xs <&> \case
       Nothing -> Nothing
       Just (sets, pths) -> Just (sets, "stdin" : pths)
   "--config" : f : xs -> do
     settings <- settingsFromFile f
-    legacyCli ind xs <&> \case
+    legacyCli aborted ind xs <&> \case
       Nothing -> Nothing
       Just (_, fps) -> Just (settings, fps)
   ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : '\'' : ind') : xs ->
-    legacyCli (Just (init ind')) xs
+    legacyCli aborted (Just (init ind')) xs
   ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : ind') : xs ->
-    legacyCli (Just ind') xs
+    legacyCli aborted (Just ind') xs
   f : xs -> do
-    legacyCli ind xs <&> \case
+    legacyCli aborted ind xs <&> \case
       Nothing -> Nothing
       Just (ls, fs) -> Just (ls, f : fs)

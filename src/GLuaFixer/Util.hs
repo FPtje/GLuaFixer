@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE LambdaCase #-}
 module GLuaFixer.Util where
 
 import GLua.AG.AST
@@ -13,8 +14,8 @@ import GLuaFixer.BadSequenceFinder
 import Control.DeepSeq (deepseq, force)
 import Control.Monad (void)
 import qualified Data.ByteString.Lazy as BS
+import Data.IORef (IORef, readIORef)
 import Data.Maybe(fromMaybe)
-import Data.Traversable (for)
 import System.Exit (exitWith, ExitCode (..))
 import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory, makeAbsolute, getCurrentDirectory)
 import System.FilePath (takeDirectory, (</>), (<.>))
@@ -29,6 +30,11 @@ import Data.Aeson (eitherDecode)
 data StdInOrFiles
   = UseStdIn
   | UseFiles [FilePath]
+  deriving (Show)
+
+data Abort
+  = Abort
+  | Continue
   deriving (Show)
 
 -- | Indentation used for pretty printing code
@@ -135,10 +141,11 @@ forEachInput
     :: Maybe Indentation
     -> Maybe LogFormatChoice
     -> StdInOrFiles
+    -> IORef Abort
     -> (LintSettings -> String -> IO a)
     -> (LintSettings -> FilePath -> String -> IO a)
     -> IO [a]
-forEachInput mbIndent mbOutputFormat stdInOrFiles onStdIn onFile =
+forEachInput mbIndent mbOutputFormat stdInOrFiles aborted onStdIn onFile =
     case stdInOrFiles of
       UseStdIn -> do
         cwd <- getCurrentDirectory
@@ -146,12 +153,12 @@ forEachInput mbIndent mbOutputFormat stdInOrFiles onStdIn onFile =
         stdinData <- getContents
         (:[]) <$> onStdIn lintSettings stdinData
       UseFiles fs -> do
-        res <- for fs $ \fp -> do
+        res <- forWithAbort aborted fs $ \fp -> do
           isDirectory <- doesDirectoryExist fp
           lintSettings <- overrideSettings <$> getSettings fp
           if isDirectory then do
             luaFiles <- findLuaFiles (lint_ignoreFiles lintSettings) fp
-            for luaFiles $ \luaFile -> do
+            forWithAbort aborted luaFiles $ \luaFile -> do
               contents <- doReadFile luaFile
               onFile lintSettings luaFile contents
           else do
@@ -165,12 +172,23 @@ forEachInput mbIndent mbOutputFormat stdInOrFiles onStdIn onFile =
       , log_format = fromMaybe (log_format settings) mbOutputFormat
       }
 
+forWithAbort :: IORef Abort -> [a] -> (a -> IO b) -> IO [b]
+forWithAbort aborted list f = go list
+    where
+      go = \case
+        [] -> pure []
+        (x : xs) -> do
+          readIORef aborted >>= \case
+            Abort -> pure []
+            Continue -> (:) <$> f x <*> go xs
+
 forEachInput_
     :: Maybe Indentation
     -> Maybe LogFormatChoice
     -> StdInOrFiles
+    -> IORef Abort
     -> (LintSettings -> String -> IO ())
     -> (LintSettings -> FilePath -> String -> IO ())
     -> IO ()
-forEachInput_ mbIndent mbOutputFormat stdInOrFiles onStdIn onFile =
-    void $ forEachInput mbIndent mbOutputFormat stdInOrFiles onStdIn onFile
+forEachInput_ mbIndent mbOutputFormat stdInOrFiles aborted onStdIn onFile =
+    void $ forEachInput mbIndent mbOutputFormat stdInOrFiles aborted onStdIn onFile

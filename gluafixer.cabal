@@ -93,6 +93,7 @@ executable glualint
     , glualint-lib
     , directory
     , optparse-applicative
+    , signal
 
   hs-source-dirs:      src
   ghc-options:         -O3 -Wall
