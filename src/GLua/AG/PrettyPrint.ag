@@ -151,7 +151,6 @@ convertComment conf (MToken p t) = MToken p $ convert' t
         cComment (DashBlockComment _ s) = SlashBlockComment s
         cComment t' = t'
 
-
 indent :: PrettyPrintConfig -> Int -> Doc -> Doc
 indent conf n = (<>) $ zeroWidthText (concat . replicate n $ indentation conf)
 
@@ -277,8 +276,10 @@ sem MStatList
                  lhs.isLast = False
     | Nil        lhs.pretty = @loc.renderedComments
                  lhs.statementCount = 0
-                 loc.renderedComments = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBeforeEnd)
-                 loc.commentsBeforeEnd = span (\(MToken pos' _tok) -> pos' `beforeEnd` @lhs.statRegion) @lhs.comments
+                 loc.renderedComments = renderMLComments @lhs.ppconf @lhs.indent $ fst @loc.commentsBeforeEnd
+                 --  Don't print any comments if this is an empty MStatList, otherwise the `end`
+                 --  keyword may be hidden by the comments printed here.
+                 loc.commentsBeforeEnd = if @lhs.isHead then ([], @lhs.comments) else span (\(MToken pos' _tok) -> pos' `beforeEnd` @lhs.statRegion) @lhs.comments
                  lhs.comments = snd @loc.commentsBeforeEnd
 
 sem MStat

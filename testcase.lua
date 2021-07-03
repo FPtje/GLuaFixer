@@ -1,4 +1,4 @@
-﻿-- Lua test file for basic regression testing.
+-- Lua test file for basic regression testing.
 -- Run glualint --test testcase.lua to run the test
 
 a = {}
@@ -166,3 +166,8 @@ a = "a\
 
 a = "foo\z
    bar"
+
+-- This should be multiline
+a({b}, function()
+  -- This comment may not hide keywords upon pretty printing
+end, function() end)
