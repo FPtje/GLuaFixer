@@ -227,7 +227,7 @@ sem Token
     | Identifier
         lhs.identifier          = @ident
         +tokenWarnings          = if @ident /= "goto" then id else
-                                    (:) "Don't use 'goto', it will cause a syntax error in future versions of Lua."
+                                    (:) "Don't use 'goto' as an identifier, later versions of Lua will confuse it with the goto keyword."
 
 sem MToken
     | MToken
