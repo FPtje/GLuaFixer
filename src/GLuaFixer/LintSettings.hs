@@ -18,6 +18,7 @@ data LintSettings =
     , lint_emptyBlocks               :: !Bool
     , lint_shadowing                 :: !Bool
     , lint_gotos                     :: !Bool
+    , lint_goto_identifier           :: !Bool
     , lint_doubleNegations           :: !Bool
     , lint_redundantIfStatements     :: !Bool
     , lint_redundantParentheses      :: !Bool
@@ -58,6 +59,7 @@ defaultLintSettings =
     , lint_emptyBlocks               = True
     , lint_shadowing                 = True
     , lint_gotos                     = True
+    , lint_goto_identifier           = True
     , lint_doubleNegations           = True
     , lint_redundantIfStatements     = True
     , lint_redundantParentheses      = True
@@ -98,6 +100,7 @@ instance FromJSON LintSettings where
           v .:? "lint_emptyBlocks"               .!= lint_emptyBlocks defaultLintSettings               <*>
           v .:? "lint_shadowing"                 .!= lint_shadowing defaultLintSettings                 <*>
           v .:? "lint_gotos"                     .!= lint_gotos defaultLintSettings                     <*>
+          v .:? "lint_goto_identifier"           .!= lint_goto_identifier defaultLintSettings           <*>
           v .:? "lint_doubleNegations"           .!= lint_doubleNegations defaultLintSettings           <*>
           v .:? "lint_redundantIfStatements"     .!= lint_redundantIfStatements defaultLintSettings     <*>
           v .:? "lint_redundantParentheses"      .!= lint_redundantParentheses defaultLintSettings      <*>
@@ -152,6 +155,7 @@ instance ToJSON LintSettings where
         , "lint_emptyBlocks"               .= lint_emptyBlocks ls
         , "lint_shadowing"                 .= lint_shadowing ls
         , "lint_gotos"                     .= lint_gotos ls
+        , "lint_goto_identifier"           .= lint_goto_identifier ls
         , "lint_doubleNegations"           .= lint_doubleNegations ls
         , "lint_redundantIfStatements"     .= lint_redundantIfStatements ls
         , "lint_redundantParentheses"      .= lint_redundantParentheses ls

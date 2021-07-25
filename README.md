@@ -46,6 +46,7 @@ Example `glualint.json` with the default options:
     "lint_emptyBlocks":                 true,
     "lint_shadowing":                   true,
     "lint_gotos":                       true,
+    "lint_goto_identifier":             true,
     "lint_doubleNegations":             true,
     "lint_redundantIfStatements":       true,
     "lint_redundantParentheses":        true,
@@ -84,6 +85,7 @@ Example `glualint.json` with the default options:
 - `lint_emptyBlocks`: Warn for empty blocks
 - `lint_shadowing`: Warn for variable shadowing
 - `lint_gotos`: Warn for inappropriate gotos (i.e. the ones not used to jump out of a double loop)
+- `lint_goto_identifier`: Warn when `goto` is used as an identifer (e.g. `a = {goto = 1}`). This warning exists because `goto` being allowed as identifier is actually a bug. You should not be able to use `goto` like that for the same reason you're not allowed to use any other keyword as identifier.
 - `lint_doubleNegations`: Warn for double negations (things like `not (a == b)`)
 - `lint_duplicateTableKeys`: Warn for duplicate table keys (e.g. `{a = 1, a = 2}`)
 - `lint_profanity`: Warn for profanity (bitch, cock, cocks, cunt, dick, dicks, fuck, fucking, goddamnit, knob, knobs, motherfucker, nigger, niggers, niggertits, nipple, shit)

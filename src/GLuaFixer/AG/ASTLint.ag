@@ -126,8 +126,6 @@ unknownIdentifier = "Unknown identifier"
 ----------------------------------------
 
 attr AllStuff
-    inh config :: LintSettings
-
     inh scopeLevel :: Int
     inh loopLevel :: Int -- In how many scopes of loops we are. Used in checking labels
 
@@ -135,6 +133,7 @@ attr AllStuff
     chn variableStyle :: DeterminedVariableStyle
 
 attr AllStuff MToken MTokenList
+    inh config :: LintSettings
     chn mtokenPos :: {Region} -- The location of the warning
 
     -- Global variable definitions
@@ -155,9 +154,6 @@ attr AllStuff MToken MTokenList Token TokenList Region
     syn warnings use {++} {[]} :: {[String -> LintMessage]}
     syn copy :: self
     syn identifier use {const} {unknownIdentifier} :: String -- identifier of the first token
-
-attr Token TokenList
-    syn tokenWarnings use {++} {[]} :: {[String]}
 
 attr Block MStat MStatList AReturn MElse
     syn statementCount use {+} {1} :: Int
@@ -226,15 +222,14 @@ sem Token
         lhs.identifier          = @lbl
     | Identifier
         lhs.identifier          = @ident
-        +tokenWarnings          = if @ident /= "goto" then id else
-                                    (:) "Don't use 'goto' as an identifier, later versions of Lua will confuse it with the goto keyword."
 
 sem MToken
     | MToken
         lhs.mtokenPos           = @mpos.copy
         lhs.mtok                = @mtok.copy
-        lhs.warnings            = map (warn @mpos.copy) @mtok.tokenWarnings
         lhs.identifier          = @mtok.identifier
+        +warnings               = if not (lint_goto_identifier @lhs.config) || @mtok.identifier /= "goto" then id else
+                                    (:) $ warn @mpos.copy "Don't use 'goto' as an identifier, later versions of Lua will confuse it with the goto keyword."
 
 sem MTokenList MStatList MExprList FieldList VarsList
     | Cons
