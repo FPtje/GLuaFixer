@@ -61,7 +61,8 @@ Example `glualint.json` with the default options:
     "prettyprint_spaceAfterParens":     false,
     "prettyprint_spaceAfterBrackets":   false,
     "prettyprint_spaceAfterBraces":     false,
-    "prettyprint_spaceEmptyBrackets":   true,
+    "prettyprint_spaceEmptyParens":     false,
+    "prettyprint_spaceEmptyBraces":     false,
     "prettyprint_spaceAfterLabel":      false,
     "prettyprint_spaceBeforeComma":     false,
     "prettyprint_spaceAfterComma":      true,
@@ -69,6 +70,7 @@ Example `glualint.json` with the default options:
     "prettyprint_cStyle":               false,
     "prettyprint_rejectInvalidCode":    false,
     "prettyprint_indentation":          "    ",
+
     "log_format":                       "auto"
 }
 ```
@@ -80,13 +82,16 @@ Example `glualint.json` with the default options:
 - `lint_syntaxErrors`: Whether syntax errors should be reported. This is off by default because [`gluac`](https://github.com/cartman300/gluac) shows nicer syntax errors.
 - `lint_syntaxInconsistencies`: Warn for syntax inconsistencies (using both `&&` and `and`, that kind of stuff)
 - `lint_deprecated`: Warn for deprecated functions. These functions are taken from [the GMod wiki](http://wiki.garrysmod.com/page/Category:Deprecated_Functions), don't blame me for the things that are on there.
-- `lint_whitespaceStyle`: Warn for shitty whitespace behaviour (e.g. lack of spaces around operators and keywords)
+- `lint_trailingWhitespace`: Warn for whitespace at the end of a line. Your editor should have an option to automatically trim trailing whitespace.
+- `lint_whitespaceStyle`: Warn for bad whitespace behaviour (e.g. lack of spaces around operators and keywords)
 - `lint_beginnerMistakes`: Warn for typical beginner mistakes (using self in non-metafunction, `net.WriteEntity(LocalPlayer())` in a net message, using self.Weapon in a SWEP etc.)
 - `lint_emptyBlocks`: Warn for empty blocks
 - `lint_shadowing`: Warn for variable shadowing
 - `lint_gotos`: Warn for inappropriate gotos (i.e. the ones not used to jump out of a double loop)
 - `lint_goto_identifier`: Warn when `goto` is used as an identifer (e.g. `a = {goto = 1}`). This warning exists because `goto` being allowed as identifier is actually a bug. You should not be able to use `goto` like that for the same reason you're not allowed to use any other keyword as identifier.
 - `lint_doubleNegations`: Warn for double negations (things like `not (a == b)`)
+- `lint_redundantIfStatements`: Warn for nested if-statements that can be combined with `and`
+- `lint_redundantParentheses`: Warn for unneeded parentheses around expressions.
 - `lint_duplicateTableKeys`: Warn for duplicate table keys (e.g. `{a = 1, a = 2}`)
 - `lint_profanity`: Warn for profanity (bitch, cock, cocks, cunt, dick, dicks, fuck, fucking, goddamnit, knob, knobs, motherfucker, nigger, niggers, niggertits, nipple, shit)
 - `lint_unusedVars`: Warn for variables that are never used
@@ -103,11 +108,13 @@ These options affect the pretty printing functionality of `glualint`.
 - `prettyprint_spaceAfterBraces`: Put a space between all curly braces
 - `prettyprint_spaceEmptyParens`: Put a space between empty parentheses (e.g. `( )`). Only applies when `prettyprint_spaceAfterParens` is set
 - `prettyprint_spaceEmptyBraces`: Put a space between empty braces (e.g. `{ }`). Only applies when `prettyprint_spaceAfterBraces` is set
+- `prettyprint_spaceAfterLabel`: Put a space after a `::label::` statement
 - `prettyprint_semicolons`: Clutter the script with semicolons after every damn statement
 - `prettyprint_cStyle`: Use C style operators and comments everywhere
 - `prettyprint_indentation`: What to use for indentation. Any string is valid, but some amount of spaces or `"\t"` is recommended
 - `prettyprint_spaceBeforeComma`: Whether to place a space before every comma
 - `prettyprint_spaceAfterComma`: Whether to place a space after every comma
+- `prettyprint_rejectInvalidCode`: Whether not to pretty print when the code is syntactically invalid
 
 
 ## Other options
