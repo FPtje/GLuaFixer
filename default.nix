@@ -1,6 +1,6 @@
 { mkDerivation, aeson, array, base, bytestring, containers
 , directory, deepseq, filemanip, filepath, ListLike, MissingH, mtl
-, optparse-applicative, parsec, pretty, signal, stdenv, uu-parsinglib
+, optparse-applicative, parsec, pretty, signal, lib, uu-parsinglib
 , uuagc, uuagc-cabal, vector
 , pkgs
 }:
@@ -30,5 +30,5 @@ mkDerivation {
 
   homepage = "https://github.com/FPtje/GLuaFixer";
   description = "Attempts to fix your syntax erroring Lua files";
-  license = stdenv.lib.licenses.lgpl21;
+  license = lib.licenses.lgpl21;
 }
