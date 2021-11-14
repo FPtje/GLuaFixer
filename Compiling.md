@@ -1,8 +1,34 @@
 # Compiling glualint
 
-This document describes how glualint is to be compiled. This guide applies to Windows, Linux and OSX.
+This document describes how glualint is to be compiled. This guide applies to Windows, Linux and hopefully OSX.
 
-## Prerequisites
+## Linux/OSX
+
+For Linux and OSX, the compilation uses Nix. Please install Nix version 2.4 or higher from [https://nixos.org/download.html](NixOS.org).
+Nix 2.4 or higher is needed to enable the flakes feature that is introduced in 2.4.
+
+Once installed, Nix flakes need to be enabled by editing `/etc/nix/nix.conf` and adding the following line:
+
+```conf
+experimental-features = nix-command flakes
+```
+
+Then, in the root of this repository, run the following command to build this project:
+
+```bash
+nix develop --command ./AGGenerator.sh
+nix develop --command cabal v1-build
+```
+
+This will create the `glualint` executable at `dist/build/glualint/glualint`.
+
+Note: OSX building is neither tested nor supported. It may work, it may not.
+
+## Windows
+
+The compilation for Windows more difficult, since the dependencies have to be installed manually.
+
+### Prerequisites
 
 In order to build glualint, you need the following programs:
 
@@ -14,17 +40,15 @@ These programs can be installed through the [Haskell platform](https://www.haske
 
 Make sure the programs are in your `PATH`.
 
-## Compiling glualint
+### Compilation commands
+
 Open a terminal (or command prompt in Windows) in the root folder of the repository (the folder with `gluafixer.cabal` file).
 Run the following commands in order:
 
 ```bash
-# Depending on OS, for Linux run AGGenerator.sh, on Windows run the AGGenerator.bat
-./AGGenerator.sh
+AGGenerator.bat
 cabal build glualint
 ```
-
-The first command makes sure that any dependencies are installed in a local sandbox. The second command installs the dependencies. The third command actually builds glualint.
 
 Once the process succeeds, you will find an executable called `glualint` in `dist/build/glualint/`. That executable is what you need. Follow the [Installation instructions](https://github.com/FPtje/GLuaFixer#installing) to install it.
 
