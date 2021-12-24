@@ -46,6 +46,8 @@ data PrettyPrintConfig = PPConfig {
     spaceAfterComma :: Bool,
     semicolons :: Bool,
     cStyle :: Bool,
+    removeExtraParens :: Bool,
+    removeAllExtraParens :: Bool,
     indentation :: String
 }
 
@@ -61,6 +63,8 @@ defaultPPConfig = PPConfig {
     spaceAfterComma = True,
     semicolons = False,
     cStyle = False,
+    removeExtraParens = True,
+    removeAllExtraParens = False,
     indentation = "    "
 }
 
@@ -182,15 +186,25 @@ infixl 6 <->
 a <-> b | a == empty = b
         | b == empty = a
         | otherwise  = a <> zchr ' ' <> b
+
+-- Always 10, so there is a default for precedence
+infixr 5 $$$
+($$$) :: Int -> Int -> Int
+a $$$ b = if a > b then 10 else 10
+
 }
 
 
 attr AllStuff
     syn pretty :: Doc
     inh indent :: Int
+    inh neighborPrecedence :: Int
     syn isMultiline use {||} {False} :: Bool -- whether code is printed over multiple lines
     inh ppconf :: PrettyPrintConfig
     syn copy :: self
+
+attr ExprStuff
+    syn precedence use {$$$} {10} :: Int
 
 attr Declaration VarsList
     syn varPretty  use {<>} {empty}  :: Doc
@@ -483,7 +497,12 @@ sem FuncName
 
 sem PrefixExp
     | PFVar      lhs.pretty = tok @name <> @suffixes.pretty
-    | ExprVar    lhs.pretty = parens @lhs.ppconf NonEmpty @expr.pretty <> @suffixes.pretty
+    | ExprVar    lhs.pretty = (if @loc.noparens then @expr.pretty else parens @lhs.ppconf NonEmpty @expr.pretty) <> @suffixes.pretty
+                 lhs.precedence = if @loc.noparens then @expr.precedence else 10
+                 loc.wraps = case @expr.copy of
+                                MExpr _ (APrefixExpr _) -> True
+                                _ -> False
+                 loc.noparens = removeExtraParens @lhs.ppconf && (@loc.wraps || (length @suffixes.copy == 0 && (@expr.precedence == 10 || @lhs.neighborPrecedence == 0 || removeAllExtraParens @lhs.ppconf && @lhs.neighborPrecedence < @expr.precedence)))
                  lhs.potentiallyAmbiguousAsStatement = True
 
 sem PFExprSuffix
@@ -509,6 +528,7 @@ sem Expr
                         loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                         loc.emptyParams = toEmpty $ null @pars
                         body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
+                        body.neighborPrecedence = 0
                         lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         lhs.wouldBeAmbiguousIfNextStatementIsExprVar = True
@@ -519,18 +539,43 @@ sem Expr
                         loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @fields.pretty
                         loc.emptyContents = toEmpty $ null @fields.copy
                         fields.indent = @lhs.indent + (if @fields.isMultiline then 1 else 0)
+                        fields.neighborPrecedence = 0
     | BinOpExpr         lhs.pretty = @left.pretty <-> @op.pretty <-> @right.pretty
+                        loc.precedence = case @op.copy of
+                                            AOr -> 1
+                                            AAnd -> 2
+                                            ALT -> 3
+                                            AGT -> 3
+                                            ALEQ -> 3
+                                            AGEQ -> 3
+                                            ANEq -> 3
+                                            AEq -> 3
+                                            AConcatenate -> 4
+                                            APlus -> 5
+                                            BinMinus -> 5
+                                            AMultiply -> 6
+                                            ADivide -> 6
+                                            AModulus -> 6
+                                            APower -> 8
+                        -- Note: the AST doesn't always represent precedence correctly in unparenthesized unary/binary expressions
+                        lhs.precedence = min @loc.precedence $ min @left.precedence @right.precedence
+                        left.neighborPrecedence = @loc.precedence
+                        right.neighborPrecedence = @loc.precedence
     | UnOpExpr          lhs.pretty = @op.pretty <> @right.pretty
+                        lhs.precedence = min @right.precedence 7
+                        right.neighborPrecedence = 7
 
 sem Args
     | ListArgs  lhs.pretty = parens @lhs.ppconf @loc.emptyParams @args.pretty
                 loc.emptyParams = toEmpty $ null @args.copy
+                args.neighborPrecedence = 0
                 args.isHead = True
     | TableArg  lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
                 loc.prettyMulti = zchr '{' $+$ indent @lhs.ppconf (@lhs.indent + 1) @arg.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
                 loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @arg.pretty
                 loc.emptyContents = toEmpty $ null @arg.copy
                 arg.indent = @lhs.indent + (if @arg.isMultiline then 1 else 0)
+                arg.neighborPrecedence = 0
     | StringArg lhs.pretty = tok @arg
 
 sem Field
@@ -580,57 +625,57 @@ sem UnOp
 {
 
 pp_block :: Block -> Int -> Doc
-pp_block p i = pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] i defaultPPConfig emptyRg))
+pp_block p i = pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] i 0 defaultPPConfig emptyRg))
 
 pp_mstat :: MStat -> Int -> Doc
-pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] i False False defaultPPConfig))
+pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] i False 0 False defaultPPConfig))
 
 pp_prefixexp :: PrefixExp -> Doc
-pp_prefixexp p = pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 defaultPPConfig))
+pp_prefixexp p = pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 0 defaultPPConfig))
 
 pp_pfexprsuffix :: PFExprSuffix -> Doc
-pp_pfexprsuffix p = pretty_Syn_PFExprSuffix (wrap_PFExprSuffix (sem_PFExprSuffix p) (Inh_PFExprSuffix [] 0 defaultPPConfig))
+pp_pfexprsuffix p = pretty_Syn_PFExprSuffix (wrap_PFExprSuffix (sem_PFExprSuffix p) (Inh_PFExprSuffix [] 0 0 defaultPPConfig))
 
 pp_field :: Field -> Doc
-pp_field p = pretty_Syn_Field (wrap_Field (sem_Field p) (Inh_Field [] 0 defaultPPConfig))
+pp_field p = pretty_Syn_Field (wrap_Field (sem_Field p) (Inh_Field [] 0 0 defaultPPConfig))
 
 pp_mexpr :: MExpr -> Doc
-pp_mexpr p = pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 defaultPPConfig))
+pp_mexpr p = pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 0 defaultPPConfig))
 
 prettyprint :: AST -> String
-prettyprint p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0 defaultPPConfig))
+prettyprint p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0 0 defaultPPConfig))
 
 prettyprintConf :: PrettyPrintConfig -> AST -> String
-prettyprintConf conf p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0 conf))
+prettyprintConf conf p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0 0 conf))
 
 renderBlock        :: Block -> String
-renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] 0 defaultPPConfig emptyRg))
+renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] 0 0 defaultPPConfig emptyRg))
 
 renderStat         :: Stat -> String
-renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat [] 0 False False defaultPPConfig emptyRg))
+renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat [] 0 False 0 False defaultPPConfig emptyRg))
 
 renderMStat         :: MStat -> String
-renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] 0 False False defaultPPConfig))
+renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] 0 False 0 False defaultPPConfig))
 
 renderAReturn      :: AReturn -> String
-renderAReturn p    = render $ pretty_Syn_AReturn (wrap_AReturn (sem_AReturn p) (Inh_AReturn [] 0 defaultPPConfig))
+renderAReturn p    = render $ pretty_Syn_AReturn (wrap_AReturn (sem_AReturn p) (Inh_AReturn [] 0 0 defaultPPConfig))
 
 renderFuncName     :: FuncName -> String
-renderFuncName p   = render $ pretty_Syn_FuncName (wrap_FuncName (sem_FuncName p) (Inh_FuncName [] 0 defaultPPConfig))
+renderFuncName p   = render $ pretty_Syn_FuncName (wrap_FuncName (sem_FuncName p) (Inh_FuncName [] 0 0 defaultPPConfig))
 
 renderPrefixExp    :: PrefixExp -> String
-renderPrefixExp p  = render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 defaultPPConfig))
+renderPrefixExp p  = render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 0 defaultPPConfig))
 
 renderExpr         :: Expr -> String
-renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) (Inh_Expr [] 0 defaultPPConfig emptyRg))
+renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) (Inh_Expr [] 0 0 defaultPPConfig emptyRg))
 
 renderMExpr         :: MExpr -> String
-renderMExpr p       = render $ pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 defaultPPConfig))
+renderMExpr p       = render $ pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 0 defaultPPConfig))
 
 renderArgs         :: Args -> String
-renderArgs p       = render $ pretty_Syn_Args (wrap_Args (sem_Args p) (Inh_Args [] 0 defaultPPConfig))
+renderArgs p       = render $ pretty_Syn_Args (wrap_Args (sem_Args p) (Inh_Args [] 0 0 defaultPPConfig))
 
 renderField        :: Field -> String
-renderField p      = render $ pretty_Syn_Field (wrap_Field (sem_Field p) (Inh_Field [] 0 defaultPPConfig))
+renderField p      = render $ pretty_Syn_Field (wrap_Field (sem_Field p) (Inh_Field [] 0 0 defaultPPConfig))
 
 }
