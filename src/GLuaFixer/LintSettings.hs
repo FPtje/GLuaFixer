@@ -40,8 +40,8 @@ data LintSettings =
     , prettyprint_spaceAfterComma      :: !Bool
     , prettyprint_semicolons           :: !Bool
     , prettyprint_cStyle               :: !Bool
-    , prettyprint_removeExtraParens    :: !Bool
-    , prettyprint_removeAllExtraParens :: !Bool
+    , prettyprint_removeRedundantParens:: !Bool
+    , prettyprint_minimizeParens       :: !Bool
     , prettyprint_rejectInvalidCode    :: !Bool
     , prettyprint_indentation          :: !String
 
@@ -83,8 +83,8 @@ defaultLintSettings =
     , prettyprint_spaceAfterComma      = True
     , prettyprint_semicolons           = False
     , prettyprint_cStyle               = False
-    , prettyprint_removeExtraParens    = True
-    , prettyprint_removeAllExtraParens = False
+    , prettyprint_removeRedundantParens= True
+    , prettyprint_minimizeParens       = False
     , prettyprint_rejectInvalidCode    = False
     , prettyprint_indentation          = "    "
 
@@ -125,8 +125,8 @@ instance FromJSON LintSettings where
           v .:? "prettyprint_spaceAfterComma"      .!= prettyprint_spaceAfterComma defaultLintSettings      <*>
           v .:? "prettyprint_semicolons"           .!= prettyprint_semicolons defaultLintSettings           <*>
           v .:? "prettyprint_cStyle"               .!= prettyprint_cStyle defaultLintSettings               <*>
-          v .:? "prettyprint_removeExtraParens"    .!= prettyprint_removeExtraParens defaultLintSettings    <*>
-          v .:? "prettyprint_removeAllExtraParens" .!= prettyprint_removeAllExtraParens defaultLintSettings <*>
+          v .:? "prettyprint_removeRedundantParens".!= prettyprint_removeRedundantParens defaultLintSettings<*>
+          v .:? "prettyprint_minimizeParens"       .!= prettyprint_minimizeParens defaultLintSettings       <*>
           v .:? "prettyprint_rejectInvalidCode"    .!= prettyprint_rejectInvalidCode defaultLintSettings    <*>
           v .:? "prettyprint_indentation"          .!= prettyprint_indentation defaultLintSettings          <*>
           v .:? "log_format"                       .!= log_format defaultLintSettings
@@ -146,8 +146,8 @@ lint2ppSetting ls =
     , spaceAfterComma      = prettyprint_spaceAfterComma ls
     , semicolons           = prettyprint_semicolons ls
     , cStyle               = prettyprint_cStyle ls
-    , removeExtraParens    = prettyprint_removeExtraParens ls
-    , removeAllExtraParens = prettyprint_removeAllExtraParens ls
+    , removeRedundantParens= prettyprint_removeRedundantParens ls
+    , minimizeParens       = prettyprint_minimizeParens ls
     , indentation          = prettyprint_indentation ls
     }
 
@@ -183,8 +183,8 @@ instance ToJSON LintSettings where
         , "prettyprint_spaceAfterComma"      .= prettyprint_spaceAfterComma ls
         , "prettyprint_semicolons"           .= prettyprint_semicolons ls
         , "prettyprint_cStyle"               .= prettyprint_cStyle ls
-        , "prettyprint_removeExtraParens"    .= prettyprint_removeExtraParens ls
-        , "prettyprint_removeAllExtraParens" .= prettyprint_removeAllExtraParens ls
+        , "prettyprint_removeRedundantParens".= prettyprint_removeRedundantParens ls
+        , "prettyprint_minimizeParens"       .= prettyprint_minimizeParens ls
         , "prettyprint_indentation"          .= prettyprint_indentation ls
         , "log_format"                       .= log_format ls
         ]
