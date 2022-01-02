@@ -216,6 +216,7 @@ attr MExpr Expr PrefixExp
     -- e.g. in `(1 + 2) * 3`, 1 and 2 get the precedence of the +, and 3 gets the precedence of the
     -- *.
     inh parentOperatorPrecedence :: OperatorLevel
+    inh parentOperatorAssociative :: Bool
     -- Whether an expression is a literal string, number, table, bool nil or varargs. Defaults and
     -- combines to False, because anything that contains a literal is no longer a literal.
     syn isLiteral use {(\_ _ -> False)} {False} :: Bool
@@ -223,6 +224,8 @@ attr MExpr Expr PrefixExp
 attr ExprStuff BinOp
     -- Operator precedence
     syn precedence use {min} {OperatorLevel8} :: OperatorLevel
+    -- Whether all operators in an expression are associative.
+    syn isAssociative use {&&} {False} :: Bool
 
 attr Declaration VarsList
     syn varPretty  use {<>} {empty}  :: Doc
@@ -324,6 +327,7 @@ sem MExprList
                  tl.isHead  = False
                  lhs.pos    = @hd.pos
                  hd.parentOperatorPrecedence = TopLevelExpression
+                 hd.parentOperatorAssociative = True
     | Nil        lhs.pretty = empty
                  lhs.pos    = emptyRg
 
@@ -365,6 +369,7 @@ sem MaybeMExpr
                 lhs.pretty = @just.pretty
                 lhs.isDefined = True
                 just.parentOperatorPrecedence = TopLevelExpression
+                just.parentOperatorAssociative = True
     | Nothing
                 lhs.pretty = empty
                 lhs.isDefined = False
@@ -373,6 +378,7 @@ sem Declaration
     | Tuple     lhs.varPretty = @x1.pretty
                 lhs.exprPretty = @x2.pretty
                 x1.parentOperatorPrecedence = TopLevelExpression
+                x1.parentOperatorAssociative = True
 
 sem VarsList
     | Cons      lhs.pretty = @loc.varPretty <-> if @loc.isDefined then zchr '=' <-> @loc.exprPretty else empty
@@ -393,6 +399,7 @@ sem ElseIf
                 x2.indent = @lhs.indent + 1
                 x2.statRegion = emptyRg
                 x1.parentOperatorPrecedence = TopLevelExpression
+                x1.parentOperatorAssociative = True
 
 sem MElseIf
     | MElseIf   lhs.pos = @pos
@@ -444,6 +451,7 @@ sem Stat
     | AFuncCall  lhs.pretty = @fn.pretty <> @loc.semicolon
                  loc.semicolon = if semicolons @lhs.ppconf || @lhs.potentiallyAmbiguousAsStatement then zchr ';' else empty
                  fn.parentOperatorPrecedence = TopLevelExpression
+                 fn.parentOperatorAssociative = True
     | ALabel     lhs.pretty = zeroWidthText "::" <> @loc.whitespace <> tok @lbl <> @loc.whitespace <> zeroWidthText "::"
                  loc.whitespace = if spaceAfterLabel @lhs.ppconf then zeroWidthText " " else empty
     | ABreak     lhs.pretty = zeroWidthText "break" <> @loc.semicolon
@@ -461,17 +469,20 @@ sem Stat
                  lhs.hasBreaking = False
     | AWhile     lhs.isMultiline = True
                  cond.parentOperatorPrecedence = TopLevelExpression
+                 cond.parentOperatorAssociative = True
                  lhs.pretty = zeroWidthText "while" <-> @cond.pretty <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
     | ARepeat    lhs.pretty = zeroWidthText "repeat" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "until" <-> @cond.pretty)
                  body.indent = @lhs.indent + 1
                  cond.parentOperatorPrecedence = TopLevelExpression
+                 cond.parentOperatorAssociative = True
                  lhs.hasBreaking = False
     | AIf        loc.isMultiline = @cond.isMultiline || @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking || @elifs.elsesExist || @els.elsesExist
                  loc.singleLinePretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" <-> @body.pretty <-> zeroWidthText "end"
                  loc.multilinePretty  = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  cond.parentOperatorPrecedence = TopLevelExpression
+                 cond.parentOperatorAssociative = True
                  body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
                  body.statRegion = @lhs.statRegion `upto` @elifs.pos `upto` @els.pos
                  lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
@@ -483,8 +494,11 @@ sem Stat
                  lhs.pretty = zeroWidthText "for" <-> tok @var <-> zchr '=' <-> @val.pretty <> @loc.comma <> @to.pretty <> @loc.step <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  loc.comma = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  val.parentOperatorPrecedence = TopLevelExpression
+                 val.parentOperatorAssociative = True
                  to.parentOperatorPrecedence = TopLevelExpression
+                 to.parentOperatorAssociative = True
                  step.parentOperatorPrecedence = TopLevelExpression
+                 step.parentOperatorAssociative = True
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
     | AGFor      lhs.isMultiline = True
@@ -538,7 +552,7 @@ sem PrefixExp
                                                     _ -> False
                  loc.noparens =
                     (removeRedundantParens @lhs.ppconf || minimizeParens @lhs.ppconf) && (@loc.containsParenthesizedExpr || (@lhs.parentOperatorPrecedence == TopLevelExpression || @expr.isLiteral) && length @suffixes.copy == 0) ||
-                    (minimizeParens @lhs.ppconf && length @suffixes.copy == 0 && @lhs.parentOperatorPrecedence < @expr.precedence)
+                    (minimizeParens @lhs.ppconf && length @suffixes.copy == 0 && (@lhs.parentOperatorPrecedence < @expr.precedence || @lhs.parentOperatorPrecedence == @expr.precedence && @lhs.parentOperatorAssociative))
                  lhs.potentiallyAmbiguousAsStatement = True
 
 sem PFExprSuffix
@@ -546,6 +560,7 @@ sem PFExprSuffix
     | MetaCall   lhs.pretty = zchr ':' <> tok @fn <> @args.pretty
     | ExprIndex  lhs.pretty = brackets @lhs.ppconf @index.pretty
                  index.parentOperatorPrecedence = TopLevelExpression
+                 index.parentOperatorAssociative = True
     | DotIndex   lhs.pretty = zchr '.' <> tok @index
 
 sem MExpr
@@ -588,6 +603,8 @@ sem Expr
                         lhs.precedence = min @op.precedence $ min @left.precedence @right.precedence
                         left.parentOperatorPrecedence = @op.precedence
                         right.parentOperatorPrecedence = @op.precedence
+                        left.parentOperatorAssociative = @op.isAssociative
+                        right.parentOperatorAssociative = @op.isAssociative
     | UnOpExpr          lhs.pretty = @op.pretty <> @right.pretty
                         lhs.precedence = min @right.precedence OperatorLevel7
                         right.parentOperatorPrecedence = OperatorLevel7
@@ -608,14 +625,18 @@ sem Field
                     lhs.isMultiline = True
                     lhs.canFitOnSameLine = False
                     key.parentOperatorPrecedence = TopLevelExpression
+                    key.parentOperatorAssociative = True
                     value.parentOperatorPrecedence = TopLevelExpression
+                    value.parentOperatorAssociative = True
     | NamedField    lhs.pretty = tok @key <-> zchr '=' <-> @value.pretty <> @sep.pretty
                     lhs.isMultiline = True
                     lhs.canFitOnSameLine = False
                     value.parentOperatorPrecedence = TopLevelExpression
+                    value.parentOperatorAssociative = True
     | UnnamedField  lhs.pretty = @value.pretty <> @sep.pretty
                     lhs.canFitOnSameLine = @sep.canFitOnSameLine && not @value.isMultiline
                     value.parentOperatorPrecedence = TopLevelExpression
+                    value.parentOperatorAssociative = True
 
 sem FieldSep
     | CommaSep      lhs.pretty = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ','
@@ -632,34 +653,49 @@ sem FieldSep
 sem BinOp
     | APlus         lhs.pretty = zeroWidthText "+"
                     lhs.precedence = OperatorLevel5
+                    lhs.isAssociative = True
     | BinMinus      lhs.pretty = zeroWidthText "-"
                     lhs.precedence = OperatorLevel5
+                    lhs.isAssociative = False
     | AMultiply     lhs.pretty = zeroWidthText "*"
                     lhs.precedence = OperatorLevel6
+                    lhs.isAssociative = True
     | ADivide       lhs.pretty = zeroWidthText "/"
                     lhs.precedence = OperatorLevel6
+                    lhs.isAssociative = False
     | AModulus      lhs.pretty = zeroWidthText "%"
                     lhs.precedence = OperatorLevel6
+                    lhs.isAssociative = False
     | APower        lhs.pretty = zeroWidthText "^"
                     lhs.precedence = OperatorLevel8
+                    lhs.isAssociative = False
     | AConcatenate  lhs.pretty = zeroWidthText ".."
                     lhs.precedence = OperatorLevel4
+                    lhs.isAssociative = True
     | ALT           lhs.pretty = zeroWidthText "<"
                     lhs.precedence = OperatorLevel3
+                    lhs.isAssociative = True
     | ALEQ          lhs.pretty = zeroWidthText "<="
                     lhs.precedence = OperatorLevel3
+                    lhs.isAssociative = True
     | AGT           lhs.pretty = zeroWidthText ">"
                     lhs.precedence = OperatorLevel3
+                    lhs.isAssociative = True
     | AGEQ          lhs.pretty = zeroWidthText ">="
                     lhs.precedence = OperatorLevel3
+                    lhs.isAssociative = True
     | AEq           lhs.pretty = zeroWidthText "=="
                     lhs.precedence = OperatorLevel3
+                    lhs.isAssociative = True
     | ANEq          lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "!=" else "~=")
                     lhs.precedence = OperatorLevel3
+                    lhs.isAssociative = True
     | AAnd          lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "&&" else "and")
                     lhs.precedence = OperatorLevel2
+                    lhs.isAssociative = True
     | AOr           lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "||" else "or")
                     lhs.precedence = OperatorLevel1
+                    lhs.isAssociative = True
 
 sem UnOp
     | UnMinus  lhs.pretty = zeroWidthText "-"
@@ -675,7 +711,7 @@ pp_mstat :: MStat -> Int -> Doc
 pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] i False False defaultPPConfig))
 
 pp_prefixexp :: PrefixExp -> Doc
-pp_prefixexp p = pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 TopLevelExpression defaultPPConfig))
+pp_prefixexp p = pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 True TopLevelExpression defaultPPConfig))
 
 pp_pfexprsuffix :: PFExprSuffix -> Doc
 pp_pfexprsuffix p = pretty_Syn_PFExprSuffix (wrap_PFExprSuffix (sem_PFExprSuffix p) (Inh_PFExprSuffix [] 0 defaultPPConfig))
@@ -684,7 +720,7 @@ pp_field :: Field -> Doc
 pp_field p = pretty_Syn_Field (wrap_Field (sem_Field p) (Inh_Field [] 0 defaultPPConfig))
 
 pp_mexpr :: MExpr -> Doc
-pp_mexpr p = pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 TopLevelExpression defaultPPConfig))
+pp_mexpr p = pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 True TopLevelExpression defaultPPConfig))
 
 prettyprint :: AST -> String
 prettyprint p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0 defaultPPConfig))
@@ -708,13 +744,13 @@ renderFuncName     :: FuncName -> String
 renderFuncName p   = render $ pretty_Syn_FuncName (wrap_FuncName (sem_FuncName p) (Inh_FuncName [] 0 defaultPPConfig))
 
 renderPrefixExp    :: PrefixExp -> String
-renderPrefixExp p  = render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 TopLevelExpression defaultPPConfig))
+renderPrefixExp p  = render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 True TopLevelExpression defaultPPConfig))
 
 renderExpr         :: Expr -> String
-renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) (Inh_Expr [] 0 TopLevelExpression defaultPPConfig emptyRg))
+renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) (Inh_Expr [] 0 True TopLevelExpression defaultPPConfig emptyRg))
 
 renderMExpr         :: MExpr -> String
-renderMExpr p       = render $ pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 TopLevelExpression defaultPPConfig))
+renderMExpr p       = render $ pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 True TopLevelExpression defaultPPConfig))
 
 renderArgs         :: Args -> String
 renderArgs p       = render $ pretty_Syn_Args (wrap_Args (sem_Args p) (Inh_Args [] 0 defaultPPConfig))
