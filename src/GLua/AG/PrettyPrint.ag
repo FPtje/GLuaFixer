@@ -551,7 +551,17 @@ sem PrefixExp
                                                     MExpr _ (APrefixExpr _) -> True
                                                     _ -> False
                  loc.noparens =
+                    -- Parameters are redundant when the first expression below them is also
+                    -- parenthesized, when it's a top level expression or when the contents of the
+                    -- parentheses are a literal.
                     (removeRedundantParens @lhs.ppconf || minimizeParens @lhs.ppconf) && (@loc.containsParenthesizedExpr || (@lhs.parentOperatorPrecedence == TopLevelExpression || @expr.isLiteral) && length @suffixes.copy == 0) ||
+                    -- Parentheses can be minimized when there's no suffix (function call/index) and
+                    -- the parent operator's precedence is lower than the child expression's
+                    -- precedence OR they are equal and the parent operator is associative. There is
+                    -- no check for the child operator being associative (@expr.isAssociative),
+                    -- because evaluation order of the child itself does not change when the
+                    -- parentheses are removed. Only the order of evaluation between the parent
+                    -- operator and the child changes.
                     (minimizeParens @lhs.ppconf && length @suffixes.copy == 0 && (@lhs.parentOperatorPrecedence < @expr.precedence || @lhs.parentOperatorPrecedence == @expr.precedence && @lhs.parentOperatorAssociative))
                  lhs.potentiallyAmbiguousAsStatement = True
 
