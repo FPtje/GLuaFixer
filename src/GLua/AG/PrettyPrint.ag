@@ -216,8 +216,12 @@ attr MExpr Expr PrefixExp
     -- e.g. in `(1 + 2) * 3`, 1 and 2 get the precedence of the +, and 3 gets the precedence of the
     -- *.
     inh parentOperatorPrecedence :: OperatorLevel
+    -- Whether an expression is a literal string, number, table, bool nil or varargs. Defaults and
+    -- combines to False, because anything that contains a literal is no longer a literal.
+    syn isLiteral use {(\_ _ -> False)} {False} :: Bool
 
 attr ExprStuff BinOp
+    -- Operator precedence
     syn precedence use {min} {OperatorLevel8} :: OperatorLevel
 
 attr Declaration VarsList
@@ -522,8 +526,10 @@ sem FuncName
 
 sem PrefixExp
     | PFVar      lhs.pretty = tok @name <> @suffixes.pretty
+                 lhs.isLiteral = False
     | ExprVar    lhs.pretty = (if @loc.noparens then @expr.pretty else parens @lhs.ppconf NonEmpty @expr.pretty) <> @suffixes.pretty
                  lhs.precedence = if @loc.noparens then @expr.precedence else OperatorLevel8
+                 lhs.isLiteral = False
 
                  -- Whether this ExprVar contains another PrefixExp. In this case the parentheses
                  -- can be removed.
@@ -531,9 +537,8 @@ sem PrefixExp
                                                     MExpr _ (APrefixExpr _) -> True
                                                     _ -> False
                  loc.noparens =
-                    (removeRedundantParens @lhs.ppconf || minimizeParens @lhs.ppconf) && (@lhs.parentOperatorPrecedence == TopLevelExpression || @loc.containsParenthesizedExpr) ||
+                    (removeRedundantParens @lhs.ppconf || minimizeParens @lhs.ppconf) && (@loc.containsParenthesizedExpr || (@lhs.parentOperatorPrecedence == TopLevelExpression || @expr.isLiteral) && length @suffixes.copy == 0) ||
                     (minimizeParens @lhs.ppconf && length @suffixes.copy == 0 && @lhs.parentOperatorPrecedence < @expr.precedence)
-                 expr.parentOperatorPrecedence = TopLevelExpression
                  lhs.potentiallyAmbiguousAsStatement = True
 
 sem PFExprSuffix
@@ -549,11 +554,17 @@ sem MExpr
 
 sem Expr
     | ANil              lhs.pretty = zeroWidthText "nil"
+                        lhs.isLiteral = True
     | AFalse            lhs.pretty = zeroWidthText "false"
+                        lhs.isLiteral = True
     | ATrue             lhs.pretty = zeroWidthText "true"
+                        lhs.isLiteral = True
     | ANumber           lhs.pretty = zeroWidthText @num
+                        lhs.isLiteral = True
     | AString           lhs.pretty = tok @str
+                        lhs.isLiteral = True
     | AVarArg           lhs.pretty = zeroWidthText "..."
+                        lhs.isLiteral = True
     | AnonymousFunc     loc.isMultiline = @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking
                         loc.singleLinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) <-> @body.pretty <-> zeroWidthText "end"
                         loc.multilinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
@@ -566,6 +577,7 @@ sem Expr
     | ATableConstructor
                         lhs.pretty = if @fields.isMultiline then @loc.prettyMulti else @loc.prettySingle
                         lhs.isMultiline = not $ null $ @fields.copy
+                        lhs.isLiteral = True
                         loc.prettyMulti = zchr '{' $+$ indent @lhs.ppconf (@lhs.indent + 1) @fields.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
                         loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @fields.pretty
                         loc.emptyContents = toEmpty $ null @fields.copy
