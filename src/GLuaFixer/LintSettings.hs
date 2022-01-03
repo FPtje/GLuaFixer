@@ -42,6 +42,7 @@ data LintSettings =
     , prettyprint_cStyle :: !Bool
     , prettyprint_removeRedundantParens :: !Bool
     , prettyprint_minimizeParens :: !Bool
+    , prettyprint_assumeOperatorAssociativity :: !Bool
     , prettyprint_rejectInvalidCode :: !Bool
     , prettyprint_indentation :: !String
 
@@ -85,6 +86,7 @@ defaultLintSettings =
     , prettyprint_cStyle = False
     , prettyprint_removeRedundantParens = True
     , prettyprint_minimizeParens = False
+    , prettyprint_assumeOperatorAssociativity = True
     , prettyprint_rejectInvalidCode = False
     , prettyprint_indentation = "    "
 
@@ -127,6 +129,7 @@ instance FromJSON LintSettings where
           v .:? "prettyprint_cStyle" .!= prettyprint_cStyle defaultLintSettings <*>
           v .:? "prettyprint_removeRedundantParens" .!= prettyprint_removeRedundantParens defaultLintSettings <*>
           v .:? "prettyprint_minimizeParens" .!= prettyprint_minimizeParens defaultLintSettings <*>
+          v .:? "prettyprint_assumeOperatorAssociativity" .!= prettyprint_assumeOperatorAssociativity defaultLintSettings <*>
           v .:? "prettyprint_rejectInvalidCode" .!= prettyprint_rejectInvalidCode defaultLintSettings <*>
           v .:? "prettyprint_indentation" .!= prettyprint_indentation defaultLintSettings <*>
           v .:? "log_format" .!= log_format defaultLintSettings
@@ -148,6 +151,7 @@ lint2ppSetting ls =
     , cStyle = prettyprint_cStyle ls
     , removeRedundantParens = prettyprint_removeRedundantParens ls
     , minimizeParens = prettyprint_minimizeParens ls
+    , assumeOperatorAssociativity = prettyprint_assumeOperatorAssociativity ls
     , indentation = prettyprint_indentation ls
     }
 
@@ -185,6 +189,7 @@ instance ToJSON LintSettings where
         , "prettyprint_cStyle" .= prettyprint_cStyle ls
         , "prettyprint_removeRedundantParens" .= prettyprint_removeRedundantParens ls
         , "prettyprint_minimizeParens" .= prettyprint_minimizeParens ls
+        , "prettyprint_assumeOperatorAssociativity" .= prettyprint_assumeOperatorAssociativity ls
         , "prettyprint_indentation" .= prettyprint_indentation ls
         , "log_format" .= log_format ls
         ]

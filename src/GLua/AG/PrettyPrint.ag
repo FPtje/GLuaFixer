@@ -48,6 +48,7 @@ data PrettyPrintConfig = PPConfig {
     cStyle :: Bool,
     removeRedundantParens :: Bool,
     minimizeParens :: Bool,
+    assumeOperatorAssociativity :: Bool,
     indentation :: String
 }
 
@@ -64,6 +65,7 @@ defaultPPConfig = PPConfig {
     semicolons = False,
     cStyle = False,
     removeRedundantParens = True,
+    assumeOperatorAssociativity = True,
     minimizeParens = False,
     indentation = "    "
 }
@@ -562,7 +564,18 @@ sem PrefixExp
                     -- because evaluation order of the child itself does not change when the
                     -- parentheses are removed. Only the order of evaluation between the parent
                     -- operator and the child changes.
-                    (minimizeParens @lhs.ppconf && length @suffixes.copy == 0 && (@lhs.parentOperatorPrecedence < @expr.precedence || @lhs.parentOperatorPrecedence == @expr.precedence && @lhs.parentOperatorAssociative))
+                    (minimizeParens @lhs.ppconf && length @suffixes.copy == 0 &&
+                        -- Operator has a lower precedence or it has the same precedence and the
+                        -- assumeOperatorAssociativity option is set. The assumption of operator
+                        -- associativity is that e.g. `a + (b + c)` is equal to `(a + b) + c`. With
+                        -- floating point numbers, this does not necessarily hold. See
+                        -- https://stackoverflow.com/a/10371890
+                        ( @lhs.parentOperatorPrecedence < @expr.precedence
+                        || assumeOperatorAssociativity @lhs.ppconf
+                        && @lhs.parentOperatorPrecedence == @expr.precedence
+                        && @lhs.parentOperatorAssociative
+                        )
+                    )
                  lhs.potentiallyAmbiguousAsStatement = True
 
 sem PFExprSuffix
