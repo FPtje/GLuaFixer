@@ -68,6 +68,8 @@ Example `glualint.json` with the default options:
     "prettyprint_spaceAfterComma":      true,
     "prettyprint_semicolons":           false,
     "prettyprint_cStyle":               false,
+    "prettyprint_removeRedundantParens": true,
+    "prettyprint_minimizeParens":       false,
     "prettyprint_rejectInvalidCode":    false,
     "prettyprint_indentation":          "    ",
 
@@ -114,6 +116,8 @@ These options affect the pretty printing functionality of `glualint`.
 - `prettyprint_indentation`: What to use for indentation. Any string is valid, but some amount of spaces or `"\t"` is recommended
 - `prettyprint_spaceBeforeComma`: Whether to place a space before every comma
 - `prettyprint_spaceAfterComma`: Whether to place a space after every comma
+- `prettyprint_removeRedundantParens`: Whether to remove unnecessary parentheses (e.g. `x = (1 + 2)`, `if ((1) + (2) == 3) then`)
+- `prettyprint_minimizeParens`: Removes parentheses which are unnecessary due to operator precedence (e.g. `(1 * 2) + 3`). This option also removes redundant parameters, regardless of whether `prettyprint_removeRedundantParens` is enabled.
 - `prettyprint_rejectInvalidCode`: Whether not to pretty print when the code is syntactically invalid
 
 

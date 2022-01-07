@@ -57,7 +57,7 @@ data Stat         -- a, b, c = ...
                   | AWhile   cond :: MExpr      body :: Block
                   -- repeat block until expr
                   | ARepeat  body :: Block      cond :: MExpr
-                  -- if exp r then block [elseif expr then block] [else block] end
+                  -- if expr then block [elseif expr then block] [else block] end
                   | AIf      cond :: MExpr      body :: Block     elifs :: ElseIfList els :: Else
                   -- for varname = expr, expr, expr? do block end, numeric for
                   | ANFor    var  :: MToken      val :: MExpr        to :: MExpr step :: MExpr body :: Block
