@@ -1,0 +1,24 @@
+version: v1.0
+name: Build glualint for OSX
+agent:
+  machine:
+    type: a1-standard-4
+    os_image: macos-xcode13
+
+blocks:
+  - name: "Build OSX executable"
+    task:
+      jobs:
+        - name: Build
+          commands:
+            - curl -L https://releases.nixos.org/nix/nix-2.6.1/install > install_nix.sh
+            - chmod +x install_nix.sh
+            - yes | ./install_nix.sh
+            - echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf
+            - source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+            - checkout
+            - nix develop --command bash -c "./AGGenerator.sh && cabal v1-build"
+            - mv dist/build/glualint/glualint .
+            - TARNAME="glualint-$(./glualint --version).tar.gz"
+            - tar -zcvf $TARNAME glualint
+            - artifact push project --force $TARNAME
