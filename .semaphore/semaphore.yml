@@ -19,6 +19,6 @@ blocks:
             - checkout
             - nix develop --command bash -c "./AGGenerator.sh && cabal v1-build"
             - mv dist/build/glualint/glualint .
-            - TARNAME="glualint-$(./glualint --version).tar.gz"
+            - TARNAME="glualint-$(./glualint --version)-OSX.tar.gz"
             - tar -zcvf $TARNAME glualint
             - artifact push project --force $TARNAME
