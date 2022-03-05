@@ -1,4 +1,4 @@
--- Lua test file for basic regression testing.
+﻿-- Lua test file for basic regression testing.
 -- Run glualint --test testcase.lua to run the test
 
 a = {}
@@ -171,3 +171,11 @@ a = "foo\z
 a({b}, function()
   -- This comment may not hide keywords upon pretty printing
 end, function() end)
+
+-- https://github.com/FPtje/GLuaFixer/issues/118
+foo = { -- Single line comment
+--[[
+  Some multiline comment
+  with newlines
+]]
+}

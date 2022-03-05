@@ -3,6 +3,7 @@ module {GLua.AG.PrettyPrint}{}{}
 imports
 {
 import Prelude hiding ((<>))
+import Data.List (foldl')
 import GLua.AG.AST
 import Text.PrettyPrint hiding (parens, brackets, braces)
 import GLua.TokenTypes
@@ -10,6 +11,7 @@ import Data.Maybe
 import Text.Parsec
 import Text.Parsec.Error
 import Text.ParserCombinators.UU.BasicInstances hiding (pos)
+import Debug.Trace
 }
 
 include "AST.ag"
@@ -127,13 +129,33 @@ renderPSError ps = map replNL . showErrorMessages "or" "unknown parse error" "ex
         replNL '\n' = ' '
         replNL c = c
 
--- | Render multiline comments
+-- | Render comments on multiple lines
 renderMLComments :: PrettyPrintConfig -> Int -> [MToken] -> Doc
-renderMLComments conf ind toks = foldl ($+$) empty . map (indent conf ind . tok . convertComment conf) $ toks
+renderMLComments conf ind toks = foldl' ($+$) empty . map (indent conf ind . tok . convertComment conf) $ toks
 
--- | Render single line comments
-renderSLComments :: PrettyPrintConfig -> [MToken] -> Doc
-renderSLComments conf toks = foldl (<->) empty . map (tok . convertComment conf) $ toks
+-- | Render comments, and prefer having them on a single line. It may not print comments on the same
+-- line if that would cause a syntax error (e.g. a multiline comment after a single line comment)
+renderSLComments :: PrettyPrintConfig -> Int -> [MToken] -> Doc
+renderSLComments conf ind toks = foldl' combine empty . map (convertComment conf) $ toks
+    where
+        combine :: Doc -> MToken -> Doc
+        combine acc mt@(MToken _pos t) =
+          case t of
+            -- Block comments after single line comments cannot be printed on the same line, as that
+            -- would cause a syntax error, e.g. in this case:
+
+            -- foo = { -- single line comment
+            -- --[[multiline
+            -- comment
+            -- ]]
+            -- }
+            -- Make sure in these cases the comment is printed on a new line, rather than on the
+            -- same line
+            DashBlockComment _depth comment | '\n' `elem` comment ->
+              acc $+$ (indent conf ind $ tok mt)
+            SlashBlockComment comment | '\n' `elem` comment ->
+              acc $+$ (indent conf ind $ tok mt)
+            _ -> acc <-> tok mt
 
 convertComment :: PrettyPrintConfig -> MToken -> MToken
 convertComment conf (MToken p t) = MToken p $ convert' t
@@ -291,10 +313,14 @@ sem MStatList
     | Cons
                  lhs.isMultiline = @hd.isMultiline
                  loc.addNewline = if not @tl.isLast && (@hd.isMultiline || @tl.isMultiline) then zchr '\n' else empty
-                 lhs.pretty = @loc.prettyCommentsBefore $+$ indent @lhs.ppconf @lhs.indent @hd.pretty <-> @loc.prettyCommentsAfter <> @loc.addNewline $+$ @tl.pretty
+                 lhs.pretty =
+                    @loc.prettyCommentsBefore
+                    $+$ indent @lhs.ppconf @lhs.indent @hd.pretty
+                    <-> @loc.prettyCommentsAfter <> @loc.addNewline
+                    $+$ @tl.pretty
 
                  loc.prettyCommentsBefore = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
-                 loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
+                 loc.prettyCommentsAfter = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
                  loc.commentsBefore =
                     if @hd.isMultiline
                     then span (\(MToken pos' _) -> pos' `beforeOrOnLine` @hd.pos) @lhs.comments
@@ -349,8 +375,8 @@ sem FieldList
 
                  loc.isMultiline = @hd.isMultiline || @tl.isMultiline
 
-                 loc.prettyCommentsBefore = renderSLComments @lhs.ppconf (fst @loc.commentsBefore)
-                 loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
+                 loc.prettyCommentsBefore = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
+                 loc.prettyCommentsAfter = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
                  loc.commentsBefore =
                     if @loc.isMultiline then
                         span (\(MToken pos _) -> pos `before` @hd.pos) @lhs.comments
@@ -421,7 +447,7 @@ sem Else
 sem MElse
     | MElse     lhs.pretty = indent @lhs.ppconf @lhs.indent (zeroWidthText "else") <-> @loc.prettyCommentsAfter $+$ @body.pretty
                 body.indent = @lhs.indent + 1
-                loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
+                loc.prettyCommentsAfter = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
                 loc.commentsAfter = span (\(MToken pos _) -> pos `beforeOrOnLine` @pos) @lhs.comments
                 lhs.pos = @pos
                 body.comments = snd @loc.commentsAfter
@@ -527,7 +553,7 @@ sem AReturn
                  lhs.isMultiline = @values.isMultiline
                  loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  loc.prettyCommentsBefore = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
-                 loc.prettyCommentsAfter = renderSLComments @lhs.ppconf (fst @loc.commentsAfter)
+                 loc.prettyCommentsAfter = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
                  loc.commentsBefore = span (\(MToken pos _) -> pos `before` @pos) @lhs.comments
                  loc.commentsAfter  = span (\(MToken pos _) -> pos `beforeOrOnLine` (rgOr @values.pos @pos)) (snd @loc.commentsBefore)
                  values.comments = snd @loc.commentsAfter
