@@ -7,7 +7,6 @@ import "glualint-lib" GLua.Parser
 import "glualint-lib" GLua.ASTInstances ()
 import "glualint-lib" GLua.TokenTypes (isWhitespace)
 import "glualint-lib" GLuaFixer.AG.ASTLint
-import "glualint-lib" GLuaFixer.AG.DarkRPRewrite
 import "glualint-lib" GLuaFixer.AnalyseProject
 import "glualint-lib" GLuaFixer.LintMessage
 import "glualint-lib" GLuaFixer.LintSettings
@@ -231,7 +230,7 @@ prettyPrint :: LintSettings -> String -> Maybe String
 prettyPrint lintsettings lua =
     if prettyprint_rejectInvalidCode lintsettings && not (null errors)
     then Nothing
-    else Just $ prettyprintConf ppconf $ fixOldDarkRPSyntax ast
+    else Just $ prettyprintConf ppconf ast
   where
     (ast, errors) = parseGLuaFromString lua
     ppconf = lint2ppSetting lintsettings
@@ -368,7 +367,7 @@ runTest fs = do
                     putStrLn $ "Errors when trying to parse '" ++ f ++ "' with parsec parser!"
                     print errs
 
-            let pretty_printed = prettyprintConf (lint2ppSetting lintsettings) $ fixOldDarkRPSyntax uu_ast
+            let pretty_printed = prettyprintConf (lint2ppSetting lintsettings) uu_ast
             let (_uu_ast_pp, uu_parseErrs_pp) = parseGLuaFromString pretty_printed
             unless (null uu_parseErrs_pp) $ do
                 putStrLn $ "Errors when trying to parse '" ++ f ++

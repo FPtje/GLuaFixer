@@ -58,7 +58,6 @@ library
     , GLuaFixer.AG.LexLint
     , GLua.AG.Token
     , GLuaFixer.AG.ASTLint
-    , GLuaFixer.AG.DarkRPRewrite
 
   ghc-options:
     -Wall
