@@ -75,6 +75,10 @@ library
 
 
 executable glualint
+  -- Disable the executable for ghcjs and older versions of ghc. LintMain.hs
+  -- uses functions only available in ghc 8+
+  if !impl(ghc >= 8.0.0)
+    buildable: False
   main-is:             GLuaFixer/LintMain.hs
   other-extensions:
       FlexibleInstances
