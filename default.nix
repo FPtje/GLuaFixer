@@ -25,7 +25,11 @@ mkDerivation {
 
   preBuild = ''
     printf "Generating attribute grammar haskell files"
-    ./AGGenerator.sh
+    ${uuagc}/bin/uuagc --haskellsyntax --data src/GLua/AG/AST.ag
+    ${uuagc}/bin/uuagc --haskellsyntax --data --strictdata src/GLua/AG/Token.ag
+    ${uuagc}/bin/uuagc --catas --haskellsyntax --semfuns --wrappers --signatures src/GLua/AG/PrettyPrint.ag
+    ${uuagc}/bin/uuagc --catas --haskellsyntax --semfuns --wrappers --signatures --optimize src/GLuaFixer/AG/LexLint.ag
+    ${uuagc}/bin/uuagc --catas --haskellsyntax --semfuns --wrappers --signatures --optimize src/GLuaFixer/AG/ASTLint.ag
   '';
 
   homepage = "https://github.com/FPtje/GLuaFixer";

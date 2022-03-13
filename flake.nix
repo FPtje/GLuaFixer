@@ -9,9 +9,11 @@
     let
       pkgs = nixpkgs.legacyPackages.${system};
       haskellPackages = pkgs.haskellPackages;
+      staticHaskellPackages = pkgs.pkgsStatic.haskellPackages;
     in {
       packages.glualint = haskellPackages.callPackage ./default.nix {};
-      defaultPackage = self.packages.${system}.glualint;
+      packages.glualint-static = staticHaskellPackages.callPackage ./default.nix {};
+      defaultPackage = self.packages.${system}.glualint-static;
 
       devShell = pkgs.mkShell {
         buildInputs = with haskellPackages; [
