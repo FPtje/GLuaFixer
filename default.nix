@@ -4,10 +4,38 @@
 , uuagc, uuagc-cabal, vector
 , pkgs
 }:
-mkDerivation {
+let
+# Clean up the source of the derivation to prevent rebuilds
+src = lib.cleanSourceWith rec {
+  name = "glualint-src";
+  src = ./.;
+  filter = path: type:
+    let
+      suffixAllowlist = [
+        ".ag"
+        ".cabal"
+        ".hs"
+        ".sh"
+        "LICENSE"
+      ];
+      suffixDenylist = [
+        "release-linux.sh"
+      ];
+    in
+      ((type == "directory") ||
+       (builtins.any (suffix: lib.hasSuffix suffix path) suffixAllowlist)
+      ) &&
+      !(builtins.any (suffix: lib.hasSuffix suffix path) suffixDenylist) &&
+      # Simple library function to remove git related files.
+      lib.cleanSourceFilter path type
+    ;
+};
+
+in mkDerivation {
+  inherit src;
+
   pname = "glualint-lib";
   version = "0.1.0.0";
-  src = ./.;
   isLibrary = true;
   isExecutable = true;
   buildDepends = [uuagc uuagc-cabal];
