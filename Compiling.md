@@ -4,7 +4,7 @@ This document describes how glualint is to be compiled. This guide applies to Wi
 
 ## Linux/OSX
 
-For Linux and OSX, the compilation uses Nix. Please install Nix version 2.4 or higher from [https://nixos.org/download.html](NixOS.org).
+For Linux and OSX, the compilation uses Nix. Please install Nix version 2.4 or higher from [NixOS.org](https://nixos.org/download.html).
 Nix 2.4 or higher is needed to enable the flakes feature that is introduced in 2.4.
 
 Once installed, Nix flakes need to be enabled by editing `/etc/nix/nix.conf` and adding the following line:
