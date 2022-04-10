@@ -148,6 +148,38 @@ issueDescription = \case
   DuplicateKeyInTable keyToken ->
     "Duplicate key in table: '" ++ show keyToken ++ "'."
 
+-- | Shorthand title of an issue. Several issues may share the same title.
+issueTitle :: Issue -> String
+issueTitle = \case
+  IssueParseError _ -> "Parse error"
+  Deprecated _ -> "Deprecated"
+  Profanity -> "Profanity"
+  BeginnerMistake _ -> "Beginner mistake"
+  WhitespaceStyle _ -> "Whitespace style"
+  TrailingWhitespace -> "Trailing whitespace"
+  InconsistentTabsSpaces -> "Syntax inconsistency"
+  SyntaxInconsistency _ _ -> "Syntax inconsistency"
+  VariableShadows _ _ -> "Shadowing"
+  GotoAsIdentifier -> "Goto"
+  InconsistentVariableNaming -> "Variable inconsistency"
+  ScopePyramids -> "Scope depth"
+  UnusedVariable _ -> "Unused variable"
+  AvoidGoto -> "Goto"
+  EmptyDoBlock -> "Empty block"
+  EmptyWhileLoop -> "Empty block"
+  EmptyRepeat -> "Empty block"
+  EmptyIf -> "Empty block"
+  DoubleIf -> "Double if-statement"
+  EmptyFor -> "Empty block"
+  EmptyElseIf -> "Empty block"
+  EmptyElse -> "Empty block"
+  SelfInNonMeta -> "Bad self"
+  SelfEntity -> "Deprecated"
+  SelfWeapon -> "Deprecated"
+  UnnecessaryParentheses -> "Unnecessary parentheses"
+  SillyNegation _ -> "Unnecessary negation"
+  DuplicateKeyInTable _ -> "Duplicate key"
+
 
 logFormatChoiceToLogFormat :: LogFormatChoice -> IO LogFormat
 logFormatChoiceToLogFormat = \case
@@ -190,6 +222,7 @@ formatLintMessageGithub (LintMessage severity (Region (LineColPos line col _) (L
     showString ",col=" . shows (succ col) .
     showString ",endLine=" . shows (succ endLine) .
     showString ",endColumn=" . shows (succ endCol) .
+    showString ",title=" . shows (issueTitle msg) .
     showString "::" . showString (issueDescription msg) $
     ""
 
