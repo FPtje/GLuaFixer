@@ -85,7 +85,7 @@ formatLintMessageDefault (LintMessage severity region msg file) =
     ""
 
 formatLintMessageGithub :: LintMessage -> String
-formatLintMessageGithub (LintMessage severity (Region (LineColPos line col _) _) msg file) =
+formatLintMessageGithub (LintMessage severity (Region (LineColPos line col _) (LineColPos endLine endCol _)) msg file) =
   let
     level = case severity of
       LintWarning -> "warning"
@@ -95,6 +95,8 @@ formatLintMessageGithub (LintMessage severity (Region (LineColPos line col _) _)
     showString " file=" . showString file .
     showString ",line=" . shows (succ line) .
     showString ",col=" . shows (succ col) .
+    showString ",endLine=" . shows (succ endLine) .
+    showString ",endColumn=" . shows (succ endCol) .
     showString "::" . showString msg $
     ""
 
