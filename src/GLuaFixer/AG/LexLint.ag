@@ -40,12 +40,8 @@ instance Monoid SyntaxUsed where
     mempty = SyntaxUsed False False
     mappend (SyntaxUsed l1 c1) (SyntaxUsed l2 c2) = SyntaxUsed (l1 || l2) (c1 || c2)
 
--- Syntax inconsistency warning
-syntaxInconsistency :: String -> String -> String
-syntaxInconsistency l c = "Inconsistent use of '" ++ l ++ "' and '" ++ c ++ "'"
-
-mTokenWarning :: Region -> String -> FilePath -> LintMessage
-mTokenWarning pos message = LintMessage LintWarning pos message
+mTokenWarning :: Region -> Issue -> FilePath -> LintMessage
+mTokenWarning pos issue = LintMessage LintWarning pos issue
 
 isSingleChar :: String -> Bool
 isSingleChar [] = True
@@ -83,7 +79,7 @@ attr MTokenList MToken Token TokenList Region
     syn copy :: self
     inh config :: LintSettings
 
-    syn warnings use {++} {[]} :: {[String -> LintMessage]}
+    syn warnings use {++} {[]} :: {[FilePath -> LintMessage]}
 
     chn lineCommentSyntax :: SyntaxUsed
     chn multilineCommentSyntax :: SyntaxUsed
@@ -97,10 +93,10 @@ attr MTokenList MToken Token TokenList Region
     chn nextTokenPos :: LineColPos
 
 attr Token TokenList
-    syn tokenWarnings use {++} {[]} :: {[String]}
+    syn tokenWarnings use {++} {[]} :: {[Issue]}
 
 attr Token
-    syn customWarnings use {++} {[]} :: {[String -> LintMessage]} -- Warnings where the position is modified
+    syn customWarnings use {++} {[]} :: {[FilePath -> LintMessage]} -- Warnings where the position is modified
 
 ---------------------------------------
 --  Semantics
@@ -134,24 +130,24 @@ sem Token
         -- Start and end of indentation at the start of a line
         loc.indentationRg = Region (indentationStart @loc.curTokenPos @space) @loc.nextTokenPos
 
-        +customWarnings = if not (lint_trailingWhitespace @lhs.config) || (not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space)) then id else (:) $ mTokenWarning (Region (fst @loc.whitespaceStart) @loc.whitespaceEnd) "Trailing whitespace"
+        +customWarnings = if not (lint_trailingWhitespace @lhs.config) || (not (isInfixOf " \n" @space) && not (isInfixOf "\t\n" @space)) then id else (:) $ mTokenWarning (Region (fst @loc.whitespaceStart) @loc.whitespaceEnd) TrailingWhitespace
 
         +customWarnings = if not (lint_whitespaceStyle @lhs.config) || not @loc.inconsistent then id else
-                            (:) $ mTokenWarning @loc.indentationRg "Inconsistent use of tabs and spaces for indentation"
+                            (:) $ mTokenWarning @loc.indentationRg InconsistentTabsSpaces
 
     | DashComment
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.lineCommentSyntax)
         loc.lineCommentSyntax = SyntaxUsed @loc.consistent False -- When inconsistent, reset consistency check
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "--" "//"
+                            (:) $ SyntaxInconsistency "--" "//"
 
     | SlashComment
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.lineCommentSyntax)
         loc.lineCommentSyntax = SyntaxUsed False @loc.consistent
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "//" "--"
+                            (:) $ SyntaxInconsistency "//" "--"
 
 
     | DashBlockComment
@@ -160,7 +156,7 @@ sem Token
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.multilineCommentSyntax)
         loc.multilineCommentSyntax = SyntaxUsed @loc.consistent False
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "--[[ ]]" "/* */"
+                            (:) $ SyntaxInconsistency "--[[ ]]" "/* */"
 
     | SlashBlockComment
         loc.str = showString "/*" . showString @comment . showString "*/" $ ""
@@ -168,7 +164,7 @@ sem Token
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.multilineCommentSyntax)
         loc.multilineCommentSyntax = SyntaxUsed False @loc.consistent
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "/* */" "--[[ ]]"
+                            (:) $ SyntaxInconsistency "/* */" "--[[ ]]"
 
     | Semicolon TNumber DQString SQString TTrue TFalse Nil VarArg Plus Minus Multiply Divide Modulus Power TEq TNEq TCNEq TLEQ TGEQ TLT TGT Equals Concatenate Colon Dot Comma Hash Not CNot And CAnd Or COr Function Local If Then Elseif Else For In Do While Until Repeat Continue Break Return End LRound RRound LCurly RCurly LSquare RSquare Identifier
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
@@ -177,13 +173,13 @@ sem Token
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.strSyntax)
         loc.strSyntax = SyntaxUsed @loc.consistent False
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "double quoted strings" "single quoted strings"
+                            (:) $ SyntaxInconsistency "double quoted strings" "single quoted strings"
 
     | SQString
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.strSyntax) || isSingleChar @str -- Allow single character ' ' strings
         loc.strSyntax = SyntaxUsed False (@loc.consistent && not (isSingleChar @str))
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "single quoted strings" "double quoted strings"
+                            (:) $ SyntaxInconsistency "single quoted strings" "double quoted strings"
 
     | MLString
         lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @str
@@ -192,49 +188,49 @@ sem Token
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.notSyntax)
         loc.notSyntax = SyntaxUsed @loc.consistent False
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "not" "!"
+                            (:) $ SyntaxInconsistency "not" "!"
 
     | CNot
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.notSyntax)
         loc.notSyntax = SyntaxUsed False @loc.consistent
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "!" "not"
+                            (:) $ SyntaxInconsistency "!" "not"
 
     | And
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.andSyntax)
         loc.andSyntax = SyntaxUsed @loc.consistent False
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "and" "&&"
+                            (:) $ SyntaxInconsistency "and" "&&"
 
     | CAnd
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.andSyntax)
         loc.andSyntax = SyntaxUsed False @loc.consistent
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "&&" "and"
+                            (:) $ SyntaxInconsistency "&&" "and"
 
     | Or
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.orSyntax)
         loc.orSyntax = SyntaxUsed @loc.consistent False
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "or" "||"
+                            (:) $ SyntaxInconsistency "or" "||"
 
     | COr
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.orSyntax)
         loc.orSyntax = SyntaxUsed False @loc.consistent
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "||" "or"
+                            (:) $ SyntaxInconsistency "||" "or"
 
     | TNEq
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.neqSyntax)
         loc.neqSyntax = SyntaxUsed @loc.consistent False
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "~=" "!="
+                            (:) $ SyntaxInconsistency "~=" "!="
 
     | TCNEq
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.neqSyntax)
         loc.neqSyntax = SyntaxUsed False @loc.consistent
         +tokenWarnings = if @loc.consistent then id else
-                            (:) $ syntaxInconsistency "!=" "~="
+                            (:) $ SyntaxInconsistency "!=" "~="
 
     | Label
         lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos (showString "::" . showString @lbl . showString "::" $ "")

@@ -173,8 +173,8 @@ metaFuncWarnings = do
 
 
 -- | Parser for all deprecated sequences of tokens
-deprecatedSequence :: LintSettings -> AParser String
-deprecatedSequence opts = if not (lint_deprecated opts) then parserZero else (++) "Deprecated: " <$> (
+deprecatedSequence :: LintSettings -> AParser Issue
+deprecatedSequence opts = if not (lint_deprecated opts) then parserZero else Deprecated <$> (
 
     -- Deprecated meta functions
     try metaFuncWarnings
@@ -211,10 +211,10 @@ deprecatedSequence opts = if not (lint_deprecated opts) then parserZero else (++
     )
 
 -- | Parser for all beginner mistakes
-beginnerMistakeSequence :: LintSettings -> AParser String
-beginnerMistakeSequence opts = if not (lint_beginnerMistakes opts) then parserZero else
-    try (const "There's little fucking reason to use ';' in the first place, don't use it twice in a row" <$> pMTok Semicolon <* pMTok Semicolon) <|>
-    try (const "The server already knows who sent the net message, use the first parameter of net.Receive" <$> do
+beginnerMistakeSequence :: LintSettings -> AParser Issue
+beginnerMistakeSequence opts = if not (lint_beginnerMistakes opts) then parserZero else BeginnerMistake <$>
+    (try ("There's little fucking reason to use ';' in the first place, don't use it twice in a row" <$ pMTok Semicolon <* pMTok Semicolon) <|>
+    try ("The server already knows who sent the net message, use the first parameter of net.Receive" <$ do
         ident "net"
         pMTok Dot
         ident "WriteEntity"
@@ -235,13 +235,14 @@ beginnerMistakeSequence opts = if not (lint_beginnerMistakes opts) then parserZe
         whitespace
         pMTok End
         )
+    )
 
-whiteSpaceStyleSequence :: LintSettings -> AParser String
-whiteSpaceStyleSequence opts = if not (lint_whitespaceStyle opts) then parserZero else (++) "Style: " <$> (
-    try (const "Please put some whitespace after 'if'" <$> pMTok If <* notFollowedBy whitespace)            <|>
-    try (const "Please put some whitespace after 'elseif'" <$> pMTok Elseif <* notFollowedBy whitespace)    <|>
-    try (const "Please put some whitespace after 'while'" <$> pMTok While <* notFollowedBy whitespace)      <|>
-    try (const "Please put some whitespace after 'until'" <$> pMTok Until <* notFollowedBy whitespace)      <|>
+whiteSpaceStyleSequence :: LintSettings -> AParser Issue
+whiteSpaceStyleSequence opts = if not (lint_whitespaceStyle opts) then parserZero else WhitespaceStyle <$> (
+    try ("Please put some whitespace after 'if'" <$ pMTok If <* notFollowedBy whitespace)            <|>
+    try ("Please put some whitespace after 'elseif'" <$ pMTok Elseif <* notFollowedBy whitespace)    <|>
+    try ("Please put some whitespace after 'while'" <$ pMTok While <* notFollowedBy whitespace)      <|>
+    try ("Please put some whitespace after 'until'" <$ pMTok Until <* notFollowedBy whitespace)      <|>
 
     try ("Please put some whitespace after ')'" <$ do
         pMTok RRound
@@ -258,8 +259,8 @@ whiteSpaceStyleSequence opts = if not (lint_whitespaceStyle opts) then parserZer
     )
 
 -- | Parser for all profanity
-profanitySequence :: LintSettings -> AParser String
-profanitySequence opts = if not (lint_profanity opts) then parserZero else const "Watch your profanity" <$> (
+profanitySequence :: LintSettings -> AParser Issue
+profanitySequence opts = if not (lint_profanity opts) then parserZero else Profanity <$ (
     ident "anus"                    <|>
     ident "bitch"                   <|>
     ident "cock"                    <|>
@@ -281,14 +282,14 @@ profanitySequence opts = if not (lint_profanity opts) then parserZero else const
     )
 
 -- | Parses for any bad sequence
-badSequence :: LintSettings -> AParser String
+badSequence :: LintSettings -> AParser Issue
 badSequence opts = deprecatedSequence opts          <|>
                     profanitySequence opts          <|>
                     beginnerMistakeSequence opts    <|>
                     whiteSpaceStyleSequence opts
 
 -- | Creates a warning for a certain sequence at any position
-badSequenceWarning :: Region -> String -> [FilePath -> LintMessage] -> [FilePath -> LintMessage]
+badSequenceWarning :: Region -> Issue -> [FilePath -> LintMessage] -> [FilePath -> LintMessage]
 badSequenceWarning pos message = (:) (LintMessage LintWarning pos message)
 
 -- | Searches for all the bad sequences
