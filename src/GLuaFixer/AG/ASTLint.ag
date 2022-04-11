@@ -26,8 +26,8 @@ include "../../GLua/AG/Token.ag"
 --  Helper functions
 ----------------------------------------
 {
-warn :: Region -> String -> FilePath -> LintMessage
-warn pos message = LintMessage LintWarning pos message
+warn :: Region -> Issue -> FilePath -> LintMessage
+warn pos issue = LintMessage LintWarning pos issue
 
 -- Used in detecting "not (a == b)" kind of things
 oppositeBinOp :: BinOp -> Maybe String
@@ -40,19 +40,17 @@ oppositeBinOp AEq = Just "~="
 oppositeBinOp _ = Nothing
 
 -- Checks whether a variable shadows existing variables
-checkShadows :: [M.Map String (Bool, Region)] -> MToken -> Maybe (String -> LintMessage)
+checkShadows :: [M.Map String (Bool, Region)] -> MToken -> Maybe (FilePath -> LintMessage)
 checkShadows [] _ = Nothing
 checkShadows _ (MToken _ (Identifier "_")) = Nothing -- Exception for vars named '_'
 checkShadows (scope : scs) mtok' =
     if M.member lbl scope then
-      Just $ warn (mpos mtok')
-      ("Variable '" ++ lbl ++ "' shadows existing binding, defined at " ++ location)
+      Just $ warn (mpos mtok') $ VariableShadows lbl location
     else
       checkShadows scs mtok'
     where
         lbl = tokenLabel mtok'
-        location = case snd $ fromMaybe (error "checkShadows fromMaybe") $ M.lookup lbl scope of
-            Region start _ -> PP.renderPos start
+        location = snd $ fromMaybe (error "checkShadows fromMaybe") $ M.lookup lbl scope
 
 -- Determines whether a variable is local
 -- It is local if it does not exist in any but the topmost (global) scope
@@ -229,7 +227,7 @@ sem MToken
         lhs.mtok                = @mtok.copy
         lhs.identifier          = @mtok.identifier
         +warnings               = if not (lint_goto_identifier @lhs.config) || @mtok.identifier /= "goto" then id else
-                                    (:) $ warn @mpos.copy "Don't use 'goto' as an identifier, later versions of Lua will confuse it with the goto keyword."
+                                    (:) $ warn @mpos.copy GotoAsIdentifier
 
 sem MTokenList MStatList MExprList FieldList VarsList
     | Cons
@@ -287,7 +285,7 @@ sem Declaration
         +warnings               = if not (lint_shadowing @lhs.config) || not @lhs.localDefinition || isNothing @loc.shadowWarning then id else
                                     (:) . fromMaybe (error "fromMaybe sem Declaration +warnings") $ @loc.shadowWarning
         +warnings               = if not (lint_inconsistentVariableStyle @lhs.config) || not @lhs.localDefinition || not (variableStyleInconsistent @lhs.variableStyle @loc.varStyle) then id else
-                                    (:) $ warn @x1.mtokenPos "Inconsistent variable naming! There are variables that start with a lowercase letter, as well as ones that start with an uppercase letter. Please decide on one style."
+                                    (:) $ warn @x1.mtokenPos InconsistentVariableNaming
 
 sem AST
     | AST
@@ -299,10 +297,10 @@ sem Block
         stats.scopeLevel        = @lhs.scopeLevel + 1
         loc.maxScopeDepth       = lint_maxScopeDepth @lhs.config
         +warnings               = if @loc.maxScopeDepth == 0 || @lhs.scopeLevel /= @loc.maxScopeDepth then id else
-                                    (:) $ warn @stats.mtokenPos "Are you Egyptian? What's with these fucking scope pyramids!?"
+                                    (:) $ warn @stats.mtokenPos ScopePyramids
         loc.deadVars            = M.filterWithKey (\k (b, _) -> not (null k) && head k /= '_' && not b) (head @ret.scopes)
         +warnings               = if not (lint_unusedVars @lhs.config) || @lhs.isRepeat then id else
-                                    (++) $ M.foldrWithKey (\k (_, pos) ls -> warn pos ("Unused variable: " ++ k) : ls) [] @loc.deadVars
+                                    (++) $ M.foldrWithKey (\k (_, pos) ls -> warn pos (UnusedVariable k) : ls) [] @loc.deadVars
         lhs.scopes              = if @lhs.isRepeat then @ret.scopes else tail @ret.scopes
 
 sem MStat
@@ -330,13 +328,13 @@ sem Stat
     | AContinue
     | AGoto
         +warnings               = if not (lint_gotos @lhs.config) || @lhs.loopLevel >= 2 then id else
-                                    (:) $ warn @lbl.mtokenPos "Don't use labels and gotos unless you're jumping out of multiple loops."
+                                    (:) $ warn @lbl.mtokenPos AvoidGoto
     | ADo
         lhs.isIfStatement       = False
         body.scopes             = M.empty : @lhs.scopes
         body.isRepeat           = False
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
-                                    (:) $ warn @lhs.mtokenPos "Empty do block"
+                                    (:) $ warn @lhs.mtokenPos EmptyDoBlock
     | AWhile
         lhs.isIfStatement       = False
         body.loopLevel          = @lhs.loopLevel + 1
@@ -347,7 +345,7 @@ sem Stat
         body.isRepeat           = False
         body.scopes             = M.empty : @cond.scopes
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
-                                    (:) $ warn @lhs.mtokenPos "Empty while loop"
+                                    (:) $ warn @lhs.mtokenPos EmptyWhileLoop
 
     | ARepeat
         lhs.isIfStatement       = False
@@ -360,10 +358,10 @@ sem Stat
         body.scopes             = M.empty : @lhs.scopes
         lhs.scopes              = tail @cond.scopes -- Manually pop off a scope after the condition
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
-                                    (:) $ warn @lhs.mtokenPos "Empty repeat statement"
+                                    (:) $ warn @lhs.mtokenPos EmptyRepeat
         loc.deadVars            = M.filterWithKey (\k (b, _) -> not (null k) && head k /= '_' && not b) (head @cond.scopes)
         -- +warnings               = if not (lint_unusedVars @lhs.config) then id else
-         --                           (++) $ M.foldrWithKey (\k (_, pos) ls -> warn pos ("Unused variable: " ++ k) : ls) [] @loc.deadVars
+         --                           (++) $ M.foldrWithKey (\k (_, pos) ls -> warn pos (UnusedVariable k) : ls) [] @loc.deadVars
 
     | AIf
         lhs.isIfStatement       = not @elifs.elseExists && not @els.elseExists
@@ -379,11 +377,11 @@ sem Stat
 
         -- Warn for empty if statements
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
-                                    (:) $ warn @loc.keywordPos "Empty if statement"
+                                    (:) $ warn @loc.keywordPos EmptyIf
 
         -- Warn for if statements being put as the only statement in another if-statement
         +warnings               = if not (lint_redundantIfStatements @lhs.config) || @body.statementCount /= 1 || not @body.isIfStatement || @elifs.elseExists || @els.elseExists then id else
-                                    (:) $ warn @body.mtokenPos "Double if statement. Please combine the condition of this if statement with that of the outer if statement using `and`."
+                                    (:) $ warn @body.mtokenPos DoubleIf
     | ANFor
         lhs.isIfStatement       = False
         body.loopLevel          = @lhs.loopLevel + 1
@@ -405,7 +403,7 @@ sem Stat
         +warnings               = if not (lint_shadowing @lhs.config) || isNothing @loc.shadowWarning then id else
                                     (:) . fromMaybe (error "fromMaybe ANFor +warnings") $ @loc.shadowWarning
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
-                                    (:) $ warn @lhs.mtokenPos "Empty for loop"
+                                    (:) $ warn @lhs.mtokenPos EmptyFor
     | AGFor
         lhs.isIfStatement       = False
         vals.inParentheses      = True
@@ -418,7 +416,7 @@ sem Stat
         +warnings               = if not (lint_shadowing @lhs.config) then id else
                                     (++) . catMaybes . map (checkShadows @lhs.scopes) $ @vars
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @body.statementCount > 0 then id else
-                                    (:) $ warn @lhs.mtokenPos "Empty for loop"
+                                    (:) $ warn @lhs.mtokenPos EmptyFor
     | AFunc
         lhs.isIfStatement       = False
         loc.argIdentifiers      = filter (/= MToken emptyRg VarArg) $ @args
@@ -474,7 +472,7 @@ sem ElseIf
         x2.isRepeat             = False
         loc.keywordPos          = Region (rgStart @lhs.mtokenPos) (customAdvanceToken (rgStart @lhs.mtokenPos) T.Elseif)
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @x2.statementCount > 0 then id else
-                                    (:) $ warn @loc.keywordPos "Empty elseif statement"
+                                    (:) $ warn @loc.keywordPos EmptyElseIf
 
 sem MElse
     | MElse
@@ -487,7 +485,7 @@ sem Else
         lhs.elseExists          = True
         loc.keywordPos          = Region (rgStart @just.mtokenPos) (customAdvanceToken (rgStart @just.mtokenPos) T.Else)
         +warnings               = if not (lint_emptyBlocks @lhs.config) || @just.statementCount > 0 then id else
-                                    (:) $ warn @loc.keywordPos "Empty else statement"
+                                    (:) $ warn @loc.keywordPos EmptyElse
 sem AReturn
     | AReturn
         values.inParentheses    = True
@@ -524,13 +522,13 @@ sem PrefixExp
         loc.name                = tokenLabel @name.copy
         name.scopes             = @loc.foundVars
         +warnings               = if not (lint_beginnerMistakes @lhs.config) || @lhs.isMeta || @loc.name /= "self" then id else
-                                    (:) $ warn @name.mtokenPos "Don't use self in a non-metafunction"
+                                    (:) $ warn @name.mtokenPos SelfInNonMeta
         +warnings               = if not (lint_beginnerMistakes @lhs.config) || not @lhs.isMeta || @loc.name /= "self" ||
                                   @lhs.funcName /= "ENT" || @suffixes.identifier /= "Entity" then id else
-                                    (:) $ warn @name.mtokenPos "'self.Entity' is the same as just 'self' in SENTs"
+                                    (:) $ warn @name.mtokenPos SelfEntity
         +warnings               = if not (lint_beginnerMistakes @lhs.config) || not @lhs.isMeta || @loc.name /= "self" ||
                                   @lhs.funcName /= "SWEP" || @suffixes.identifier /= "Weapon" then id else
-                                    (:) $ warn @name.mtokenPos "'self.Weapon' is the same as just 'self' in SWEPs"
+                                    (:) $ warn @name.mtokenPos SelfWeapon
     | ExprVar
         lhs.mtokenPos           = @expr.mtokenPos
         lhs.isSingleVar         = Nothing
@@ -539,7 +537,7 @@ sem PrefixExp
         expr.inParentheses      = True
         expr.topLevel           = True
         +warnings               = if lint_redundantParentheses @lhs.config && null @suffixes.copy && (@lhs.inParentheses || (not @lhs.topLevel && @expr.isSimpleExpression))
-                                  then (:) $ warn @lhs.mtokenPos "Unnecessary parentheses"
+                                  then (:) $ warn @lhs.mtokenPos UnnecessaryParentheses
                                   else id
 
 sem PFExprSuffix
@@ -594,7 +592,7 @@ sem Expr
         -- Wheter someone is doing "not (a == b)" or "not (a ~= b)"
         loc.stupidNegation      = oppositeBinOp @op.copy
         +warnings               = if not (lint_doubleNegations @lhs.config) || not @lhs.isNegation || isNothing @loc.stupidNegation then id else
-                                    (:) $ warn @lhs.mtokenPos $ "Silly negation. Use '" ++ fromMaybe (error "fromMaybe sem Expr loc.stupidNegation") @loc.stupidNegation ++ "'"
+                                    (:) $ warn @lhs.mtokenPos $ SillyNegation$ fromMaybe (error "fromMaybe sem Expr loc.stupidNegation") @loc.stupidNegation
     | UnOpExpr
         lhs.isSimpleExpression  = False
         right.isNegation        = @op.isNegation
@@ -629,7 +627,7 @@ sem Field
         value.inParentheses     = True
         value.topLevel          = True
         +warnings               = if not (lint_duplicateTableKeys @lhs.config) || not (S.member @key.mtok @lhs.fieldNames) then id else
-                                    (:) $ warn @key.mtokenPos $ "Duplicate key in table: '" ++ show @key.mtok ++ "'."
+                                    (:) $ warn @key.mtokenPos $ DuplicateKeyInTable @key.mtok
     | UnnamedField
         value.isNegation        = False
         value.inParentheses     = True
