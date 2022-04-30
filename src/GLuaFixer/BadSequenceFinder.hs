@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 module GLuaFixer.BadSequenceFinder (sequenceWarnings, checkFromString) where
 
 
@@ -31,6 +32,11 @@ whitespace = pTSatisfy isWhitespace
 isWhitespace :: Token -> Bool
 isWhitespace (Whitespace _) = True
 isWhitespace _ = False
+
+-- | Whether a token consists of spaces
+isSpaces :: Token -> Bool
+isSpaces (Whitespace str) = all (== ' ') str
+isSpaces _ = False
 
 -- | Parse anything that isn't whitespace
 notWhitespace :: AParser MToken
@@ -258,6 +264,121 @@ whiteSpaceStyleSequence opts = if not (lint_whitespaceStyle opts) then parserZer
         )
     )
 
+-- | Matches any token but the given one
+pNotTToken :: Token -> AParser MToken
+pNotTToken t = pTSatisfy (t /=)
+
+-- | Warn about adding or removing spaces after an opening parenthesis. What it actually checks for
+-- and wants the user to do depends on the prettyprint_spaceAfterParens and
+-- prettyprint_spaceEmptyParens settings
+spaceAfterParenthesis :: LintSettings -> AParser Issue
+spaceAfterParenthesis settings
+    | not (lint_spaceAfterParens settings) = parserZero
+    | otherwise =
+        case (prettyprint_spaceAfterParens settings, prettyprint_spaceEmptyParens settings) of
+          (True, True) ->
+            SpaceAfterParenthesis AddSpace <$ try (pMTok LRound >> notWhitespace)
+          (False, False) ->
+            SpaceAfterParenthesis RemoveSpace <$ try (pMTok LRound >> pTSatisfy isSpaces)
+          (True, False) ->
+            SpaceAfterParenthesis AddSpace <$ try (pMTok LRound >> notWhitespaceAndNotClose) <|>
+            SpaceAfterParenthesis RemoveSpace <$ try (pMTok LRound >> pTSatisfy isSpaces >> pMTok RRound)
+          (False, True) ->
+            SpaceAfterParenthesis RemoveSpace <$ try (pMTok LRound >> pTSatisfy isSpaces >> pNotTToken RRound) <|>
+            SpaceAfterParenthesis AddSpace <$ try (pMTok LRound >> pMTok RRound)
+  where
+    notWhitespaceAndNotClose :: AParser MToken
+    notWhitespaceAndNotClose = pTSatisfy $ \case
+      RRound -> False
+      Whitespace _ -> False
+      _ -> True
+
+-- | Warn about adding or removing spaces before a closing parenthesis
+spaceBeforeParenthesis :: LintSettings -> AParser Issue
+spaceBeforeParenthesis settings
+    | not (lint_spaceAfterParens settings) = parserZero
+    | otherwise =
+        case (prettyprint_spaceAfterParens settings, prettyprint_spaceEmptyParens settings) of
+          (True, True) ->
+            SpaceBeforeParenthesis AddSpace <$ try (notWhitespace >> pMTok RRound)
+          (False, False) ->
+            SpaceBeforeParenthesis RemoveSpace <$ try (pTSatisfy isSpaces >> pMTok RRound)
+          (True, False) ->
+            SpaceBeforeParenthesis AddSpace <$ try (notWhitespaceAndNotOpen >> pMTok RRound)
+          (False, True) ->
+            SpaceBeforeParenthesis RemoveSpace <$ try (pNotTToken LRound >> pTSatisfy isSpaces >> pMTok RRound)
+  where
+    notWhitespaceAndNotOpen :: AParser MToken
+    notWhitespaceAndNotOpen = pTSatisfy $ \case
+      LRound -> False
+      Whitespace _ -> False
+      _ -> True
+
+-- | Warn about adding or removing spaces after an opening brace (`}`). What it actually checks for
+-- and wants the user to do depends on the prettyprint_spaceAfterBraces and
+-- prettyprint_spaceEmptyBraces settings
+spaceAfterBraces :: LintSettings -> AParser Issue
+spaceAfterBraces settings
+    | not (lint_spaceAfterBraces settings) = parserZero
+    | otherwise =
+        case (prettyprint_spaceAfterBraces settings, prettyprint_spaceEmptyBraces settings) of
+          (True, True) ->
+            SpaceAfterBrace AddSpace <$ try (pMTok LCurly >> notWhitespace)
+          (False, False) ->
+            SpaceAfterBrace RemoveSpace <$ try (pMTok LCurly >> pTSatisfy isSpaces)
+          (True, False) ->
+            SpaceAfterBrace AddSpace <$ try (pMTok LCurly >> notWhitespaceAndNotClose) <|>
+            SpaceAfterBrace RemoveSpace <$ try (pMTok LCurly >> pTSatisfy isSpaces >> pMTok RCurly)
+          (False, True) ->
+            SpaceAfterBrace RemoveSpace <$ try (pMTok LCurly >> pTSatisfy isSpaces >> pNotTToken RCurly) <|>
+            SpaceAfterBrace AddSpace <$ try (pMTok LCurly >> pMTok RCurly)
+  where
+    notWhitespaceAndNotClose :: AParser MToken
+    notWhitespaceAndNotClose = pTSatisfy $ \case
+      RCurly -> False
+      Whitespace _ -> False
+      _ -> True
+
+-- | Warn about adding or removing spaces before a closing brace (`}`)
+spaceBeforeBraces :: LintSettings -> AParser Issue
+spaceBeforeBraces settings
+    | not (lint_spaceAfterBraces settings) = parserZero
+    | otherwise =
+        case (prettyprint_spaceAfterBraces  settings, prettyprint_spaceEmptyBraces settings) of
+          (True, True) ->
+            SpaceBeforeBrace AddSpace <$ try (notWhitespace >> pMTok RCurly)
+          (False, False) ->
+            SpaceBeforeBrace RemoveSpace <$ try (pTSatisfy isSpaces >> pMTok RCurly)
+          (True, False) ->
+            SpaceBeforeBrace AddSpace <$ try (notWhitespaceAndNotOpen >> pMTok RCurly)
+          (False, True) ->
+            SpaceBeforeBrace RemoveSpace <$ try (pNotTToken LCurly >> pTSatisfy isSpaces >> pMTok RCurly)
+  where
+    notWhitespaceAndNotOpen :: AParser MToken
+    notWhitespaceAndNotOpen = pTSatisfy $ \case
+      LCurly -> False
+      Whitespace _ -> False
+      _ -> True
+
+-- | Warn about adding or removing spaces after an opening bracket (`[`). What it actually checks
+-- for and wants the user to do depends on the prettyprint_spaceAfterBracket
+spaceAfterBrackets :: LintSettings -> AParser Issue
+spaceAfterBrackets settings
+    | not (lint_spaceAfterBrackets settings) = parserZero
+    | prettyprint_spaceAfterBrackets settings =
+      SpaceAfterBracket AddSpace <$ try (pMTok LSquare >> notWhitespace)
+    | otherwise =
+      SpaceAfterBracket RemoveSpace <$ try (pMTok LSquare >> pTSatisfy isSpaces)
+
+-- | Warn about adding or removing spaces before a closing bracket (`]`)
+spaceBeforeBrackets :: LintSettings -> AParser Issue
+spaceBeforeBrackets settings
+    | not (lint_spaceAfterBrackets settings) = parserZero
+    | prettyprint_spaceAfterBrackets settings =
+      SpaceAfterBracket AddSpace <$ try (notWhitespace >> pMTok RSquare)
+    | otherwise =
+      SpaceAfterBracket RemoveSpace <$ try (pTSatisfy isSpaces >> pMTok RSquare)
+
 -- | Parser for all profanity
 profanitySequence :: LintSettings -> AParser Issue
 profanitySequence opts = if not (lint_profanity opts) then parserZero else Profanity <$ (
@@ -283,10 +404,20 @@ profanitySequence opts = if not (lint_profanity opts) then parserZero else Profa
 
 -- | Parses for any bad sequence
 badSequence :: LintSettings -> AParser Issue
-badSequence opts = deprecatedSequence opts          <|>
-                    profanitySequence opts          <|>
-                    beginnerMistakeSequence opts    <|>
-                    whiteSpaceStyleSequence opts
+badSequence opts =
+    deprecatedSequence opts <|>
+    profanitySequence opts <|>
+    beginnerMistakeSequence opts <|>
+    whiteSpaceStyleSequence opts <|>
+
+    spaceAfterParenthesis opts <|>
+    spaceBeforeParenthesis opts <|>
+
+    spaceAfterBraces opts <|>
+    spaceBeforeBraces opts <|>
+
+    spaceAfterBrackets opts <|>
+    spaceBeforeBrackets opts
 
 -- | Creates a warning for a certain sequence at any position
 badSequenceWarning :: Region -> Issue -> [FilePath -> LintMessage] -> [FilePath -> LintMessage]

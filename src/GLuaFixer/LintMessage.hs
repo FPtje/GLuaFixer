@@ -44,6 +44,13 @@ instance FromJSON LogFormatChoice where
 data Severity = LintWarning | LintError
   deriving (Eq)
 
+-- | With the Space(Before|After)(Parenthesis|Bracket|Brace), it depends on the pretty print
+-- settings whether the space is desired or not. This encodes what we ask the user to do.
+data RemoveOrAddSpace
+  = RemoveSpace
+  | AddSpace
+  deriving (Eq)
+
 -- | Representation of the different kinds of issues that can be raised. Many of the arguments are
 -- 'String', because this data type is a rewrite of what was previously directly rendered Strings.
 -- Many of these Strings can later be rewritten to their own types if necessary.
@@ -55,6 +62,12 @@ data Issue
   | Profanity
   | BeginnerMistake !String -- ^ message
   | WhitespaceStyle !String -- ^ message
+  | SpaceAfterParenthesis !RemoveOrAddSpace
+  | SpaceBeforeParenthesis !RemoveOrAddSpace
+  | SpaceAfterBracket !RemoveOrAddSpace
+  | SpaceBeforeBracket !RemoveOrAddSpace
+  | SpaceAfterBrace !RemoveOrAddSpace
+  | SpaceBeforeBrace !RemoveOrAddSpace
 
   -- Issues found in the lexicon (see LexLint.ag)
   | TrailingWhitespace
@@ -109,6 +122,18 @@ issueDescription = \case
   Profanity -> "Watch your profanity"
   BeginnerMistake msg -> msg
   WhitespaceStyle msg -> "Style: " ++ msg
+  SpaceAfterParenthesis RemoveSpace -> "Style: Please remove the space after the parenthesis"
+  SpaceAfterParenthesis AddSpace -> "Style: Please add a space after the parenthesis"
+  SpaceBeforeParenthesis RemoveSpace -> "Style: Please remove the space before the parenthesis"
+  SpaceBeforeParenthesis AddSpace -> "Style: Please add a space before the parenthesis"
+  SpaceAfterBracket RemoveSpace -> "Style: Please remove the space after the bracket"
+  SpaceAfterBracket AddSpace -> "Style: Please add a space after the bracket"
+  SpaceBeforeBracket RemoveSpace -> "Style: Please remove the space before the bracket"
+  SpaceBeforeBracket AddSpace -> "Style: Please add a space before the bracket"
+  SpaceAfterBrace RemoveSpace -> "Style: Please remove the space after the brace"
+  SpaceAfterBrace AddSpace -> "Style: Please add a space after the brace"
+  SpaceBeforeBrace RemoveSpace -> "Style: Please remove the space before the brace"
+  SpaceBeforeBrace AddSpace -> "Style: Please add a space before the brace"
 
   TrailingWhitespace -> "Trailing whitespace"
   InconsistentTabsSpaces -> "Inconsistent use of tabs and spaces for indentation"
@@ -157,6 +182,12 @@ issueTitle = \case
   BeginnerMistake _ -> "Beginner mistake"
   WhitespaceStyle _ -> "Whitespace style"
   TrailingWhitespace -> "Trailing whitespace"
+  SpaceAfterParenthesis _ -> "Space after parenthesis"
+  SpaceBeforeParenthesis _ -> "Space before parenthesis"
+  SpaceAfterBracket _ -> "Space after bracket"
+  SpaceBeforeBracket _ -> "Space before bracket"
+  SpaceAfterBrace _ -> "Space after brace"
+  SpaceBeforeBrace _ -> "Space before brace"
   InconsistentTabsSpaces -> "Syntax inconsistency"
   SyntaxInconsistency _ _ -> "Syntax inconsistency"
   VariableShadows _ _ -> "Shadowing"

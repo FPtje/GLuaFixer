@@ -56,6 +56,9 @@ Example `glualint.json` with the default options:
     "lint_unusedParameters": false,
     "lint_unusedLoopVars": false,
     "lint_inconsistentVariableStyle": false,
+    "lint_spaceAfterParens": false,
+    "lint_spaceAfterBrackets": false,
+    "lint_spaceAfterBraces": false,
     "lint_ignoreFiles": [],
 
     "prettyprint_spaceAfterParens": false,
@@ -102,6 +105,9 @@ Example `glualint.json` with the default options:
 - `lint_unusedLoopVars`: Warn for loop variables that are never used (`for k,v in ...`). *NOTE:* Only has effect when `lint_unusedVars` is enabled!
 - `lint_ignoreFiles`: Files to ignore when linting. You can use glob patterns (e.g. `"*.lua"` or `libraries/*.lua`)
 - `lint_inconsistentVariableStyle`: Whether to warn about inconsistent styles in namning local variables (e.g. lowercase and uppercase variables)
+- `lint_spaceAfterParens`: Whether to warn about there being spaces after parens
+- `lint_spaceAfterBrackets`: Whether to warn about there being spaces after brackets
+- `lint_spaceAfterBraces`: Whether to warn about there being spaces after braces
 
 ## Pretty print options
 These options affect the pretty printing functionality of `glualint`.

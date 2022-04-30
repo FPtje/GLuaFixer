@@ -28,6 +28,9 @@ data LintSettings =
     , lint_unusedParameters :: !Bool
     , lint_unusedLoopVars :: !Bool
     , lint_inconsistentVariableStyle :: !Bool
+    , lint_spaceAfterParens :: !Bool
+    , lint_spaceAfterBrackets :: !Bool
+    , lint_spaceAfterBraces :: !Bool
     , lint_ignoreFiles :: ![String]
 
     , prettyprint_spaceAfterParens :: !Bool
@@ -72,6 +75,9 @@ defaultLintSettings =
     , lint_unusedParameters = False
     , lint_unusedLoopVars = False
     , lint_inconsistentVariableStyle = False
+    , lint_spaceAfterParens = False
+    , lint_spaceAfterBrackets = False
+    , lint_spaceAfterBraces = False
     , lint_ignoreFiles = []
 
     , prettyprint_spaceAfterParens = False
@@ -116,6 +122,9 @@ instance FromJSON LintSettings where
           v .:? "lint_unusedParameters" .!= lint_unusedParameters defaultLintSettings <*>
           v .:? "lint_unusedLoopVars" .!= lint_unusedLoopVars defaultLintSettings <*>
           v .:? "lint_inconsistentVariableStyle" .!= lint_inconsistentVariableStyle defaultLintSettings <*>
+          v .:? "lint_spaceAfterParens" .!= lint_spaceAfterParens defaultLintSettings <*>
+          v .:? "lint_spaceAfterBrackets" .!= lint_spaceAfterBrackets defaultLintSettings <*>
+          v .:? "lint_spaceAfterBraces" .!= lint_spaceAfterBraces defaultLintSettings <*>
           v .:? "lint_ignoreFiles" .!= lint_ignoreFiles defaultLintSettings <*>
           v .:? "prettyprint_spaceAfterParens" .!= prettyprint_spaceAfterParens defaultLintSettings <*>
           v .:? "prettyprint_spaceAfterBrackets" .!= prettyprint_spaceAfterBrackets defaultLintSettings <*>
@@ -177,6 +186,9 @@ instance ToJSON LintSettings where
         , "lint_unusedParameters" .= lint_unusedParameters ls
         , "lint_unusedLoopVars" .= lint_unusedLoopVars ls
         , "lint_inconsistentVariableStyle" .= lint_inconsistentVariableStyle ls
+        , "lint_spaceAfterParens" .= lint_spaceAfterParens ls
+        , "lint_spaceAfterBrackets" .= lint_spaceAfterBrackets ls
+        , "lint_spaceAfterBraces" .= lint_spaceAfterBraces ls
         , "prettyprint_spaceAfterParens" .= prettyprint_spaceAfterParens ls
         , "prettyprint_spaceAfterBrackets" .= prettyprint_spaceAfterBrackets ls
         , "prettyprint_spaceAfterBraces" .= prettyprint_spaceAfterBraces ls
