@@ -189,6 +189,7 @@ instance ToJSON LintSettings where
         , "lint_spaceAfterParens" .= lint_spaceAfterParens ls
         , "lint_spaceAfterBrackets" .= lint_spaceAfterBrackets ls
         , "lint_spaceAfterBraces" .= lint_spaceAfterBraces ls
+        , "lint_ignoreFiles" .= lint_ignoreFiles ls
         , "prettyprint_spaceAfterParens" .= prettyprint_spaceAfterParens ls
         , "prettyprint_spaceAfterBrackets" .= prettyprint_spaceAfterBrackets ls
         , "prettyprint_spaceAfterBraces" .= prettyprint_spaceAfterBraces ls
@@ -202,6 +203,7 @@ instance ToJSON LintSettings where
         , "prettyprint_removeRedundantParens" .= prettyprint_removeRedundantParens ls
         , "prettyprint_minimizeParens" .= prettyprint_minimizeParens ls
         , "prettyprint_assumeOperatorAssociativity" .= prettyprint_assumeOperatorAssociativity ls
+        , "prettyprint_rejectInvalidCode" .= prettyprint_rejectInvalidCode ls
         , "prettyprint_indentation" .= prettyprint_indentation ls
         , "log_format" .= log_format ls
         ]
