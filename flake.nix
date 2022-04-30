@@ -23,6 +23,7 @@
             ListLike MissingH mtl optparse-applicative parsec pretty signal
             uu-parsinglib uuagc uuagc-cabal deepseq
           ]))
+          haskell-language-server
         ];
       };
     }
