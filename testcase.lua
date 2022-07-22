@@ -53,6 +53,12 @@ a = {
   c
 }
 
+local tbl = {
+    function()
+    return nil -- comment
+  end
+}
+
 local t = {
   val1, val2;
   val3, val4;
