@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE LambdaCase #-}
 -- | Contains class instances and functions related to tokens
 module GLua.TokenTypes where
 
@@ -455,3 +456,9 @@ tokenSize = foldToken ((
     length -- Identifier
     )
     )
+
+isSingleLineComment :: Token -> Bool
+isSingleLineComment = \case
+    DashComment _ -> True
+    SlashComment _ -> True
+    _ -> False

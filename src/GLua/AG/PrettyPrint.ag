@@ -629,13 +629,19 @@ sem Expr
                         lhs.isLiteral = True
     | AVarArg           lhs.pretty = zeroWidthText "..."
                         lhs.isLiteral = True
-    | AnonymousFunc     loc.isMultiline = @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking
+    | AnonymousFunc     loc.isMultiline = @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 || (not $ null $ @loc.singleLineCommentsBeforeEnd) && not @body.hasBreaking
                         loc.singleLinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) <-> @body.pretty <-> zeroWidthText "end"
                         loc.multilinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                         loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                         loc.emptyParams = toEmpty $ null @pars
                         body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
                         lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
+
+                        -- If there are any single line comments within this anonymous function, do
+                        -- not render the function as single line.
+                        loc.commentsBeforeEnd = fst $ span (\(MToken pos' _tok) -> pos' `beforeEnd` @lhs.statRegion) @lhs.comments
+                        loc.singleLineCommentsBeforeEnd =
+                            filter (\(MToken _rg t) -> isSingleLineComment t) @loc.commentsBeforeEnd
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         lhs.wouldBeAmbiguousIfNextStatementIsExprVar = True
     | ATableConstructor
