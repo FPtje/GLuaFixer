@@ -1,0 +1,63 @@
+name: Lint GLua
+
+on:
+  workflow_call:
+    inputs:
+      config:
+        type: string
+        required: false
+        default: ""
+        description: "A URL or path (relative to your project root) of the glualint config"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: project
+
+      - name: Prepare GLuaFixer
+        run: |
+          cd $GITHUB_WORKSPACE
+          curl -s https://api.github.com/repos/FPtje/GLuaFixer/releases/latest \
+          | grep "browser_download_url.*linux" \
+          | cut -d : -f 2,3 \
+          | tr -d \" \
+          | wget -O glualint.zip -qi -
+
+      - name: Extract GLuaFixer
+        run: |
+          cd $GITHUB_WORKSPACE
+          unzip glualint.zip
+
+      - name: Get config file
+        run: |
+          GLUALINT_PATH=${{ inputs.config }}
+          if [[ "$GLUALINT_PATH" == "" ]];
+          then
+              echo "::warn:: No glualint config provided. Using defaults."
+              echo "{}" > "$GITHUB_WORKSPACE/.glualint.json"
+          else
+            if [[ "$GLUALINT_PATH" == http* ]];
+            then
+                echo "::info:: Given remote glualint path. Downloading..."
+                curl -vL "$GLUALINT_PATH" > "$GITHUB_WORKSPACE/.glualint.json"
+            else
+                echo "::info:: Given local path to glualint config. Copying..."
+                cp -v "$GITHUB_WORKSPACE/project/$GLUALINT_PATH" "$GITHUB_WORKSPACE/.glualint.json"
+            fi
+          fi
+
+      - name: Lint with GLuaFixer
+        run: |
+          cd "$GITHUB_WORKSPACE/project/"
+          "$GITHUB_WORKSPACE/glualint" --output-format github --config "$GITHUB_WORKSPACE/.glualint.json" lint . && \
+          echo "linting_failures=false" >> $GITHUB_ENV || \
+          echo "linting_failures=true" >> $GITHUB_ENV
+
+      - name: Print linting errors
+        run: |
+          [[ "$linting_failures" == "false" ]] && exit 0;
+          "$GITHUB_WORKSPACE/glualint" --output-format standard --config "$GITHUB_WORKSPACE/.glualint.json" lint .
