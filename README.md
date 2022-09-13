@@ -84,49 +84,53 @@ Example `glualint.json` with the default options:
 # All options explained:
 
 ## Linter options
-- `lint_maxScopeDepth`: Maximum depth of scopes in your code. Any terrible scripter can build the most atrocious sideways code pyramids, usually without knowing. The number here is at which step the linter will start calling you out on it. Set to `0` if you're king Tut and want to disable it.
-- `lint_syntaxErrors`: Whether syntax errors should be reported. This is off by default because [`gluac`](https://github.com/cartman300/gluac) shows nicer syntax errors.
-- `lint_syntaxInconsistencies`: Warn for syntax inconsistencies (using both `&&` and `and`, that kind of stuff)
-- `lint_deprecated`: Warn for deprecated functions. These functions are taken from [the GMod wiki](http://wiki.garrysmod.com/page/Category:Deprecated_Functions), don't blame me for the things that are on there.
-- `lint_trailingWhitespace`: Warn for whitespace at the end of a line. Your editor should have an option to automatically trim trailing whitespace.
-- `lint_whitespaceStyle`: Warn for bad whitespace behaviour (e.g. lack of spaces around operators and keywords)
-- `lint_beginnerMistakes`: Warn for typical beginner mistakes (using self in non-metafunction, `net.WriteEntity(LocalPlayer())` in a net message, using self.Weapon in a SWEP etc.)
-- `lint_emptyBlocks`: Warn for empty blocks
-- `lint_shadowing`: Warn for variable shadowing
-- `lint_gotos`: Warn for inappropriate gotos (i.e. the ones not used to jump out of a double loop)
-- `lint_goto_identifier`: Warn when `goto` is used as an identifer (e.g. `a = {goto = 1}`). This warning exists because `goto` being allowed as identifier is actually a bug. You should not be able to use `goto` like that for the same reason you're not allowed to use any other keyword as identifier.
-- `lint_doubleNegations`: Warn for double negations (things like `not (a == b)`)
-- `lint_redundantIfStatements`: Warn for nested if-statements that can be combined with `and`
-- `lint_redundantParentheses`: Warn for unneeded parentheses around expressions.
-- `lint_duplicateTableKeys`: Warn for duplicate table keys (e.g. `{a = 1, a = 2}`)
-- `lint_profanity`: Warn for profanity (bitch, cock, cocks, cunt, dick, dicks, fuck, fucking, goddamnit, knob, knobs, motherfucker, nigger, niggers, niggertits, nipple, shit)
-- `lint_unusedVars`: Warn for variables that are never used
-- `lint_unusedParameters`: Warn for function parameters that are never used. *NOTE:* Only has effect when `lint_unusedVars` is enabled!
-- `lint_unusedLoopVars`: Warn for loop variables that are never used (`for k,v in ...`). *NOTE:* Only has effect when `lint_unusedVars` is enabled!
-- `lint_ignoreFiles`: Files to ignore when linting. You can use glob patterns (e.g. `"*.lua"` or `libraries/*.lua`)
-- `lint_inconsistentVariableStyle`: Whether to warn about inconsistent styles in namning local variables (e.g. lowercase and uppercase variables)
-- `lint_spaceAfterParens`: Whether to warn about there being spaces after parens
-- `lint_spaceAfterBrackets`: Whether to warn about there being spaces after brackets
-- `lint_spaceAfterBraces`: Whether to warn about there being spaces after braces
+Option | Description
+----------|------------
+`lint_maxScopeDepth` | Maximum depth of scopes in your code. Any terrible scripter can build the most atrocious sideways code pyramids, usually without knowing. The number here is at which step the linter will start calling you out on it. Set to `0` if you're king Tut and want to disable it.
+`lint_syntaxErrors` | Whether syntax errors should be reported. This is off by default because [`gluac`](https://github.com/cartman300/gluac) shows nicer syntax errors.
+`lint_syntaxInconsistencies` | Warn for syntax inconsistencies (using both `&&` and `and`, that kind of stuff)
+`lint_deprecated` | Warn for deprecated functions. These functions are taken from [the GMod wiki](http://wiki.garrysmod.com/page/Category:Deprecated_Functions), don't blame me for the things that are on there.
+`lint_trailingWhitespace` | Warn for whitespace at the end of a line. Your editor should have an option to automatically trim trailing whitespace.
+`lint_whitespaceStyle` | Warn for bad whitespace behaviour (e.g. lack of spaces around operators and keywords)
+`lint_beginnerMistakes` | Warn for typical beginner mistakes (using self in non-metafunction, `net.WriteEntity(LocalPlayer())` in a net message, using self.Weapon in a SWEP etc.)
+`lint_emptyBlocks` | Warn for empty blocks
+`lint_shadowing` | Warn for variable shadowing
+`lint_gotos` | Warn for inappropriate gotos (i.e. the ones not used to jump out of a double loop)
+`lint_goto_identifier` | Warn when `goto` is used as an identifer (e.g. `a = {goto = 1}`). This warning exists because `goto` being allowed as identifier is actually a bug. You should not be able to use `goto` like that for the same reason you're not allowed to use any other keyword as identifier.
+`lint_doubleNegations` | Warn for double negations (things like `not (a == b)`)
+`lint_redundantIfStatements` | Warn for nested if-statements that can be combined with `and`
+`lint_redundantParentheses` | Warn for unneeded parentheses around expressions.
+`lint_duplicateTableKeys` | Warn for duplicate table keys (e.g. `{a = 1, a = 2}`)
+`lint_profanity` | Warn for profanity (bitch, cock, cocks, cunt, dick, dicks, fuck, fucking, goddamnit, knob, knobs, motherfucker, nigger, niggers, niggertits, nipple, shit)
+`lint_unusedVars` | Warn for variables that are never used
+`lint_unusedParameters` | Warn for function parameters that are never used. *NOTE:* Only has effect when `lint_unusedVars` is enabled!
+`lint_unusedLoopVars` | Warn for loop variables that are never used (`for k,v in ...`). *NOTE:* Only has effect when `lint_unusedVars` is enabled!
+`lint_ignoreFiles` | Files to ignore when linting. You can use glob patterns (e.g. `"*.lua"` or `libraries/*.lua`)
+`lint_inconsistentVariableStyle` | Whether to warn about inconsistent styles in namning local variables (e.g. lowercase and uppercase variables)
+`lint_spaceAfterParens` | Whether to warn about there being spaces after parens
+`lint_spaceAfterBrackets` | Whether to warn about there being spaces after brackets
+`lint_spaceAfterBraces` | Whether to warn about there being spaces after braces
 
 ## Pretty print options
 These options affect the pretty printing functionality of `glualint`.
 
-- `prettyprint_spaceAfterParens`: Put a space between all parentheses
-- `prettyprint_spaceAfterBrackets`: Put a space between all brackets
-- `prettyprint_spaceAfterBraces`: Put a space between all curly braces
-- `prettyprint_spaceEmptyParens`: Put a space between empty parentheses (e.g. `( )`). Only applies when `prettyprint_spaceAfterParens` is set
-- `prettyprint_spaceEmptyBraces`: Put a space between empty braces (e.g. `{ }`). Only applies when `prettyprint_spaceAfterBraces` is set
-- `prettyprint_spaceAfterLabel`: Put a space after a `::label::` statement
-- `prettyprint_semicolons`: Clutter the script with semicolons after every damn statement
-- `prettyprint_cStyle`: Use C style operators and comments everywhere
-- `prettyprint_indentation`: What to use for indentation. Any string is valid, but some amount of spaces or `"\t"` is recommended
-- `prettyprint_spaceBeforeComma`: Whether to place a space before every comma
-- `prettyprint_spaceAfterComma`: Whether to place a space after every comma
-- `prettyprint_removeRedundantParens`: Whether to remove unnecessary parentheses (e.g. `x = (1 + 2)`, `if ((1) + (2) == 3) then`)
-- `prettyprint_minimizeParens`: Removes parentheses which are unnecessary due to operator precedence (e.g. `(1 * 2) + 3`). This option also removes redundant parameters, regardless of whether `prettyprint_removeRedundantParens` is enabled.
-- `prettyprint_assumeOperatorAssociativity`: Only takes effect when `prettyprint_minimizeParens` is `true`. It decides whether parameters can be removed when the involved operators are assumed associative. Examples: `a * (b * c)`, `a and (b and c)`. This assumption is generally true, except for floating point numbers, where removing parentheses can actually change the outcome of the calculation. See [Stack Overflow](https://stackoverflow.com/a/10371890). This option is set to `true` by default, because the expectation is that this will not be problematic even if it affects your code. In a very rare case, this might cause trouble, though. You might want to consider turning this off if you have floating point code that heavily relies on evaluation order. You may also choose to leave this option on and ensure evaluation order by explicitly setting variables.
-- `prettyprint_rejectInvalidCode`: Whether not to pretty print when the code is syntactically invalid
+Option | Description
+----------|------------
+`prettyprint_spaceAfterParens` | Put a space between all parentheses
+`prettyprint_spaceAfterBrackets` | Put a space between all brackets
+`prettyprint_spaceAfterBraces` | Put a space between all curly braces
+`prettyprint_spaceEmptyParens` | Put a space between empty parentheses (e.g. `( )`). Only applies when `prettyprint_spaceAfterParens` is set
+`prettyprint_spaceEmptyBraces` | Put a space between empty braces (e.g. `{ }`). Only applies when `prettyprint_spaceAfterBraces` is set
+`prettyprint_spaceAfterLabel` | Put a space after a `::label::` statement
+`prettyprint_semicolons` | Clutter the script with semicolons after every damn statement
+`prettyprint_cStyle` | Use C style operators and comments everywhere
+`prettyprint_indentation` | What to use for indentation. Any string is valid, but some amount of spaces or `"\t"` is recommended
+`prettyprint_spaceBeforeComma` | Whether to place a space before every comma
+`prettyprint_spaceAfterComma` | Whether to place a space after every comma
+`prettyprint_removeRedundantParens` | Whether to remove unnecessary parentheses (e.g. `x = (1 + 2)`, `if ((1) + (2) == 3) then`)
+`prettyprint_minimizeParens` | Removes parentheses which are unnecessary due to operator precedence (e.g. `(1 * 2) + 3`). This option also removes redundant parameters, regardless of whether `prettyprint_removeRedundantParens` is enabled.
+`prettyprint_assumeOperatorAssociativity` | Only takes effect when `prettyprint_minimizeParens` is `true`. It decides whether parameters can be removed when the involved operators are assumed associative. Examples: `a * (b * c)`, `a and (b and c)`. This assumption is generally true, except for floating point numbers, where removing parentheses can actually change the outcome of the calculation. See [Stack Overflow](https://stackoverflow.com/a/10371890). This option is set to `true` by default, because the expectation is that this will not be problematic even if it affects your code. In a very rare case, this might cause trouble, though. You might want to consider turning this off if you have floating point code that heavily relies on evaluation order. You may also choose to leave this option on and ensure evaluation order by explicitly setting variables.
+`prettyprint_rejectInvalidCode` | Whether not to pretty print when the code is syntactically invalid
 
 
 ## Other options
