@@ -132,3 +132,21 @@ These options affect the pretty printing functionality of `glualint`.
 ## Other options
 
 - `log_format`: Decides how to format linter warnings and error messages. Possible values are `"auto"`, `"standard"` and `"github"`. The `"github"` output format is specifically designed for usage with GitHub actions. The default value is `"auto"`, With `"auto"`, the log format will be `"github"` when the environment variables `GITHUB_ACTIONS` and `GITHUB_WORKFLOW` are both present, and `"standard"` otherwise.
+
+# Editor Plugins
+Through community support, GLuaFixer is supported across a wide variety of popular editors.
+
+Here's a list of plugins we recommend (PRs for more tools welcome!):
+
+### Sublime
+ - https://github.com/FPtje/SublimeLinter-contrib-glualint
+
+### Atom
+ - https://github.com/FPtje/linter-glualint
+
+### VS Code
+ - [vscode-glualint](https://marketplace.visualstudio.com/items?itemName=goz3rr.vscode-glualint)
+ - [GLua Enhanced](https://marketplace.visualstudio.com/items?itemName=venner.vscode-glua-enhanced)
+
+### Vim
+ - https://github.com/CFC-Servers/gluafixer.vim
