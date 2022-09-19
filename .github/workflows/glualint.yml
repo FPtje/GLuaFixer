@@ -24,7 +24,7 @@ jobs:
           curl --retry 3 --location https://api.github.com/repos/FPtje/GLuaFixer/releases/latest \
           | jq '.assets[0].browser_download_url' \
           | tr --delete \" \
-          | wget --output-document=glualint.zip --input-document=-
+          | wget --output-document=glualint.zip --input-file=-
 
       - name: Extract GLuaLint
         run: |
