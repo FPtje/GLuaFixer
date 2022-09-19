@@ -183,14 +183,14 @@ You have two options for configuration:
 
 Then, modify your Workflow like so:
 ```yml
-name: GLuaFixer
+name: GLuaLint
 
 on:
   pull_request:
 
 jobs:
   Lint:
-    uses: FPtje/GLuaFixer/.github/workflows/gluafixer.yml
+    uses: FPtje/GLuaFixer/.github/workflows/glualint.yml
     with:
       config: "<link or relative path to config file>"
 ```
