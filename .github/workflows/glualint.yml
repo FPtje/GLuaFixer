@@ -21,10 +21,10 @@ jobs:
       - name: Prepare GLuaLint
         run: |
           cd $GITHUB_WORKSPACE
-          curl -s https://api.github.com/repos/FPtje/GLuaFixer/releases/latest \
+          curl --retry 3 --location https://api.github.com/repos/FPtje/GLuaFixer/releases/latest \
           | jq '.assets[0].browser_download_url' \
-          | tr -d \" \
-          | wget -O glualint.zip -qi -
+          | tr --delete \" \
+          | wget --output-document=glualint.zip --input-document=-
 
       - name: Extract GLuaLint
         run: |
