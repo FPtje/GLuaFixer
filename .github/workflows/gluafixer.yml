@@ -18,16 +18,15 @@ jobs:
         with:
           path: project
 
-      - name: Prepare GLuaFixer
+      - name: Prepare GLuaLint
         run: |
           cd $GITHUB_WORKSPACE
           curl -s https://api.github.com/repos/FPtje/GLuaFixer/releases/latest \
-          | grep "browser_download_url.*linux" \
-          | cut -d : -f 2,3 \
+          | jq '.assets[0].browser_download_url'
           | tr -d \" \
           | wget -O glualint.zip -qi -
 
-      - name: Extract GLuaFixer
+      - name: Extract GLuaLint
         run: |
           cd $GITHUB_WORKSPACE
           unzip glualint.zip
@@ -35,11 +34,8 @@ jobs:
       - name: Get config file
         run: |
           GLUALINT_PATH=${{ inputs.config }}
-          if [[ "$GLUALINT_PATH" == "" ]];
+          if [[ "$GLUALINT_PATH" != "" ]];
           then
-              echo "::warn:: No glualint config provided. Using defaults."
-              echo "{}" > "$GITHUB_WORKSPACE/.glualint.json"
-          else
             if [[ "$GLUALINT_PATH" == http* ]];
             then
                 echo "::info:: Given remote glualint path. Downloading..."
@@ -50,14 +46,7 @@ jobs:
             fi
           fi
 
-      - name: Lint with GLuaFixer
+      - name: Lint with GLuaLint
         run: |
           cd "$GITHUB_WORKSPACE/project/"
-          "$GITHUB_WORKSPACE/glualint" --output-format github --config "$GITHUB_WORKSPACE/.glualint.json" lint . && \
-          echo "linting_failures=false" >> $GITHUB_ENV || \
-          echo "linting_failures=true" >> $GITHUB_ENV
-
-      - name: Print linting errors
-        run: |
-          [[ "$linting_failures" == "false" ]] && exit 0;
-          "$GITHUB_WORKSPACE/glualint" --output-format standard --config "$GITHUB_WORKSPACE/.glualint.json" lint .
+          "$GITHUB_WORKSPACE/glualint" --output-format github --config "$GITHUB_WORKSPACE/.glualint.json" lint .
