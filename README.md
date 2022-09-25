@@ -154,3 +154,43 @@ Here's a list of plugins we recommend (PRs for more tools welcome!):
 
 ### Vim
  - https://github.com/CFC-Servers/gluafixer.vim
+
+# Reusable Workflow
+You can easily run GLuaFixer in your own Workflows using the included Reusable Workflow.
+
+### Setup
+To run GLuaFixer on all of your PRs, create a new file in your respository: `.github/workflows/gluafixer.yml` with the following contents:
+```yml
+name: GLuaFixer
+
+on:
+  pull_request:
+
+jobs:
+  Lint:
+    uses: FPtje/GLuaFixer/.github/workflows/gluafixer.yml
+```
+
+Now, every time you make or update a PR, GLuaFixer will run and report any linting violations right on your PR!
+
+
+### Configuration
+The GLuaFixer Workflow can be configured, too.
+
+You have two options for configuration:
+ - Include a file in your repository containing the GLuaFixer config
+ - Upload your GLuaFixer config somewhere (gist.github.com, pastebin/hastebin, etc.)
+
+Then, modify your Workflow like so:
+```yml
+name: GLuaLint
+
+on:
+  pull_request:
+
+jobs:
+  Lint:
+    uses: FPtje/GLuaFixer/.github/workflows/glualint.yml
+    with:
+      config: "<link or relative path to config file>"
+```

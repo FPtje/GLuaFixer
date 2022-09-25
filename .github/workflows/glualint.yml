@@ -1,0 +1,52 @@
+name: Lint GLua
+
+on:
+  workflow_call:
+    inputs:
+      config:
+        type: string
+        required: false
+        default: ""
+        description: "A URL or path (relative to your project root) of the glualint config"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          path: project
+
+      - name: Prepare GLuaLint
+        run: |
+          cd $GITHUB_WORKSPACE
+          curl --retry 3 --location https://api.github.com/repos/FPtje/GLuaFixer/releases/latest \
+          | jq '.assets[0].browser_download_url' \
+          | tr --delete \" \
+          | wget --output-document=glualint.zip --input-file=-
+
+      - name: Extract GLuaLint
+        run: |
+          cd $GITHUB_WORKSPACE
+          unzip glualint.zip
+
+      - name: Get config file
+        run: |
+          GLUALINT_PATH=${{ inputs.config }}
+          if [[ "$GLUALINT_PATH" != "" ]];
+          then
+            if [[ "$GLUALINT_PATH" == http* ]];
+            then
+                echo "::info:: Given remote glualint path. Downloading..."
+                curl --verbose --retry 3 --location "$GLUALINT_PATH" > "$GITHUB_WORKSPACE/.glualint.json"
+            else
+                echo "::info:: Given local path to glualint config. Copying..."
+                cp --verbose "$GITHUB_WORKSPACE/project/$GLUALINT_PATH" "$GITHUB_WORKSPACE/.glualint.json"
+            fi
+          fi
+
+      - name: Lint with GLuaLint
+        run: |
+          cd "$GITHUB_WORKSPACE/project/"
+          "$GITHUB_WORKSPACE/glualint" --output-format github --config "$GITHUB_WORKSPACE/.glualint.json" lint .
