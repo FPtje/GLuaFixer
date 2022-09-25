@@ -159,7 +159,7 @@ Here's a list of plugins we recommend (PRs for more tools welcome!):
 You can easily run GLuaFixer in your own Workflows using the included Reusable Workflow.
 
 ### Setup
-To run GLuaFixer on all of your PRs, create a new file in your respository: `.github/workflows/gluafixer.yml` with the following contents:
+To run GLuaFixer on all of your PRs, create a new file in your respository: `.github/workflows/glualint.yml with the following contents:
 ```yml
 name: GLuaFixer
 
