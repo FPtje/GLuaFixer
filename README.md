@@ -96,7 +96,7 @@ Option | Description
 `lint_emptyBlocks` | Warn for empty blocks
 `lint_shadowing` | Warn for variable shadowing
 `lint_gotos` | Warn for inappropriate gotos (i.e. the ones not used to jump out of a double loop)
-`lint_goto_identifier` | Warn when `goto` is used as an identifer (e.g. `a = {goto = 1}`). This warning exists because `goto` being allowed as identifier is actually a bug. You should not be able to use `goto` like that for the same reason you're not allowed to use any other keyword as identifier.
+`lint_goto_identifier` | Warn when `goto` is used as an identifier (e.g. `a = {goto = 1}`). This warning exists because `goto` being allowed as identifier is actually a bug. You should not be able to use `goto` like that for the same reason you're not allowed to use any other keyword as identifier.
 `lint_doubleNegations` | Warn for double negations (things like `not (a == b)`)
 `lint_redundantIfStatements` | Warn for nested if-statements that can be combined with `and`
 `lint_redundantParentheses` | Warn for unneeded parentheses around expressions.
@@ -106,7 +106,7 @@ Option | Description
 `lint_unusedParameters` | Warn for function parameters that are never used. *NOTE:* Only has effect when `lint_unusedVars` is enabled!
 `lint_unusedLoopVars` | Warn for loop variables that are never used (`for k,v in ...`). *NOTE:* Only has effect when `lint_unusedVars` is enabled!
 `lint_ignoreFiles` | Files to ignore when linting. You can use glob patterns (e.g. `"*.lua"` or `libraries/*.lua`)
-`lint_inconsistentVariableStyle` | Whether to warn about inconsistent styles in namning local variables (e.g. lowercase and uppercase variables)
+`lint_inconsistentVariableStyle` | Whether to warn about inconsistent styles in naming local variables (e.g. lowercase and uppercase variables)
 `lint_spaceAfterParens` | Whether to warn about there being spaces after parens
 `lint_spaceAfterBrackets` | Whether to warn about there being spaces after brackets
 `lint_spaceAfterBraces` | Whether to warn about there being spaces after braces
@@ -159,7 +159,7 @@ Here's a list of plugins we recommend (PRs for more tools welcome!):
 You can easily run GLuaFixer in your own Workflows using the included Reusable Workflow.
 
 ### Setup
-To run GLuaFixer on all of your PRs, create a new file in your respository: `.github/workflows/glualint.yml` with the following contents:
+To run GLuaFixer on all of your PRs, create a new file in your repository: `.github/workflows/glualint.yml` with the following contents:
 ```yml
 name: GLuaFixer
 
