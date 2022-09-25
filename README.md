@@ -159,7 +159,7 @@ Here's a list of plugins we recommend (PRs for more tools welcome!):
 You can easily run GLuaFixer in your own Workflows using the included Reusable Workflow.
 
 ### Setup
-To run GLuaFixer on all of your PRs, create a new file in your respository: `.github/workflows/gluafixer.yml` with the following contents:
+To run GLuaFixer on all of your PRs, create a new file in your respository: `.github/workflows/glualint.yml` with the following contents:
 ```yml
 name: GLuaFixer
 
@@ -168,7 +168,7 @@ on:
 
 jobs:
   Lint:
-    uses: FPtje/GLuaFixer/.github/workflows/gluafixer.yml
+    uses: FPtje/GLuaFixer/.github/workflows/glualint.yml@master
 ```
 
 Now, every time you make or update a PR, GLuaFixer will run and report any linting violations right on your PR!
@@ -190,7 +190,7 @@ on:
 
 jobs:
   Lint:
-    uses: FPtje/GLuaFixer/.github/workflows/glualint.yml
+    uses: FPtje/GLuaFixer/.github/workflows/glualint.yml@master
     with:
       config: "<link or relative path to config file>"
 ```
