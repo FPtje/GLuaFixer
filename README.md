@@ -168,7 +168,7 @@ on:
 
 jobs:
   Lint:
-    uses: FPtje/GLuaFixer/.github/workflows/gluafixer.yml
+    uses: FPtje/GLuaFixer/.github/workflows/glualint.yml@master
 ```
 
 Now, every time you make or update a PR, GLuaFixer will run and report any linting violations right on your PR!
@@ -190,7 +190,7 @@ on:
 
 jobs:
   Lint:
-    uses: FPtje/GLuaFixer/.github/workflows/glualint.yml
+    uses: FPtje/GLuaFixer/.github/workflows/glualint.yml@master
     with:
       config: "<link or relative path to config file>"
 ```
