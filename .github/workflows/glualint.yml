@@ -39,10 +39,10 @@ jobs:
             if [[ "$GLUALINT_PATH" == http* ]];
             then
                 echo "::info:: Given remote glualint path. Downloading..."
-                curl -vL "$GLUALINT_PATH" > "$GITHUB_WORKSPACE/.glualint.json"
+                curl --verbose --retry 3 --location "$GLUALINT_PATH" > "$GITHUB_WORKSPACE/.glualint.json"
             else
                 echo "::info:: Given local path to glualint config. Copying..."
-                cp -v "$GITHUB_WORKSPACE/project/$GLUALINT_PATH" "$GITHUB_WORKSPACE/.glualint.json"
+                cp --verbose "$GITHUB_WORKSPACE/project/$GLUALINT_PATH" "$GITHUB_WORKSPACE/.glualint.json"
             fi
           fi
 
