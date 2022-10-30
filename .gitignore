@@ -11,3 +11,4 @@ glualint-prof.*
 cabal.sandbox.config
 /result
 dist-newstyle
+.direnv
