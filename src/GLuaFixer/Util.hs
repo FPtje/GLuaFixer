@@ -14,12 +14,13 @@ import Control.DeepSeq (deepseq, force)
 import Control.Monad (void)
 import qualified Data.ByteString.Lazy as BS
 import Data.IORef (IORef, readIORef)
-import Data.Maybe(fromMaybe)
+import Data.List (foldl', stripPrefix)
+import Data.Maybe(fromMaybe, mapMaybe, listToMaybe)
 import System.Exit (exitWith, ExitCode (..))
 import System.Directory (doesDirectoryExist, doesFileExist, getHomeDirectory, makeAbsolute, getCurrentDirectory)
 import System.FilePath (takeDirectory, (</>), (<.>))
 import System.FilePath.GlobPattern (GlobPattern)
-import System.FilePath.Find (find, always, fileName, filePath, (~~?), (&&?), (/~?))
+import System.FilePath.Find (find, always, fileName, filePath, (~~?), (&&?), (/~?), FindClause)
 import System.IO (openFile, withFile, hSetEncoding, utf8_bom, hGetContents, hClose, hPutStrLn, IOMode (..))
 import Text.Parsec.Error (errorPos)
 
@@ -41,10 +42,25 @@ type Indentation = String
 
 -- | Finds all Lua files in a folder
 findLuaFiles :: [GlobPattern] -> FilePath -> IO [FilePath]
-findLuaFiles ignoreFiles =
-    find always (fileName ~~? "*.lua" &&? ignoredGlobs)
+findLuaFiles ignoreFiles path =
+    find always (fileName ~~? "*.lua" &&? ignoredGlobs) path
   where
-    ignoredGlobs = foldl (&&?) always $ map (filePath /~?) ignoreFiles
+    ignoredGlobs = foldl' (&&?) always $ map (relativeFilePath /~?) ignoreFiles
+
+    relativeFilePath :: FindClause FilePath
+    relativeFilePath = fmap stripFromPath filePath
+
+    -- Turn absolute path into relative path by stripping prefix
+    stripFromPath :: FilePath -> FilePath
+    stripFromPath fp =
+      fromMaybe fp $ listToMaybe $ mapMaybe (`stripPrefix` fp) pathsToStrip
+
+    -- Prefixes to attempt to strip, in order
+    pathsToStrip =
+      [ "./"
+      , path ++ "/"
+      , path
+      ]
 
 -- | Read file in utf8_bom because that seems to work better
 doReadFile :: FilePath -> IO String

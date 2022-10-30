@@ -105,7 +105,7 @@ Option | Description
 `lint_unusedVars` | Warn for variables that are never used
 `lint_unusedParameters` | Warn for function parameters that are never used. *NOTE:* Only has effect when `lint_unusedVars` is enabled!
 `lint_unusedLoopVars` | Warn for loop variables that are never used (`for k,v in ...`). *NOTE:* Only has effect when `lint_unusedVars` is enabled!
-`lint_ignoreFiles` | Files to ignore when linting. You can use glob patterns (e.g. `"*.lua"` or `libraries/*.lua`)
+`lint_ignoreFiles` | Files to ignore when linting. You can use glob patterns (e.g. `"**.lua"`, `"*.lua"` or `libraries/*.lua`)
 `lint_inconsistentVariableStyle` | Whether to warn about inconsistent styles in naming local variables (e.g. lowercase and uppercase variables)
 `lint_spaceAfterParens` | Whether to warn about there being spaces after parens
 `lint_spaceAfterBrackets` | Whether to warn about there being spaces after brackets
