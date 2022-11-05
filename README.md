@@ -56,14 +56,14 @@ Example `glualint.json` with the default options:
     "lint_unusedParameters": false,
     "lint_unusedLoopVars": false,
     "lint_inconsistentVariableStyle": false,
-    "lint_spaceAfterParens": false,
-    "lint_spaceAfterBrackets": false,
-    "lint_spaceAfterBraces": false,
+    "lint_spaceBetweenParens": false,
+    "lint_spaceBetweenBrackets": false,
+    "lint_spaceBetweenBraces": false,
     "lint_ignoreFiles": [],
 
-    "prettyprint_spaceAfterParens": false,
-    "prettyprint_spaceAfterBrackets": false,
-    "prettyprint_spaceAfterBraces": false,
+    "prettyprint_spaceBetweenParens": false,
+    "prettyprint_spaceBetweenBrackets": false,
+    "prettyprint_spaceBetweenBraces": false,
     "prettyprint_spaceEmptyParens": false,
     "prettyprint_spaceEmptyBraces": false,
     "prettyprint_spaceAfterLabel": false,
@@ -107,20 +107,20 @@ Option | Description
 `lint_unusedLoopVars` | Warn for loop variables that are never used (`for k,v in ...`). *NOTE:* Only has effect when `lint_unusedVars` is enabled!
 `lint_ignoreFiles` | Files to ignore when linting. You can use glob patterns (e.g. `"**.lua"`, `"*.lua"` or `libraries/*.lua`)
 `lint_inconsistentVariableStyle` | Whether to warn about inconsistent styles in naming local variables (e.g. lowercase and uppercase variables)
-`lint_spaceAfterParens` | Whether to warn about there being spaces after parens
-`lint_spaceAfterBrackets` | Whether to warn about there being spaces after brackets
-`lint_spaceAfterBraces` | Whether to warn about there being spaces after braces
+`lint_spaceBetweenParens` | Whether to warn about there being spaces between parentheses. This option used to be named `lint_spaceAfterParens`. For backwards compatibility that option still works.
+`lint_spaceBetweenBrackets` | Whether to warn about there being spaces between brackets. This option used to be named `lint_spaceAfterBrackets`. For backwards compatibility that option still works.
+`lint_spaceBetweenBraces` | Whether to warn about there being spaces between braces. This option used to be named `lint_spaceAfterBraces`. For backwards compatibility that option still works.
 
 ## Pretty print options
 These options affect the pretty printing functionality of `glualint`.
 
 Option | Description
 ----------|------------
-`prettyprint_spaceAfterParens` | Put a space between all parentheses
-`prettyprint_spaceAfterBrackets` | Put a space between all brackets
-`prettyprint_spaceAfterBraces` | Put a space between all curly braces
-`prettyprint_spaceEmptyParens` | Put a space between empty parentheses (e.g. `( )`). Only applies when `prettyprint_spaceAfterParens` is set
-`prettyprint_spaceEmptyBraces` | Put a space between empty braces (e.g. `{ }`). Only applies when `prettyprint_spaceAfterBraces` is set
+`prettyprint_spaceBetweenParens` | Put a space between all parentheses
+`prettyprint_spaceBetweenBrackets` | Put a space between all brackets
+`prettyprint_spaceBetweenBraces` | Put a space between all curly braces
+`prettyprint_spaceEmptyParens` | Put a space between empty parentheses (e.g. `( )`). Only applies when `prettyprint_spaceBetweenParens` is set
+`prettyprint_spaceEmptyBraces` | Put a space between empty braces (e.g. `{ }`). Only applies when `prettyprint_spaceBetweenBraces` is set
 `prettyprint_spaceAfterLabel` | Put a space after a `::label::` statement
 `prettyprint_semicolons` | Clutter the script with semicolons after every damn statement
 `prettyprint_cStyle` | Use C style operators and comments everywhere

@@ -1,10 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module GLuaFixer.LintSettings where
 
+import Control.Applicative ((<|>))
 import Data.Aeson
-import Control.Monad
-import GLua.AG.PrettyPrint
+    ( FromJSON(parseJSON),
+      ToJSON(toJSON),
+      (.!=),
+      (.:?),
+      object,
+      Value(Object),
+      KeyValue((.=)) )
+import Control.Monad ( MonadPlus(mzero) )
+import GLua.AG.PrettyPrint ( PrettyPrintConfig(..) )
 import GLuaFixer.LintMessage
+    ( LogFormatChoice(AutoLogFormatChoice) )
 
 data LintSettings =
     LintSettings
@@ -28,14 +37,14 @@ data LintSettings =
     , lint_unusedParameters :: !Bool
     , lint_unusedLoopVars :: !Bool
     , lint_inconsistentVariableStyle :: !Bool
-    , lint_spaceAfterParens :: !Bool
-    , lint_spaceAfterBrackets :: !Bool
-    , lint_spaceAfterBraces :: !Bool
+    , lint_spaceBetweenParens :: !Bool
+    , lint_spaceBetweenBrackets :: !Bool
+    , lint_spaceBetweenBraces :: !Bool
     , lint_ignoreFiles :: ![String]
 
-    , prettyprint_spaceAfterParens :: !Bool
-    , prettyprint_spaceAfterBrackets :: !Bool
-    , prettyprint_spaceAfterBraces :: !Bool
+    , prettyprint_spaceBetweenParens :: !Bool
+    , prettyprint_spaceBetweenBrackets :: !Bool
+    , prettyprint_spaceBetweenBraces :: !Bool
     , prettyprint_spaceEmptyParens :: !Bool
     , prettyprint_spaceEmptyBraces :: !Bool
     , prettyprint_spaceAfterLabel :: !Bool
@@ -75,14 +84,14 @@ defaultLintSettings =
     , lint_unusedParameters = False
     , lint_unusedLoopVars = False
     , lint_inconsistentVariableStyle = False
-    , lint_spaceAfterParens = False
-    , lint_spaceAfterBrackets = False
-    , lint_spaceAfterBraces = False
+    , lint_spaceBetweenParens = False
+    , lint_spaceBetweenBrackets = False
+    , lint_spaceBetweenBraces = False
     , lint_ignoreFiles = []
 
-    , prettyprint_spaceAfterParens = False
-    , prettyprint_spaceAfterBrackets = False
-    , prettyprint_spaceAfterBraces = False
+    , prettyprint_spaceBetweenParens = False
+    , prettyprint_spaceBetweenBrackets = False
+    , prettyprint_spaceBetweenBraces = False
     , prettyprint_spaceEmptyParens = True
     , prettyprint_spaceEmptyBraces = True
     , prettyprint_spaceAfterLabel = False
@@ -122,13 +131,29 @@ instance FromJSON LintSettings where
           v .:? "lint_unusedParameters" .!= lint_unusedParameters defaultLintSettings <*>
           v .:? "lint_unusedLoopVars" .!= lint_unusedLoopVars defaultLintSettings <*>
           v .:? "lint_inconsistentVariableStyle" .!= lint_inconsistentVariableStyle defaultLintSettings <*>
-          v .:? "lint_spaceAfterParens" .!= lint_spaceAfterParens defaultLintSettings <*>
-          v .:? "lint_spaceAfterBrackets" .!= lint_spaceAfterBrackets defaultLintSettings <*>
-          v .:? "lint_spaceAfterBraces" .!= lint_spaceAfterBraces defaultLintSettings <*>
+
+          -- Backwards compatible change: accept both the newer spaceBetween and the older
+          -- spaceAfter
+          (v .:? "lint_spaceBetweenParens" .!= lint_spaceBetweenParens defaultLintSettings <|>
+          v .:? "lint_spaceAfterParens" .!= lint_spaceBetweenParens defaultLintSettings) <*>
+
+          (v .:? "lint_spaceBetweenBrackets" .!= lint_spaceBetweenBrackets defaultLintSettings <|>
+          v .:? "lint_spaceAfterBrackets" .!= lint_spaceBetweenBrackets defaultLintSettings) <*>
+
+          (v .:? "lint_spaceBetweenBraces" .!= lint_spaceBetweenBraces defaultLintSettings <|>
+          v .:? "lint_spaceAfterBraces" .!= lint_spaceBetweenBraces defaultLintSettings) <*>
+
           v .:? "lint_ignoreFiles" .!= lint_ignoreFiles defaultLintSettings <*>
-          v .:? "prettyprint_spaceAfterParens" .!= prettyprint_spaceAfterParens defaultLintSettings <*>
-          v .:? "prettyprint_spaceAfterBrackets" .!= prettyprint_spaceAfterBrackets defaultLintSettings <*>
-          v .:? "prettyprint_spaceAfterBraces" .!= prettyprint_spaceAfterBraces defaultLintSettings <*>
+
+          (v .:? "prettyprint_spaceBetweenParens" .!= prettyprint_spaceBetweenParens defaultLintSettings <|>
+          v .:? "prettyprint_spaceAfterParens" .!= prettyprint_spaceBetweenParens defaultLintSettings) <*>
+
+          (v .:? "prettyprint_spaceBetweenBrackets" .!= prettyprint_spaceBetweenBrackets defaultLintSettings <|>
+          v .:? "prettyprint_spaceAfterBrackets" .!= prettyprint_spaceBetweenBrackets defaultLintSettings) <*>
+
+          (v .:? "prettyprint_spaceBetweenBraces" .!= prettyprint_spaceBetweenBraces defaultLintSettings <|>
+          v .:? "prettyprint_spaceAfterBraces" .!= prettyprint_spaceBetweenBraces defaultLintSettings) <*>
+
           v .:? "prettyprint_spaceEmptyParens" .!= prettyprint_spaceEmptyParens defaultLintSettings <*>
           v .:? "prettyprint_spaceEmptyBraces" .!= prettyprint_spaceEmptyBraces defaultLintSettings <*>
           v .:? "prettyprint_spaceAfterLabel" .!= prettyprint_spaceAfterLabel defaultLintSettings <*>
@@ -148,9 +173,9 @@ instance FromJSON LintSettings where
 lint2ppSetting :: LintSettings -> PrettyPrintConfig
 lint2ppSetting ls =
     PPConfig
-    { spaceAfterParens = prettyprint_spaceAfterParens ls
-    , spaceAfterBrackets = prettyprint_spaceAfterBrackets ls
-    , spaceAfterBraces = prettyprint_spaceAfterBraces ls
+    { spaceAfterParens = prettyprint_spaceBetweenParens ls
+    , spaceAfterBrackets = prettyprint_spaceBetweenBrackets ls
+    , spaceAfterBraces = prettyprint_spaceBetweenBraces ls
     , spaceEmptyParens = prettyprint_spaceEmptyParens ls
     , spaceEmptyBraces = prettyprint_spaceEmptyBraces ls
     , spaceAfterLabel = prettyprint_spaceAfterLabel ls
@@ -186,13 +211,13 @@ instance ToJSON LintSettings where
         , "lint_unusedParameters" .= lint_unusedParameters ls
         , "lint_unusedLoopVars" .= lint_unusedLoopVars ls
         , "lint_inconsistentVariableStyle" .= lint_inconsistentVariableStyle ls
-        , "lint_spaceAfterParens" .= lint_spaceAfterParens ls
-        , "lint_spaceAfterBrackets" .= lint_spaceAfterBrackets ls
-        , "lint_spaceAfterBraces" .= lint_spaceAfterBraces ls
+        , "lint_spaceBetweenParens" .= lint_spaceBetweenParens ls
+        , "lint_spaceBetweenBrackets" .= lint_spaceBetweenBrackets ls
+        , "lint_spaceBetweenBraces" .= lint_spaceBetweenBraces ls
         , "lint_ignoreFiles" .= lint_ignoreFiles ls
-        , "prettyprint_spaceAfterParens" .= prettyprint_spaceAfterParens ls
-        , "prettyprint_spaceAfterBrackets" .= prettyprint_spaceAfterBrackets ls
-        , "prettyprint_spaceAfterBraces" .= prettyprint_spaceAfterBraces ls
+        , "prettyprint_spaceBetweenParens" .= prettyprint_spaceBetweenParens ls
+        , "prettyprint_spaceBetweenBrackets" .= prettyprint_spaceBetweenBrackets ls
+        , "prettyprint_spaceBetweenBraces" .= prettyprint_spaceBetweenBraces ls
         , "prettyprint_spaceEmptyParens" .= prettyprint_spaceEmptyParens ls
         , "prettyprint_spaceEmptyBraces" .= prettyprint_spaceEmptyBraces ls
         , "prettyprint_spaceAfterLabel" .= prettyprint_spaceAfterLabel ls

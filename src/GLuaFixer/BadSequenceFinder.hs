@@ -269,13 +269,13 @@ pNotTToken :: Token -> AParser MToken
 pNotTToken t = pTSatisfy (t /=)
 
 -- | Warn about adding or removing spaces after an opening parenthesis. What it actually checks for
--- and wants the user to do depends on the prettyprint_spaceAfterParens and
+-- and wants the user to do depends on the prettyprint_spaceBetweenParens and
 -- prettyprint_spaceEmptyParens settings
 spaceAfterParenthesis :: LintSettings -> AParser Issue
 spaceAfterParenthesis settings
-    | not (lint_spaceAfterParens settings) = parserZero
+    | not (lint_spaceBetweenParens settings) = parserZero
     | otherwise =
-        case (prettyprint_spaceAfterParens settings, prettyprint_spaceEmptyParens settings) of
+        case (prettyprint_spaceBetweenParens settings, prettyprint_spaceEmptyParens settings) of
           (True, True) ->
             SpaceAfterParenthesis AddSpace <$ try (pMTok LRound >> notWhitespace)
           (False, False) ->
@@ -296,9 +296,9 @@ spaceAfterParenthesis settings
 -- | Warn about adding or removing spaces before a closing parenthesis
 spaceBeforeParenthesis :: LintSettings -> AParser Issue
 spaceBeforeParenthesis settings
-    | not (lint_spaceAfterParens settings) = parserZero
+    | not (lint_spaceBetweenParens settings) = parserZero
     | otherwise =
-        case (prettyprint_spaceAfterParens settings, prettyprint_spaceEmptyParens settings) of
+        case (prettyprint_spaceBetweenParens settings, prettyprint_spaceEmptyParens settings) of
           (True, True) ->
             SpaceBeforeParenthesis AddSpace <$ try (notWhitespace >> pMTok RRound)
           (False, False) ->
@@ -315,13 +315,13 @@ spaceBeforeParenthesis settings
       _ -> True
 
 -- | Warn about adding or removing spaces after an opening brace (`}`). What it actually checks for
--- and wants the user to do depends on the prettyprint_spaceAfterBraces and
+-- and wants the user to do depends on the prettyprint_spaceBetweenBraces and
 -- prettyprint_spaceEmptyBraces settings
 spaceAfterBraces :: LintSettings -> AParser Issue
 spaceAfterBraces settings
-    | not (lint_spaceAfterBraces settings) = parserZero
+    | not (lint_spaceBetweenBraces settings) = parserZero
     | otherwise =
-        case (prettyprint_spaceAfterBraces settings, prettyprint_spaceEmptyBraces settings) of
+        case (prettyprint_spaceBetweenBraces settings, prettyprint_spaceEmptyBraces settings) of
           (True, True) ->
             SpaceAfterBrace AddSpace <$ try (pMTok LCurly >> notWhitespace)
           (False, False) ->
@@ -342,9 +342,9 @@ spaceAfterBraces settings
 -- | Warn about adding or removing spaces before a closing brace (`}`)
 spaceBeforeBraces :: LintSettings -> AParser Issue
 spaceBeforeBraces settings
-    | not (lint_spaceAfterBraces settings) = parserZero
+    | not (lint_spaceBetweenBraces settings) = parserZero
     | otherwise =
-        case (prettyprint_spaceAfterBraces  settings, prettyprint_spaceEmptyBraces settings) of
+        case (prettyprint_spaceBetweenBraces  settings, prettyprint_spaceEmptyBraces settings) of
           (True, True) ->
             SpaceBeforeBrace AddSpace <$ try (notWhitespace >> pMTok RCurly)
           (False, False) ->
@@ -361,11 +361,11 @@ spaceBeforeBraces settings
       _ -> True
 
 -- | Warn about adding or removing spaces after an opening bracket (`[`). What it actually checks
--- for and wants the user to do depends on the prettyprint_spaceAfterBracket
+-- for and wants the user to do depends on the prettyprint_spaceBetweenBracket
 spaceAfterBrackets :: LintSettings -> AParser Issue
 spaceAfterBrackets settings
-    | not (lint_spaceAfterBrackets settings) = parserZero
-    | prettyprint_spaceAfterBrackets settings =
+    | not (lint_spaceBetweenBrackets settings) = parserZero
+    | prettyprint_spaceBetweenBrackets settings =
       SpaceAfterBracket AddSpace <$ try (pMTok LSquare >> notWhitespace)
     | otherwise =
       SpaceAfterBracket RemoveSpace <$ try (pMTok LSquare >> pTSatisfy isSpaces)
@@ -373,8 +373,8 @@ spaceAfterBrackets settings
 -- | Warn about adding or removing spaces before a closing bracket (`]`)
 spaceBeforeBrackets :: LintSettings -> AParser Issue
 spaceBeforeBrackets settings
-    | not (lint_spaceAfterBrackets settings) = parserZero
-    | prettyprint_spaceAfterBrackets settings =
+    | not (lint_spaceBetweenBrackets settings) = parserZero
+    | prettyprint_spaceBetweenBrackets settings =
       SpaceBeforeBracket AddSpace <$ try (notWhitespace >> pMTok RSquare)
     | otherwise =
       SpaceBeforeBracket RemoveSpace <$ try (pTSatisfy isSpaces >> pMTok RSquare)
