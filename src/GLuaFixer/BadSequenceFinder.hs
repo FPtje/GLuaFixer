@@ -375,9 +375,9 @@ spaceBeforeBrackets :: LintSettings -> AParser Issue
 spaceBeforeBrackets settings
     | not (lint_spaceAfterBrackets settings) = parserZero
     | prettyprint_spaceAfterBrackets settings =
-      SpaceAfterBracket AddSpace <$ try (notWhitespace >> pMTok RSquare)
+      SpaceBeforeBracket AddSpace <$ try (notWhitespace >> pMTok RSquare)
     | otherwise =
-      SpaceAfterBracket RemoveSpace <$ try (pTSatisfy isSpaces >> pMTok RSquare)
+      SpaceBeforeBracket RemoveSpace <$ try (pTSatisfy isSpaces >> pMTok RSquare)
 
 -- | Parser for all profanity
 profanitySequence :: LintSettings -> AParser Issue
