@@ -60,6 +60,8 @@ Example `glualint.json` with the default options:
     "lint_spaceBetweenBrackets": false,
     "lint_spaceBetweenBraces": false,
     "lint_ignoreFiles": [],
+    "lint_spaceBeforeComma": false,
+    "lint_spaceAfterComma": false,
 
     "prettyprint_spaceBetweenParens": false,
     "prettyprint_spaceBetweenBrackets": false,
@@ -110,6 +112,8 @@ Option | Description
 `lint_spaceBetweenParens` | Whether to warn about there being spaces between parentheses. This option used to be named `lint_spaceAfterParens`. For backwards compatibility that option still works.
 `lint_spaceBetweenBrackets` | Whether to warn about there being spaces between brackets. This option used to be named `lint_spaceAfterBrackets`. For backwards compatibility that option still works.
 `lint_spaceBetweenBraces` | Whether to warn about there being spaces between braces. This option used to be named `lint_spaceAfterBraces`. For backwards compatibility that option still works.
+`lint_spaceBeforeComma` | Whether to warn about spaces before the comma. This option depends on `prettyprint_spaceBeforeComma` on whether the space is wanted.
+`lint_spaceAfterComma` | Whether to warn about spaces after the comma. This option depends on `prettyprint_spaceAfterComma` on whether the space is wanted.
 
 ## Pretty print options
 These options affect the pretty printing functionality of `glualint`.

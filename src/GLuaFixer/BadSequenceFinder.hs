@@ -379,6 +379,24 @@ spaceBeforeBrackets settings
     | otherwise =
       SpaceBeforeBracket RemoveSpace <$ try (pTSatisfy isSpaces >> pMTok RSquare)
 
+-- | Warn about adding or removing spaces after a comma
+spaceAfterComma :: LintSettings -> AParser Issue
+spaceAfterComma settings
+    | not (lint_spaceAfterComma settings) = parserZero
+    | prettyprint_spaceAfterComma settings =
+      SpaceAfterComma AddSpace <$ try (pMTok Comma >> notWhitespace)
+    | otherwise =
+      SpaceAfterComma RemoveSpace <$ try (pMTok Comma >> pTSatisfy isSpaces)
+
+-- | Warn about adding or removing spaces before a comma
+spaceBeforeComma :: LintSettings -> AParser Issue
+spaceBeforeComma settings
+    | not (lint_spaceBeforeComma settings) = parserZero
+    | prettyprint_spaceBeforeComma settings =
+      SpaceBeforeComma AddSpace <$ try (notWhitespace >> pMTok Comma)
+    | otherwise =
+      SpaceBeforeComma RemoveSpace <$ try (pTSatisfy isSpaces >> pMTok Comma)
+
 -- | Parser for all profanity
 profanitySequence :: LintSettings -> AParser Issue
 profanitySequence opts = if not (lint_profanity opts) then parserZero else Profanity <$ (
@@ -417,7 +435,10 @@ badSequence opts =
     spaceBeforeBraces opts <|>
 
     spaceAfterBrackets opts <|>
-    spaceBeforeBrackets opts
+    spaceBeforeBrackets opts <|>
+
+    spaceAfterComma opts <|>
+    spaceBeforeComma opts
 
 -- | Creates a warning for a certain sequence at any position
 badSequenceWarning :: Region -> Issue -> [FilePath -> LintMessage] -> [FilePath -> LintMessage]

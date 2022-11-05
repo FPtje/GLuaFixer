@@ -40,6 +40,8 @@ data LintSettings =
     , lint_spaceBetweenParens :: !Bool
     , lint_spaceBetweenBrackets :: !Bool
     , lint_spaceBetweenBraces :: !Bool
+    , lint_spaceBeforeComma :: !Bool
+    , lint_spaceAfterComma :: !Bool
     , lint_ignoreFiles :: ![String]
 
     , prettyprint_spaceBetweenParens :: !Bool
@@ -87,6 +89,8 @@ defaultLintSettings =
     , lint_spaceBetweenParens = False
     , lint_spaceBetweenBrackets = False
     , lint_spaceBetweenBraces = False
+    , lint_spaceBeforeComma = False
+    , lint_spaceAfterComma = False
     , lint_ignoreFiles = []
 
     , prettyprint_spaceBetweenParens = False
@@ -142,6 +146,9 @@ instance FromJSON LintSettings where
 
           (v .:? "lint_spaceBetweenBraces" .!= lint_spaceBetweenBraces defaultLintSettings <|>
           v .:? "lint_spaceAfterBraces" .!= lint_spaceBetweenBraces defaultLintSettings) <*>
+
+          v .:? "lint_spaceBeforeComma" .!= lint_spaceBeforeComma defaultLintSettings <*>
+          v .:? "lint_spaceAfterComma" .!= lint_spaceAfterComma defaultLintSettings <*>
 
           v .:? "lint_ignoreFiles" .!= lint_ignoreFiles defaultLintSettings <*>
 

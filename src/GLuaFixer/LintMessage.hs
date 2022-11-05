@@ -68,6 +68,8 @@ data Issue
   | SpaceBeforeBracket !RemoveOrAddSpace
   | SpaceAfterBrace !RemoveOrAddSpace
   | SpaceBeforeBrace !RemoveOrAddSpace
+  | SpaceAfterComma !RemoveOrAddSpace
+  | SpaceBeforeComma !RemoveOrAddSpace
 
   -- Issues found in the lexicon (see LexLint.ag)
   | TrailingWhitespace
@@ -134,6 +136,10 @@ issueDescription = \case
   SpaceAfterBrace AddSpace -> "Style: Please add a space after the brace"
   SpaceBeforeBrace RemoveSpace -> "Style: Please remove the space before the brace"
   SpaceBeforeBrace AddSpace -> "Style: Please add a space before the brace"
+  SpaceAfterComma RemoveSpace -> "Style: Please remove the space after the comma"
+  SpaceAfterComma AddSpace -> "Style: Please add a space after the comma"
+  SpaceBeforeComma RemoveSpace -> "Style: Please remove the space before the comma"
+  SpaceBeforeComma AddSpace -> "Style: Please add a space before the comma"
 
   TrailingWhitespace -> "Trailing whitespace"
   InconsistentTabsSpaces -> "Inconsistent use of tabs and spaces for indentation"
@@ -188,6 +194,8 @@ issueTitle = \case
   SpaceBeforeBracket _ -> "Space before bracket"
   SpaceAfterBrace _ -> "Space after brace"
   SpaceBeforeBrace _ -> "Space before brace"
+  SpaceAfterComma _ -> "Space after comma"
+  SpaceBeforeComma _ -> "Space before comma"
   InconsistentTabsSpaces -> "Syntax inconsistency"
   SyntaxInconsistency _ _ -> "Syntax inconsistency"
   VariableShadows _ _ -> "Shadowing"
