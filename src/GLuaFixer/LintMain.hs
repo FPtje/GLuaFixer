@@ -245,7 +245,14 @@ lintFile :: LintSettings -> FilePath -> String -> IO Bool
 lintFile settings filePath contents = do
     let msgs = lint settings filePath contents
     logFormat <- logFormatChoiceToLogFormat $ log_format settings
-    mapM_ (putStrLn . formatLintMessage logFormat) msgs
+    case logFormat of
+      StandardLogFormat ->
+        mapM_ (putStrLn . formatLintMessage StandardLogFormat) msgs
+      GithubLogFormat -> do
+        -- When the log format is GitHub, also print in the regular format. GitHub actions hide the
+        -- GitHub specific output from the logs for some reason.
+        mapM_ (putStrLn . formatLintMessage GithubLogFormat) msgs
+        mapM_ (putStrLn . formatLintMessage StandardLogFormat) msgs
     pure $ null msgs
 
 -- | Lint a string, using parsec
