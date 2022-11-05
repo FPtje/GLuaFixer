@@ -1,9 +1,9 @@
-glualint
-==========
+# glualint
 
 glualint - Linter and pretty printer for Garry's Mod's variant of Lua.
 
-# Installing
+## Installing
+
 1. Download the latest version of `glualint` from [the releases page](https://github.com/FPtje/GLuaFixer/releases) OR [compile it yourself](https://github.com/FPtje/GLuaFixer/blob/master/Compiling.md).
 2. Place the `glualint` executable inside some folder.
 3. Add the folder you put `glualint` in to your `PATH`. How this is done differs per operating system. If you're not sure how to do this, please Google `"Add to path <YOUR OS>"`.
@@ -11,7 +11,7 @@ glualint - Linter and pretty printer for Garry's Mod's variant of Lua.
 
 After performing these steps, you can run `glualint` from the terminal or let your text editor use it as your linter. **Failing to specifically perform the third step will make `glualint` very unlikely to work**.
 
-# Command line parameters
+## Command line parameters
 
 Parameter | Description
 ----------|------------
@@ -24,7 +24,8 @@ Parameter | Description
 `--analyse-globals` | Show global variables/functions that this file defines.
 `--test` | For debugging: test whether glualint works correctly on the given files and/or folders. Tries to parse with the two available parsers, then pretty prints and tries to parse the pretty printed result. It will show errors when it fails.
 
-# Configuring glualint
+## Configuring glualint
+
 `glualint` Allows some configuration. This is done through a file called `glualint.json` or `.glualint.json`. `glualint` looks for this file in three places (in order of priority)
 
 - The file you give to the `--config` parameter (when using the terminal)
@@ -34,6 +35,7 @@ Parameter | Description
 Note: The file **must** either be called `glualint.json` or `.glualint.json`.
 
 Example `glualint.json` with the default options:
+
 ```json
 {
     "lint_maxScopeDepth": 7,
@@ -83,9 +85,10 @@ Example `glualint.json` with the default options:
 }
 ```
 
-# All options explained:
+## All options explained
 
-## Linter options
+### Linter options
+
 Option | Description
 ----------|------------
 `lint_maxScopeDepth` | Maximum depth of scopes in your code. Any terrible scripter can build the most atrocious sideways code pyramids, usually without knowing. The number here is at which step the linter will start calling you out on it. Set to `0` if you're king Tut and want to disable it.
@@ -115,7 +118,8 @@ Option | Description
 `lint_spaceBeforeComma` | Whether to warn about spaces before the comma. This option depends on `prettyprint_spaceBeforeComma` on whether the space is wanted.
 `lint_spaceAfterComma` | Whether to warn about spaces after the comma. This option depends on `prettyprint_spaceAfterComma` on whether the space is wanted.
 
-## Pretty print options
+### Pretty print options
+
 These options affect the pretty printing functionality of `glualint`.
 
 Option | Description
@@ -136,34 +140,41 @@ Option | Description
 `prettyprint_assumeOperatorAssociativity` | Only takes effect when `prettyprint_minimizeParens` is `true`. It decides whether parameters can be removed when the involved operators are assumed associative. Examples: `a * (b * c)`, `a and (b and c)`. This assumption is generally true, except for floating point numbers, where removing parentheses can actually change the outcome of the calculation. See [Stack Overflow](https://stackoverflow.com/a/10371890). This option is set to `true` by default, because the expectation is that this will not be problematic even if it affects your code. In a very rare case, this might cause trouble, though. You might want to consider turning this off if you have floating point code that heavily relies on evaluation order. You may also choose to leave this option on and ensure evaluation order by explicitly setting variables.
 `prettyprint_rejectInvalidCode` | Whether not to pretty print when the code is syntactically invalid
 
-
-## Other options
+### Other options
 
 - `log_format`: Decides how to format linter warnings and error messages. Possible values are `"auto"`, `"standard"` and `"github"`. The `"github"` output format is specifically designed for usage with GitHub actions. The default value is `"auto"`, With `"auto"`, the log format will be `"github"` when the environment variables `GITHUB_ACTIONS` and `GITHUB_WORKFLOW` are both present, and `"standard"` otherwise.
 
-# Editor Plugins
+## Editor Plugins
+
 Through community support, GLuaFixer is supported across a wide variety of popular editors.
 
 Here's a list of plugins we recommend (PRs for more tools welcome!):
 
 ### Sublime
- - https://github.com/FPtje/SublimeLinter-contrib-glualint
+
+- <https://github.com/FPtje/SublimeLinter-contrib-glualint>
 
 ### Atom
- - https://github.com/FPtje/linter-glualint
+
+- <https://github.com/FPtje/linter-glualint>
 
 ### VS Code
- - [vscode-glualint](https://marketplace.visualstudio.com/items?itemName=goz3rr.vscode-glualint)
- - [GLua Enhanced](https://marketplace.visualstudio.com/items?itemName=venner.vscode-glua-enhanced)
+
+- [vscode-glualint](https://marketplace.visualstudio.com/items?itemName=goz3rr.vscode-glualint)
+- [GLua Enhanced](https://marketplace.visualstudio.com/items?itemName=venner.vscode-glua-enhanced)
 
 ### Vim
- - https://github.com/CFC-Servers/gluafixer.vim
 
-# Reusable Workflow
+- <https://github.com/CFC-Servers/gluafixer.vim>
+
+## Reusable Workflow
+
 You can easily run GLuaFixer in your own Workflows using the included Reusable Workflow.
 
 ### Setup
+
 To run GLuaFixer on all of your PRs, create a new file in your repository: `.github/workflows/glualint.yml` with the following contents:
+
 ```yml
 name: GLuaFixer
 
@@ -177,15 +188,17 @@ jobs:
 
 Now, every time you make or update a PR, GLuaFixer will run and report any linting violations right on your PR!
 
-
 ### Configuration
+
 The GLuaFixer Workflow can be configured, too.
 
 You have two options for configuration:
- - Include a file in your repository containing the GLuaFixer config
- - Upload your GLuaFixer config somewhere (gist.github.com, pastebin/hastebin, etc.)
+
+- Include a file in your repository containing the GLuaFixer config
+- Upload your GLuaFixer config somewhere (gist.github.com, pastebin/hastebin, etc.)
 
 Then, modify your Workflow like so:
+
 ```yml
 name: GLuaLint
 
