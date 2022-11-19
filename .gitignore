@@ -12,3 +12,8 @@ cabal.sandbox.config
 /result
 dist-newstyle
 .direnv
+.ipynb_checkpoints
+*.ipynb
+*.zip
+.glualint.json
+glualint.json
