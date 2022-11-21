@@ -10,6 +10,6 @@ echo "Packing glualint version $VERSION"
 
 cp result/bin/glualint .
 
-zip "glualint-$VERSION-linux.zip" glualint
+zip "glualint-$VERSION-x86_64-linux.zip" glualint
 
 rm -f glualint
