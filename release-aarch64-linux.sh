@@ -25,6 +25,10 @@ set -o errexit \
     -o nounset \
     -o pipefail
 
+if [ -z ${CACHIX_AUTH_TOKEN+x} ]; then
+    echo "Please set the CACHIX_AUTH_TOKEN"
+    exit 1
+fi;
 
 DRV_PATH=$(nix path-info --derivation .#packages.aarch64-linux.glualint-static)
 
@@ -33,6 +37,8 @@ nix copy --derivation --to "ssh://$BUILD_HOST" "$DRV_PATH"
 echo "Copied $DRV_PATH to $BUILD_HOST"
 OUT_PATH=$(ssh "$BUILD_HOST" "nix build --print-build-logs --print-out-paths $DRV_PATH")
 VERSION=$(ssh "$BUILD_HOST" $OUT_PATH/bin/glualint --version)
-scp "$BUILD_HOST:$OUT_PATH/bin/glualint" ./glualint
+nix copy --from "ssh://$BUILD_HOST" --no-check-sigs "$OUT_PATH"
+cp "$OUT_PATH/bin/glualint" ./glualint
 zip "glualint-$VERSION-aarch64-linux.zip" glualint
 rm -f glualint
+cachix push glualint "$OUT_PATH"
