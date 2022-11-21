@@ -15,7 +15,7 @@ src = lib.cleanSourceWith rec {
         ".ag"
         ".cabal"
         ".hs"
-        ".sh"
+        "AGGenerator.sh"
         "LICENSE"
       ];
       suffixDenylist = [
