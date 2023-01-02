@@ -18,13 +18,26 @@ jobs:
         with:
           path: project
 
+      - name: Get GluaLint Download Link
+        id: download-link
+        uses: actions/github-script@v6
+        with:
+          retries: 5
+          script: |
+
+            const latest = await github.rest.repos.getLatestRelease({
+              owner: "FPtje",
+              repo: "GLuaFixer",
+            })
+
+            const latestAsset = latest.data.assets.filter(asset => asset.name.endsWith("-x86_64-linux.zip"))[0]
+            console.log(latestAsset.browser_download_url)
+            return latestAsset.browser_download_url
+
       - name: Prepare GLuaLint
         run: |
           cd $GITHUB_WORKSPACE
-          curl --retry 3 --location https://api.github.com/repos/FPtje/GLuaFixer/releases/latest \
-          | jq '.assets[] | select(.name | endswith("x86_64-linux.zip")) | .browser_download_url' \
-          | tr --delete \" \
-          | wget --output-document=glualint.zip --input-file=-
+          curl --retry 3 --location "${{steps.download-link.outputs.result}}" --output "$GITHUB_WORKSPACE/glualint.zip"
 
       - name: Extract GLuaLint
         run: |
@@ -39,7 +52,7 @@ jobs:
             if [[ "$GLUALINT_PATH" == http* ]];
             then
                 echo "::info:: Given remote glualint path. Downloading..."
-                curl --verbose --retry 3 --location "$GLUALINT_PATH" > "$GITHUB_WORKSPACE/.glualint.json"
+                curl --verbose --retry 3 --location "$GLUALINT_PATH" --output "$GITHUB_WORKSPACE/.glualint.json"
             else
                 echo "::info:: Given local path to glualint config. Copying..."
                 cp --verbose "$GITHUB_WORKSPACE/project/$GLUALINT_PATH" "$GITHUB_WORKSPACE/.glualint.json"
