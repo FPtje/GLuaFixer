@@ -78,6 +78,9 @@ data Issue
     !String -- ^ First encountered
     !String -- ^ Second encountered
 
+  -- Line length limit (see LineLimitParser.hs)
+  | LineTooLong
+
   -- Issues found in the AST (see ASTLint.ag)
   | VariableShadows
     !String -- ^ Name of the variable being shadowed
@@ -146,6 +149,8 @@ issueDescription = \case
   SyntaxInconsistency firstEncountered secondEncountered ->
     "Inconsistent use of '" ++ firstEncountered ++ "' and '" ++ secondEncountered ++ "'"
 
+  LineTooLong -> "Style: Line too long"
+
   VariableShadows lbl (Region start _) ->
     "Variable '" ++ lbl ++ "' shadows existing binding, defined at " ++ renderPos start
   GotoAsIdentifier ->
@@ -198,6 +203,7 @@ issueTitle = \case
   SpaceBeforeComma _ -> "Space before comma"
   InconsistentTabsSpaces -> "Syntax inconsistency"
   SyntaxInconsistency _ _ -> "Syntax inconsistency"
+  LineTooLong -> "Line too long"
   VariableShadows _ _ -> "Shadowing"
   GotoAsIdentifier -> "Goto"
   InconsistentVariableNaming -> "Variable inconsistency"
