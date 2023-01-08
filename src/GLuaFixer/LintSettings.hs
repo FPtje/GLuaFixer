@@ -42,6 +42,7 @@ data LintSettings =
     , lint_spaceBetweenBraces :: !Bool
     , lint_spaceBeforeComma :: !Bool
     , lint_spaceAfterComma :: !Bool
+    , lint_maxLineLength :: !Int
     , lint_ignoreFiles :: ![String]
 
     , prettyprint_spaceBetweenParens :: !Bool
@@ -91,6 +92,7 @@ defaultLintSettings =
     , lint_spaceBetweenBraces = False
     , lint_spaceBeforeComma = False
     , lint_spaceAfterComma = False
+    , lint_maxLineLength = 0
     , lint_ignoreFiles = []
 
     , prettyprint_spaceBetweenParens = False
@@ -149,6 +151,7 @@ instance FromJSON LintSettings where
 
           v .:? "lint_spaceBeforeComma" .!= lint_spaceBeforeComma defaultLintSettings <*>
           v .:? "lint_spaceAfterComma" .!= lint_spaceAfterComma defaultLintSettings <*>
+          v .:? "lint_maxLineLength" .!= lint_maxLineLength defaultLintSettings <*>
 
           v .:? "lint_ignoreFiles" .!= lint_ignoreFiles defaultLintSettings <*>
 
@@ -221,6 +224,7 @@ instance ToJSON LintSettings where
         , "lint_spaceBetweenParens" .= lint_spaceBetweenParens ls
         , "lint_spaceBetweenBrackets" .= lint_spaceBetweenBrackets ls
         , "lint_spaceBetweenBraces" .= lint_spaceBetweenBraces ls
+        , "lint_maxLineLength" .= lint_maxLineLength ls
         , "lint_ignoreFiles" .= lint_ignoreFiles ls
         , "prettyprint_spaceBetweenParens" .= prettyprint_spaceBetweenParens ls
         , "prettyprint_spaceBetweenBrackets" .= prettyprint_spaceBetweenBrackets ls
