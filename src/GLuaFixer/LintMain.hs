@@ -5,6 +5,7 @@ module Main where
 import "glualint-lib" GLua.AG.PrettyPrint
 import "glualint-lib" GLua.Parser
 import "glualint-lib" GLua.ASTInstances ()
+import "glualint-lib" GLua.LineLimitParser (execParseLineLimits, LineLimit (LineLimit))
 import "glualint-lib" GLua.TokenTypes (isWhitespace)
 import "glualint-lib" GLuaFixer.AG.ASTLint
 import "glualint-lib" GLuaFixer.AnalyseProject
@@ -262,10 +263,11 @@ lint config f contents =
       Left errs -> errs
       Right (lexWarnings, ast) ->
         let
+            lineLengthWarnings = execParseLineLimits f (LineLimit $ lint_maxLineLength config) contents
             parserWarnings = map ($f) $ astWarnings config ast
         in
             -- Print all warnings
-            sortLintMessages $ lexWarnings ++ parserWarnings
+            sortLintMessages $ lineLengthWarnings ++ lexWarnings ++ parserWarnings
 
 -- | Pretty print, uses the uu-parsinglib library
 legacyPrettyPrintStdin :: Maybe Indentation -> IO ()

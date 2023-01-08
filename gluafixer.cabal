@@ -48,6 +48,7 @@ library
     , GLua.PSParser
     , GLua.TokenTypes
     , GLua.ASTInstances
+    , GLua.LineLimitParser
     , GLuaFixer.AnalyseProject
     , GLuaFixer.BadSequenceFinder
     , GLuaFixer.LintMessage
