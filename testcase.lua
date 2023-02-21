@@ -185,3 +185,11 @@ foo = { -- Single line comment
   with newlines
 ]]
 }
+
+-- This should not cause a <<loop>> error upon pretty printing
+-- https://github.com/FPtje/GLuaFixer/issues/144 Also related to
+-- https://github.com/FPtje/GLuaFixer/issues/129, the fix of which introduced
+-- this issue.
+a(function() end)
+a(function() -- foo
+end)
