@@ -35,7 +35,7 @@ import qualified System.Signal as Signal
 
 
 version :: String
-version = "1.24.0"
+version = "1.24.1"
 
 main :: IO ()
 main = do
