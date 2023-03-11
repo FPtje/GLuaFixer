@@ -20,6 +20,7 @@ import Control.Monad (unless, void)
 import Data.Functor ((<&>))
 import Data.IORef (IORef, atomicWriteIORef, newIORef, readIORef)
 import Data.Maybe (fromMaybe, fromJust)
+import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Options.Applicative ((<**>))
 import System.Directory (doesDirectoryExist, getCurrentDirectory)
 import System.Environment (getArgs, getProgName)
@@ -39,6 +40,10 @@ version = "1.24.1"
 
 main :: IO ()
 main = do
+  -- Set the encoding of the program to UTF-8. This is to prevent problems when the system's locale
+  -- is set to anything but UTF-8.
+  -- See https://github.com/FPtje/GLuaFixer/issues/145
+  setLocaleEncoding utf8
   -- Keep track of whether process is cancelled through some signal
   aborted <- newIORef Continue
 
