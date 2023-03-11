@@ -8,7 +8,7 @@ if [ -z ${CACHIX_AUTH_TOKEN+x} ]; then
     exit 1
 fi;
 
-nix build
+nix build --print-build-logs --print-out-paths
 
 VERSION=$(result/bin/glualint --version)
 echo "Packing glualint version $VERSION"
