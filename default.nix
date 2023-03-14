@@ -2,7 +2,6 @@
 , directory, deepseq, filemanip, filepath, ListLike, MissingH, mtl
 , optparse-applicative, parsec, pretty, signal, lib, uu-parsinglib
 , uuagc, uuagc-cabal, vector
-, pkgs
 }:
 let
 # Clean up the source of the derivation to prevent rebuilds
@@ -42,12 +41,7 @@ in mkDerivation {
   libraryHaskellDepends = [
     aeson array base bytestring containers directory filemanip filepath
     ListLike MissingH mtl optparse-applicative parsec pretty signal
-    uu-parsinglib uuagc uuagc-cabal deepseq
-
-    # Require haskellPackages' uuagc and uuagc-cabal specifically
-    # Otherwise compilation with ghcjs will fuck up.
-    pkgs.haskellPackages.uuagc pkgs.haskellPackages.uuagc-cabal
-    vector
+    uu-parsinglib uuagc uuagc-cabal deepseq vector
   ];
   executableHaskellDepends = [ base directory ];
 
