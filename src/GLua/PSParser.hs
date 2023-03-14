@@ -1,15 +1,62 @@
-{-# LANGUAGE FlexibleInstances,
-             MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module GLua.PSParser where
 
 import GLua.TokenTypes
+    ( isWhitespace, mpos, rgEnd, rgStart, splitComments, tokenSize )
 import GLua.AG.Token
+    ( Region(..),
+      MToken(..),
+      Token(..) )
 import GLua.AG.AST
+    ( AST(..),
+      AReturn(..),
+      Args(..),
+      BinOp(..),
+      Block(..),
+      Expr(..),
+      Field(..),
+      FieldSep(..),
+      FuncName(..),
+      MElse(MElse),
+      MElseIf(MElseIf),
+      MExpr(..),
+      MStat(..),
+      PFExprSuffix(..),
+      PrefixExp(..),
+      Stat(..),
+      UnOp(..) )
 import qualified GLua.Lexer as Lex
 
 import Text.Parsec
-import Text.Parsec.Pos
+    ( SourcePos,
+      ParseError,
+      SourceName,
+      anyToken,
+      between,
+      chainl1,
+      choice,
+      eof,
+      many1,
+      option,
+      optionMaybe,
+      sepBy1,
+      incSourceColumn,
+      sourceColumn,
+      sourceLine,
+      (<?>),
+      (<|>),
+      getPosition,
+      getState,
+      lookAhead,
+      many,
+      putState,
+      runParser,
+      tokenPrim,
+      try,
+      Parsec )
+import Text.Parsec.Pos ( newPos )
 import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
 
 type AParser = Parsec [MToken] LineColPos

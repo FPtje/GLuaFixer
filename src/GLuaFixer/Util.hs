@@ -1,14 +1,22 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module GLuaFixer.Util where
 
-import GLua.AG.AST
+import GLua.AG.AST ( AST )
 import qualified GLua.PSLexer as PSL
 import qualified GLua.PSParser as PSP
-import GLuaFixer.AG.LexLint
+import GLuaFixer.AG.LexLint ( lintWarnings, fixedLexPositions )
 import GLuaFixer.LintMessage
+    ( LogFormatChoice,
+      Issue(IssueParseError),
+      Severity(LintError),
+      LintMessage(LintMessage) )
 import GLuaFixer.LintSettings
-import GLuaFixer.BadSequenceFinder
+    ( defaultLintSettings,
+      LintSettings(lint_syntaxErrors, prettyprint_indentation,
+                   log_format, lint_ignoreFiles) )
+import GLuaFixer.BadSequenceFinder ( sequenceWarnings )
 
 import Control.DeepSeq (deepseq, force)
 import Control.Monad (void)
@@ -26,6 +34,7 @@ import Text.Parsec.Error (errorPos)
 
 import Control.Applicative ((<|>))
 import Data.Aeson (eitherDecode)
+import Data.String (IsString)
 
 data StdInOrFiles
   = UseStdIn
@@ -38,7 +47,8 @@ data Abort
   deriving (Show)
 
 -- | Indentation used for pretty printing code
-type Indentation = String
+newtype Indentation = Indentation { unIndentation :: String }
+  deriving IsString
 
 -- | Finds all Lua files in a folder
 findLuaFiles :: [GlobPattern] -> FilePath -> IO [FilePath]
@@ -183,7 +193,7 @@ forEachInput mbIndent mbOutputFormat stdInOrFiles aborted onStdIn onFile =
   where
     overrideSettings :: LintSettings -> LintSettings
     overrideSettings settings = settings
-      { prettyprint_indentation = fromMaybe (prettyprint_indentation settings) mbIndent
+      { prettyprint_indentation = maybe (prettyprint_indentation settings) unIndentation mbIndent
       , log_format = fromMaybe (log_format settings) mbOutputFormat
       }
 

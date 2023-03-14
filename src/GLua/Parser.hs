@@ -1,8 +1,9 @@
-{-# LANGUAGE FlexibleInstances,
-            TypeSynonymInstances,
-            MultiParamTypeClasses,
-            Rank2Types, FlexibleContexts, NoMonomorphismRestriction,
-            CPP #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE CPP #-}
 
 -- | Parser based on <http://www.lua.org/manual/5.2/manual.html#9>
 module GLua.Parser where

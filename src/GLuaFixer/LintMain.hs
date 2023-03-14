@@ -19,7 +19,7 @@ import Control.Applicative ((<|>), optional)
 import Control.Monad (unless, void)
 import Data.Functor ((<&>))
 import Data.IORef (IORef, atomicWriteIORef, newIORef, readIORef)
-import Data.Maybe (fromMaybe, fromJust)
+import Data.Maybe (fromJust)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 import Options.Applicative ((<**>))
 import System.Directory (doesDirectoryExist, getCurrentDirectory)
@@ -68,7 +68,7 @@ data Options
      , optsIndentation :: Maybe Indentation
      , optsOutputFormat :: Maybe LogFormatChoice
      , optsCommand :: Command
-     } deriving (Show)
+     }
 
 -- | Available subcommands
 data Command
@@ -104,7 +104,7 @@ cliParser = Options
         <> Opt.help "Explicitly define config file location. By default it will search for it."
         )
 
-    indentOption :: Opt.Parser (Maybe String)
+    indentOption :: Opt.Parser (Maybe Indentation)
     indentOption =
       optional $ Opt.strOption
         (  Opt.long "indentation"
@@ -181,7 +181,7 @@ runGluaLint opts aborted = do
           prettyPrintStdin
           prettyPrintFile
 
-        unless noErrors $ exitFailure
+        unless noErrors exitFailure
       AnalyseGlobals files ->
         analyseGlobals files
       DumpAst stdinOrFiles ->
@@ -306,7 +306,7 @@ legacyPrettyPrintFiles aborted ind = mapM_ pp
 
 overrideLintSettingsIndentation :: Maybe Indentation -> (LintSettings -> LintSettings)
 overrideLintSettingsIndentation ind settings = settings
-  { prettyprint_indentation = fromMaybe (prettyprint_indentation settings) ind
+  { prettyprint_indentation = maybe (prettyprint_indentation settings) unIndentation ind
   }
 
 -- | Lint a set of files, uses parsec's parser library
@@ -336,8 +336,7 @@ legacyLint ls (f : fs) = do
     (|| hasMsgs) <$> legacyLint ls fs
 
 dumpASTStdin :: LintSettings -> String -> IO ()
-dumpASTStdin settings contents =
-    dumpASTFile settings "stdin" contents
+dumpASTStdin settings = dumpASTFile settings "stdin"
 
 dumpASTFile :: LintSettings -> FilePath -> String -> IO ()
 dumpASTFile settings filePath contents =
@@ -436,9 +435,9 @@ legacyCli aborted ind = \case
       Nothing -> Nothing
       Just (_, fps) -> Just (settings, fps)
   ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : '\'' : ind') : xs ->
-    legacyCli aborted (Just (init ind')) xs
+    legacyCli aborted (Just $ Indentation $ init ind') xs
   ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : ind') : xs ->
-    legacyCli aborted (Just ind') xs
+    legacyCli aborted (Just $ Indentation ind') xs
   f : xs -> do
     legacyCli aborted ind xs <&> \case
       Nothing -> Nothing

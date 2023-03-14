@@ -1,14 +1,39 @@
-{-# LANGUAGE FlexibleInstances,
-             MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module GLua.PSLexer where
 
-import GLua.AG.Token
+import GLua.AG.Token ( Region(..), MToken(..), Token(..) )
 
 import Data.Char(ord)
 import Text.Parsec
-import Text.Parsec.String
-import Text.Parsec.Pos
+    ( SourcePos,
+      ParseError,
+      char,
+      anyChar,
+      digit,
+      endOfLine,
+      noneOf,
+      oneOf,
+      satisfy,
+      space,
+      string,
+      eof,
+      many1,
+      manyTill,
+      option,
+      optionMaybe,
+      sourceColumn,
+      sourceLine,
+      (<?>),
+      (<|>),
+      getPosition,
+      lookAhead,
+      many,
+      parse,
+      try )
+import Text.Parsec.String ( Parser )
+import Text.Parsec.Pos ( newPos )
 import Text.ParserCombinators.UU.BasicInstances(LineColPos(..))
 
 -- | Region start to SourcePos

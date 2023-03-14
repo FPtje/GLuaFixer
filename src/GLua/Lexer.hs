@@ -1,18 +1,41 @@
-{-# LANGUAGE FlexibleInstances,
-            TypeSynonymInstances,
-            MultiParamTypeClasses,
-            Rank2Types, FlexibleContexts, NoMonomorphismRestriction,
-            CPP #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE CPP #-}
 
 -- | Lex GLua into MTokens
 module GLua.Lexer where
 
-import GLua.AG.Token
+import GLua.AG.Token ( Region(..), MToken(..), Token(..) )
 
 import Data.Char (ord)
 import Text.ParserCombinators.UU
-import Text.ParserCombinators.UU.Utils
+    ( P,
+      pEnd,
+      pErrors,
+      (<**>),
+      micro,
+      pPos,
+      parse,
+      (<$$>),
+      pMany,
+      pMaybe,
+      pReturn,
+      pSome,
+      ExtAlternative(opt, (<<|>)) )
+import Text.ParserCombinators.UU.Utils ( pDigit )
 import Text.ParserCombinators.UU.BasicInstances
+    ( Error,
+      LineColPos(..),
+      Str,
+      createStr,
+      pMunch,
+      pSatisfy,
+      pSym,
+      pToken,
+      Insertion(Insertion) )
 
 -- | String parser that maintains positions.
 type LParser a = P (Str Char String LineColPos) a
