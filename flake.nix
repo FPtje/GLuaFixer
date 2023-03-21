@@ -27,7 +27,6 @@
       staticHaskellPackages = pkgs.pkgsStatic.haskell.packages.ghc92.extend haskellOverlay;
     in
     {
-      asdf = haskellPackages;
       packages.glualint = haskellPackages.callPackage ./default.nix { };
       # This has to be about the ugliest hack I've ever written. Somehow the overlay in
       # staticHaskellPackages does not apply.
