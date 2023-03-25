@@ -24,7 +24,7 @@
       packages = {
         glualint = pkgs.glualintPkgs.haskellPackages.glualint;
         glualint-static = pkgs.glualintPkgs.staticHaskellPackages.glualint;
-        defaultPackage = self.packages.${system}.glualint-static;
+        default = self.packages.${system}.glualint-static;
       };
 
       apps.default = {
