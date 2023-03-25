@@ -288,9 +288,9 @@ foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashB
 instance Show Token where
     show = foldToken ((
         id,
-        \s -> "--" ++ s, -- DashComment
+        ("--" ++), -- DashComment
         \d s -> let n = replicate d '=' in "--[" ++ n ++ '[' : s ++ ']' : n ++ "]", -- DashBlockComment
-        \s -> "//" ++ s, -- SlashComment
+        ("//" ++), -- SlashComment
         \s -> "/*" ++ s ++ "*/", -- SlashBlockComment
         ";" -- Semicolon
         ),

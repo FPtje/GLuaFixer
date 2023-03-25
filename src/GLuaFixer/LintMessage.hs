@@ -117,7 +117,7 @@ data LintMessage
   deriving (Eq)
 
 instance Show LintMessage where
-    show lintMsg = formatLintMessageDefault lintMsg
+    show = formatLintMessageDefault
 
 issueDescription :: Issue -> String
 issueDescription = \case
@@ -273,5 +273,4 @@ formatLintMessageGithub (LintMessage severity (Region (LineColPos line col _) (L
 
 -- | Sort lint messages on file and then region
 sortLintMessages :: [LintMessage] -> [LintMessage]
-sortLintMessages msgs =
-    sortOn (\(LintMessage _ rg _ f) -> (f, rg)) msgs
+sortLintMessages = sortOn (\(LintMessage _ rg _ f) -> (f, rg))

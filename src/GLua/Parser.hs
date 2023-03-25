@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE LambdaCase #-}
 
 -- | Parser based on <http://www.lua.org/manual/5.2/manual.html#9>
 module GLua.Parser where
@@ -284,11 +285,18 @@ parseLocFuncName = (\a -> FuncName [a] Nothing) <$> pName
 
 -- | Parse a number into an expression
 parseNumber :: AParser Expr
-parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pMSatisfy isNumber (TNumber "0") "Number"
+parseNumber = toAnumber <$> pMSatisfy isNumber (TNumber "0") "Number"
     where
         isNumber :: MToken -> Bool
         isNumber (MToken _ (TNumber _)) = True
         isNumber _ = False
+
+        -- A better solution would be to have a single `MToken -> Maybe Expr` function, but I am too
+        -- lazy to write that.
+        toAnumber :: MToken -> Expr
+        toAnumber = \case
+          (MToken _ (TNumber str)) -> ANumber str
+          _ -> error "unreachable"
 
 -- | Parse any kind of string
 parseString :: AParser MToken
@@ -499,7 +507,7 @@ parseField = ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* 
                   ( makeUnNamedField <$>
                     (
                       -- There are operators, so the expression goes on beyond the prefixExpression
-                      (\op expr -> Just (op, expr)) <$> parseBinOp <*> parseExpression <<|>
+                      curry Just <$> parseBinOp <*> parseExpression <<|>
                       -- There are no operators after the prefix expression
                       pReturn Nothing
                     )
