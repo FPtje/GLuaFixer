@@ -2,18 +2,38 @@
 
 module Main where
 
-import "glualint-lib" GLua.AG.PrettyPrint
-import "glualint-lib" GLua.Parser
-import "glualint-lib" GLua.ASTInstances ()
-import "glualint-lib" GLua.LineLimitParser (execParseLineLimits, LineLimit (LineLimit))
-import "glualint-lib" GLua.TokenTypes (isWhitespace)
-import "glualint-lib" GLuaFixer.AG.ASTLint
-import "glualint-lib" GLuaFixer.AnalyseProject
-import "glualint-lib" GLuaFixer.LintMessage
-import "glualint-lib" GLuaFixer.LintSettings
-import "glualint-lib" GLuaFixer.Util
+import GLua.AG.PrettyPrint ( prettyprintConf )
+import GLua.Parser ( parseGLua, parseGLuaFromString )
+import GLua.ASTInstances ()
+import GLua.LineLimitParser (execParseLineLimits, LineLimit (LineLimit))
+import GLua.TokenTypes (isWhitespace)
+import GLuaFixer.AG.ASTLint ( astWarnings )
+import GLuaFixer.AnalyseProject ( analyseGlobals )
+import GLuaFixer.LintMessage
+    ( LintMessage,
+      formatLintMessage,
+      logFormatChoiceToLogFormat,
+      sortLintMessages,
+      LogFormat(StandardLogFormat, GithubLogFormat),
+      LogFormatChoice(..) )
+import GLuaFixer.LintSettings
+    ( LintSettings(lint_ignoreFiles, prettyprint_rejectInvalidCode,
+                   lint_maxLineLength, prettyprint_indentation, log_format),
+      lint2ppSetting )
+import GLuaFixer.Util
+    ( doReadFile,
+      doWriteFile,
+      findLuaFiles,
+      forEachInput,
+      forEachInput_,
+      getSettings,
+      parseFile,
+      settingsFromFile,
+      Abort(..),
+      Indentation(..),
+      StdInOrFiles(..) )
 
-import qualified "glualint-lib" GLua.Lexer as Lex
+import qualified GLua.Lexer as Lex
 
 import Control.Applicative ((<|>), optional)
 import Control.Monad (unless, void)
@@ -26,7 +46,7 @@ import System.Directory (doesDirectoryExist, getCurrentDirectory)
 import System.Environment (getArgs, getProgName)
 import System.Exit (exitSuccess, exitFailure, ExitCode (..))
 import System.IO (hPutStrLn, stderr)
-import Data.Foldable
+import Data.Foldable ( for_ )
 
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy as BL

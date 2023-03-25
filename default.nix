@@ -14,11 +14,12 @@ src = lib.cleanSourceWith rec {
         ".ag"
         ".cabal"
         ".hs"
-        "AGGenerator.sh"
         "LICENSE"
       ];
       suffixDenylist = [
         "release-linux.sh"
+        "nix"
+        "installation-instructions"
       ];
     in
       ((type == "directory") ||
