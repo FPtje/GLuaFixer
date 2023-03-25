@@ -5,62 +5,37 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
+  nixConfig = {
+    substituters = "https://cache.nixos.org/ https://glualint.cachix.org";
+    trusted-public-keys =
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= glualint.cachix.org-1:wHSvobqyCtsGg5tvumXl2SKi998JKhEZbbQeupxHHeY=";
+  };
+
   outputs = { self, nixpkgs, flake-utils }: flake-utils.lib.eachDefaultSystem (system:
     let
-      pkgs = nixpkgs.legacyPackages.${system};
-
-      # This override can likely be removed when UUAGC is updated. See
-      # https://github.com/UU-ComputerScience/uuagc/pull/11
-      uuagc-source = pkgs.fetchFromGitHub
-        {
-          owner = "FPtje";
-          repo = "uuagc";
-          rev = "93783365b8e0771b092b9d99264227ca7c5d0823";
-          sha256 = "sha256-hvJ/GShwR1AvSofPmmR4FJMPUwUaCMiL1l1CKcKvQw0=";
-        };
-      haskellOverlay = final: previous: with pkgs.haskell.lib; {
-        uuagc-cabal = final.callCabal2nixWithOptions "uuagc-cabal" uuagc-source "--subpath uuagc/trunk/cabal-plugin" { };
-        uuagc = final.callCabal2nixWithOptions "uuagc-cabal" uuagc-source "--subpath uuagc/trunk" { };
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [ self.overlays.${system}.glualint ];
       };
-
-      haskellPackages = pkgs.haskell.packages.ghc92.extend haskellOverlay;
-      staticHaskellPackages = pkgs.pkgsStatic.haskell.packages.ghc92.extend haskellOverlay;
     in
     {
-      packages.glualint = haskellPackages.callPackage ./default.nix { };
-      # This has to be about the ugliest hack I've ever written. Somehow the overlay in
-      # staticHaskellPackages does not apply.
-      packages.glualint-static = (staticHaskellPackages.callPackage ./default.nix { }).override {
-        uuagc = staticHaskellPackages.uuagc.override { uuagc-cabal = staticHaskellPackages.uuagc-cabal; };
-        uuagc-cabal = staticHaskellPackages.uuagc-cabal;
-      };
-      defaultPackage = self.packages.${system}.glualint-static;
-      staticHaskellPackages = staticHaskellPackages;
+      overlays.glualint = (import ./nix/overlay.nix);
 
-      devShell = pkgs.mkShell {
-        buildInputs = with haskellPackages; [
+      packages = {
+        glualint = pkgs.glualintPkgs.haskellPackages.glualint;
+        glualint-static = pkgs.glualintPkgs.staticHaskellPackages.glualint;
+        defaultPackage = self.packages.${system}.glualint-static;
+      };
+
+      apps.default = {
+        type = "app";
+        program = "${self.packages.${system}.glualint-static}/bin/glualint";
+      };
+
+      devShell = with pkgs.glualintPkgs.haskellPackages; shellFor {
+        packages = p: [ p.glualint ];
+        buildInputs = [
           cabal-install
-          (ghcWithPackages (self: with self; [
-            aeson
-            array
-            base
-            bytestring
-            containers
-            directory
-            filemanip
-            filepath
-            ListLike
-            MissingH
-            mtl
-            optparse-applicative
-            parsec
-            pretty
-            signal
-            uu-parsinglib
-            uuagc
-            uuagc-cabal
-            deepseq
-          ]))
           haskell-language-server
         ];
       };
