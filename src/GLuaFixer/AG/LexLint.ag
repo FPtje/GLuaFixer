@@ -30,15 +30,12 @@ include "../../GLua/AG/Token.ag"
 -- For detecting the usage of Lua/C syntax inconsistently
 data SyntaxUsed = SyntaxUsed { luaUsed :: Bool, cUsed :: Bool } deriving (Show)
 
-#if MIN_VERSION_base(4,11,0)
 instance Semigroup SyntaxUsed where
-    (SyntaxUsed l1 c1) <> (SyntaxUsed l2 c2)  = SyntaxUsed (l1 || l2) (c1 || c2)
-#endif
+    (SyntaxUsed l1 c1) <> (SyntaxUsed l2 c2) = SyntaxUsed (l1 || l2) (c1 || c2)
 
 -- Monoid instance
 instance Monoid SyntaxUsed where
     mempty = SyntaxUsed False False
-    mappend (SyntaxUsed l1 c1) (SyntaxUsed l2 c2) = SyntaxUsed (l1 || l2) (c1 || c2)
 
 mTokenWarning :: Region -> Issue -> FilePath -> LintMessage
 mTokenWarning pos issue = LintMessage LintWarning pos issue
@@ -120,7 +117,7 @@ sem Token
         loc.curTokenPos = @lhs.nextTokenPos
         loc.nextTokenPos = customAdvanceStr @loc.curTokenPos @space
         loc.indentation = if @loc.inconsistent then mempty else @loc.whitespaceUsed
-        loc.whitespaceUsed = mappend @lhs.indentation $ SyntaxUsed (isInfixOf "\n " @space) (isInfixOf "\n\t" @space)
+        loc.whitespaceUsed = @lhs.indentation <> SyntaxUsed (isInfixOf "\n " @space) (isInfixOf "\n\t" @space)
         loc.inconsistent = luaUsed @loc.whitespaceUsed && cUsed @loc.whitespaceUsed
 
         -- Start and end of trailing whitespace

@@ -269,7 +269,7 @@ lint config f contents =
       Right (lexWarnings, ast) ->
         let
             lineLengthWarnings = execParseLineLimits f (LineLimit $ lint_maxLineLength config) contents
-            parserWarnings = map ($f) $ astWarnings config ast
+            parserWarnings = map ($ f) $ astWarnings config ast
         in
             -- Print all warnings
             sortLintMessages $ lineLengthWarnings ++ lexWarnings ++ parserWarnings

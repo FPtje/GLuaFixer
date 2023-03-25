@@ -98,7 +98,7 @@ parseFile config f contents =
 
         Right tokens -> do
             let fixedTokens = fixedLexPositions tokens
-            let lexWarnings = map ($f) (lintWarnings config fixedTokens ++ sequenceWarnings config fixedTokens)
+            let lexWarnings = map ($ f) (lintWarnings config fixedTokens ++ sequenceWarnings config fixedTokens)
             let parsed = PSP.parseGLua fixedTokens
 
             case parsed of

@@ -1,5 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module GLua.PSParser where
 
@@ -122,11 +125,19 @@ pMSatisfy cond =
     let testMToken :: MToken -> Maybe MToken
         testMToken mt = if cond mt then Just mt else Nothing
 
-    mt@(MToken pos _) <- tokenPrim show updatePosMToken testMToken
+    pMToken testMToken
+
+pMToken :: forall a. (MToken -> Maybe a) -> AParser a
+pMToken cond =
+  let
+    testMToken :: MToken -> Maybe (MToken, a)
+    testMToken mt = (mt,) <$> cond mt
+  in do
+    (MToken pos _, res) <- tokenPrim show updatePosMToken testMToken
 
     putState (rgEnd pos)
 
-    return mt
+    pure res
 
 -- | Get the source position
 -- Simply gets the position of the next token
@@ -276,11 +287,12 @@ parseLocFuncName = (\name -> FuncName [name] Nothing) <$> pName <?> "function na
 
 -- | Parse a number into an expression
 parseNumber :: AParser Expr
-parseNumber = (\(MToken _ (TNumber str)) -> ANumber str) <$> pMSatisfy isNumber <?> "number"
+parseNumber = pMToken isNumber <?> "number"
     where
-        isNumber :: MToken -> Bool
-        isNumber (MToken _ (TNumber _)) = True
-        isNumber _ = False
+        isNumber :: MToken -> Maybe Expr
+        isNumber = \case
+            MToken _ (TNumber str) -> Just $ ANumber str
+            _ -> Nothing
 
 -- | Parse any kind of string
 parseString :: AParser MToken
@@ -367,24 +379,24 @@ parseUnOp = UnMinus <$ pMTok Minus <|>
 
 -- | Parses a binary operator
 parseBinOp :: AParser BinOp
-parseBinOp = const AOr          <$> pMTok Or           <|>
-             const AOr          <$> pMTok COr          <|>
-             const AAnd         <$> pMTok And          <|>
-             const AAnd         <$> pMTok CAnd         <|>
-             const ALT          <$> pMTok TLT          <|>
-             const AGT          <$> pMTok TGT          <|>
-             const ALEQ         <$> pMTok TLEQ         <|>
-             const AGEQ         <$> pMTok TGEQ         <|>
-             const ANEq         <$> pMTok TNEq         <|>
-             const ANEq         <$> pMTok TCNEq        <|>
-             const AEq          <$> pMTok TEq          <|>
-             const AConcatenate <$> pMTok Concatenate  <|>
-             const APlus        <$> pMTok Plus         <|>
-             const BinMinus     <$> pMTok Minus        <|>
-             const AMultiply    <$> pMTok Multiply     <|>
-             const ADivide      <$> pMTok Divide       <|>
-             const AModulus     <$> pMTok Modulus      <|>
-             const APower       <$> pMTok Power
+parseBinOp = AOr          <$ pMTok Or           <|>
+             AOr          <$ pMTok COr          <|>
+             AAnd         <$ pMTok And          <|>
+             AAnd         <$ pMTok CAnd         <|>
+             ALT          <$ pMTok TLT          <|>
+             AGT          <$ pMTok TGT          <|>
+             ALEQ         <$ pMTok TLEQ         <|>
+             AGEQ         <$ pMTok TGEQ         <|>
+             ANEq         <$ pMTok TNEq         <|>
+             ANEq         <$ pMTok TCNEq        <|>
+             AEq          <$ pMTok TEq          <|>
+             AConcatenate <$ pMTok Concatenate  <|>
+             APlus        <$ pMTok Plus         <|>
+             BinMinus     <$ pMTok Minus        <|>
+             AMultiply    <$ pMTok Multiply     <|>
+             ADivide      <$ pMTok Divide       <|>
+             AModulus     <$ pMTok Modulus      <|>
+             APower       <$ pMTok Power
 
 -- | Operators, sorted by priority
 -- Priority from: http://www.lua.org/manual/5.2/manual.html#3.4.7
@@ -480,9 +492,7 @@ parseNamedField = do
         _ <- pMTok Equals
         return n
 
-    expr <- parseExpression
-
-    return $ NamedField name expr
+    NamedField name <$> parseExpression
 
 -- | A field in a table
 parseField :: AParser (FieldSep -> Field)
