@@ -1,7 +1,7 @@
 {
   description = "glualint - Linter and pretty printer for Garry's Mod's variant of Lua.";
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
