@@ -7,19 +7,28 @@ agent:
 
 blocks:
   - name: "Build OSX executable"
-    skip:
-      when: "tag !~ '.*'"
+    # skip:
+    #   when: "tag !~ '.*'"
     task:
+      secrets:
+        - name: Cachix auth token
       jobs:
         - name: Build
           commands:
             - curl -L https://releases.nixos.org/nix/nix-2.12.0/install > install_nix.sh
             - chmod +x install_nix.sh
-            - yes | ./install_nix.sh
+            - ./install_nix.sh --yes --daemon-user-count 1 --no-channel-add
             - echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf
+            # Trusted user is needed for Nix to accept the glualint cachix as substituter
+            - echo "trusted-users = semaphore root" | sudo tee -a /etc/nix/nix.conf
+            # Restart Nix to enact trusted users
+            - sudo launchctl stop org.nixos.nix-daemon
+            - sudo launchctl start org.nixos.nix-daemon
             - source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+            # Sleeping to make sure that Nix is available
+            - sleep 20
             - checkout
-            - nix develop --command bash -c "./AGGenerator.sh && cabal v1-build"
+            - nix develop --accept-flake-config --profile dev-profile --command bash -c "cachix push glualint dev-profile && ./AGGenerator.sh && cabal v1-build"
             - mv dist/build/glualint/glualint .
             - TARNAME="glualint-$(./glualint --version)-OSX-x86_64.tar.gz"
             - cp installation-instructions/OSX.md installation_instructions.md
