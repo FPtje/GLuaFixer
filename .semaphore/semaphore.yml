@@ -7,8 +7,8 @@ agent:
 
 blocks:
   - name: "Build OSX executable"
-    # skip:
-    #   when: "tag !~ '.*'"
+    skip:
+      when: "tag !~ '.*'"
     task:
       secrets:
         - name: Cachix auth token
