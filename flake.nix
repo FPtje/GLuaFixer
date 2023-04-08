@@ -36,6 +36,7 @@
         packages = p: [ p.glualint ];
         buildInputs = [
           cabal-install
+          pkgs.cachix
           haskell-language-server
         ];
       };
