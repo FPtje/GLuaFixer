@@ -170,8 +170,12 @@ print(🔞, _👨‍💻, function💩)
 a = "a\
 "
 
+-- https://github.com/FPtje/GLuaFixer/issues/100
 a = "foo\z
    bar"
+
+-- https://github.com/FPtje/GLuaFixer/issues/146
+print("\z")
 
 -- This should be multiline
 a({b}, function()
