@@ -40,10 +40,13 @@ import Text.ParserCombinators.UU.BasicInstances
 -- | String parser that maintains positions.
 type LParser a = P (Str Char String LineColPos) a
 
--- | Whitespace parser.
+-- | Whitespace parser that requires at least one whitespace character
 parseWhitespace :: LParser String
 parseWhitespace = pSome $ pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' ' 5)
-    --MToken <$> pPos <*> (Whitespace <$> pMunch (`elem` " \r\n\t"))
+
+-- | Whitespace parser that requires 0 or more whitespace characters
+parseOptionalWhitespace :: LParser String
+parseOptionalWhitespace = pMany $ pSatisfy (`elem` " \r\n\t") (Insertion "Whitespace" ' ' 5)
 
 -- | Blanco parser. Parses anything. Used in parsing comments.
 parseAnyChar :: LParser Char
@@ -148,7 +151,7 @@ parseLineString c = pSym c *> innerString
                       (:) <$> pNoNewline <*> innerString -- the next character in the string
 
         escapeSequence :: LParser String
-        escapeSequence = (:) <$> pSym 'z' <*> parseWhitespace <<|> (:[]) <$> parseAnyChar
+        escapeSequence = (:) <$> pSym 'z' <*> parseOptionalWhitespace <<|> (:[]) <$> parseAnyChar
 
         pNoNewline :: LParser Char
         pNoNewline = pSatisfy (/= '\n') (Insertion "Anything but a newline" c 5)

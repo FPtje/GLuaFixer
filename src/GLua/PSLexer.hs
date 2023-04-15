@@ -90,16 +90,20 @@ cBetween c left right = c >= left && c <= right
 pUntilEnd :: Parser String
 pUntilEnd = manyTill anyChar (lookAhead (endOfLine <|> const '\n' <$> eof))
 
--- | Whitespace parser.
+-- | Whitespace parser that requires at least one whitespace character
 parseWhitespace :: Parser String
 parseWhitespace = many1 space <?> "whitespace"
+
+-- | Whitespace parser that requires 0 or more whitespace characters
+parseOptionalWhitespace :: Parser String
+parseOptionalWhitespace = many space <?> "whitespace"
 
 -- | An escaped character of a single line string
 -- Takes the delimiter of the string as parameter
 escapedStringChar :: Char -> Parser String
 escapedStringChar delim = (\escaped -> '\\' : escaped) <$ char '\\' <*> escapedChar <|> (:[]) <$> noneOf ['\n', delim]
     where
-        escapedChar = (:) <$> char 'z' <*> parseWhitespace <|> (:[]) <$> anyChar
+        escapedChar = (:) <$> char 'z' <*> parseOptionalWhitespace <|> (:[]) <$> anyChar
 
 -- | The start of a nested string
 -- Returns the amount of =-signs at the start of the nested string
