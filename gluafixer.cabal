@@ -29,6 +29,8 @@ library
     , containers
     , deepseq
     , directory
+    , effectful
+    , effectful-th
     , filemanip
     , filepath >=1.3
     , mtl

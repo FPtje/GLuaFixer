@@ -1,5 +1,5 @@
 { mkDerivation, aeson, array, base, bytestring, containers
-, directory, deepseq, filemanip, filepath, ListLike, MissingH, mtl
+, directory, deepseq, effectful, effectful-th, filemanip, filepath, ListLike, MissingH, mtl
 , optparse-applicative, parsec, pretty, signal, lib, uu-parsinglib
 , uuagc, uuagc-cabal, vector
 }:
@@ -40,8 +40,8 @@ in mkDerivation {
   isExecutable = true;
   buildDepends = [uuagc uuagc-cabal];
   libraryHaskellDepends = [
-    aeson array base bytestring containers directory filemanip filepath
-    ListLike MissingH mtl optparse-applicative parsec pretty signal
+    aeson array base bytestring containers directory effectful effectful-th filemanip
+    filepath ListLike MissingH mtl optparse-applicative parsec pretty signal
     uu-parsinglib uuagc uuagc-cabal deepseq vector
   ];
   executableHaskellDepends = [ base directory ];
