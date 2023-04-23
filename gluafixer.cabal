@@ -21,23 +21,23 @@ library
 
   build-depends:
       base
-    , filepath >=1.3
-    , uu-parsinglib >=2.8
     , ListLike >=4.1
+    , MissingH
+    , aeson
+    , array
+    , bytestring
+    , containers
+    , deepseq
+    , directory
+    , filemanip
+    , filepath >=1.3
+    , mtl
+    , parsec
+    , pretty
+    , uu-parsinglib >=2.8
     , uuagc >= 0.9.40.3
     , uuagc-cabal >= 1.0.3.0
-    , pretty
-    , array
-    , MissingH
-    , containers
-    , aeson
-    , bytestring
-    , directory
-    , parsec
     , vector
-    , filemanip
-    , mtl
-    , deepseq
 
   hs-source-dirs: src
 
@@ -94,8 +94,8 @@ executable glualint
       aeson
     , base
     , bytestring
-    , glualint-lib
     , directory
+    , glualint-lib
     , optparse-applicative
     , signal
 
