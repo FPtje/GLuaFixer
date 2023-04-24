@@ -21,6 +21,17 @@ import GLuaFixer.LintMessage
 newtype Indentation = Indentation { unIndentation :: String }
   deriving IsString
 
+-- | Whether a file is read from stdin or from files
+data StdInOrFiles
+  = UseStdIn
+  | UseFiles [FilePath]
+  deriving (Show)
+
+-- | Convert a string to StdInOrFiles
+parseStdInOrFiles :: String -> StdInOrFiles
+parseStdInOrFiles "stdin" = UseStdIn
+parseStdInOrFiles other = UseFiles [other]
+
 data LintSettings =
     LintSettings
     { lint_maxScopeDepth :: !Int

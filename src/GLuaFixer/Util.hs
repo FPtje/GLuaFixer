@@ -14,7 +14,7 @@ import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
     ( defaultLintSettings,
       LintSettings(lint_syntaxErrors, prettyprint_indentation,
-                   log_format, lint_ignoreFiles), Indentation (..))
+                   log_format, lint_ignoreFiles), Indentation (..), StdInOrFiles (..))
 import GLuaFixer.BadSequenceFinder ( sequenceWarnings )
 
 import Control.DeepSeq (deepseq, force)
@@ -33,11 +33,6 @@ import Text.Parsec.Error (errorPos)
 
 import Control.Applicative ((<|>))
 import Data.Aeson (eitherDecode)
-
-data StdInOrFiles
-  = UseStdIn
-  | UseFiles [FilePath]
-  deriving (Show)
 
 data Abort
   = Abort
