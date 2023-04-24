@@ -18,7 +18,7 @@ import Effectful.Dispatch.Dynamic (interpret)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (isJust)
 
-
+-- | The effect for emitting lint messages to the right channel
 data Logging :: Effect where
   -- | Emit a single lint message in the given format
   EmitLintMessage :: LogFormat -> LintMessage -> Logging m ()
