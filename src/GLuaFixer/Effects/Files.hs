@@ -28,11 +28,6 @@ newtype Directory = Directory { dir :: FilePath }
 newtype FileNames = FileNames { names :: [String] }
 newtype IgnoreFiles = IgnoreFiles { ignore :: [GlobPattern] }
 
-data StdInOrFiles
-  = UseStdIn
-  | UseFiles [FilePath]
-  deriving (Show)
-
 -- | Interacting with the file system
 data Files :: Effect where
   -- | Get current working directory alias
@@ -45,17 +40,25 @@ data Files :: Effect where
   WriteFile :: FilePath -> String -> Files m ()
   -- | Returns whether a file exists
   FileExists :: FilePath -> Files m Bool
+  -- | Returns whether a file exists and is a directory
+  IsDirectory :: FilePath -> Files m Bool
   -- | Will search upwards in directories for a file, returning it if it exists
   SearchUpwardsForFile :: Directory -> FileNames -> Files m (Maybe FilePath)
+  -- | Returns the file path of the first path that exists
+  FirstExists :: [FilePath] -> Files m (Maybe FilePath)
   -- | Search for Lua files
   FindLuaFiles :: IgnoreFiles -> FilePath -> Files m [FilePath]
+  -- | Get Home directory
+  GetHomeDirectory :: Files m FilePath
+  -- | Make a path absolute
+  MakeAbsolute :: FilePath -> Files m FilePath
 
 
 type instance DispatchOf Files = Dynamic
 
 makeEffect ''Files
 
-runFilesIO :: (IOE :> es) => Eff (Files : es) a -> Eff es a
+runFilesIO :: forall es a.  (IOE :> es) => Eff (Files : es) a -> Eff es a
 runFilesIO = interpret $ \_ -> \case
   GetCurrentDirectory -> liftIO Dir.getCurrentDirectory
 
@@ -74,32 +77,33 @@ runFilesIO = interpret $ \_ -> \case
 
   FileExists filepath -> liftIO $ Dir.doesFileExist filepath
 
+  IsDirectory filepath -> liftIO $ Dir.doesDirectoryExist filepath
+
   SearchUpwardsForFile (Directory directory) (FileNames filename) ->
     let
-      anyExists :: [FilePath] -> IO (Maybe FilePath)
-      anyExists = \case
-        (file : files) -> do
-          exists <- Dir.doesFileExist file
-          if exists then
-            pure $ Just file
-          else
-            anyExists files
-        [] -> pure Nothing
-
       go !subdir = do
         let filepaths = fmap (subdir </>) filename
-        mbFoundFile <- anyExists filepaths
+        mbFoundFile <- runFilesIO $ firstExists filepaths
         case mbFoundFile of
           Just file -> pure $ Just file
           Nothing -> do
             let up = takeDirectory subdir
-            dirExists <- Dir.doesDirectoryExist up
+            dirExists <- runFilesIO $ isDirectory up
             if not dirExists then
               pure Nothing
             else
               go up
 
-    in liftIO $ go directory
+    in go directory
+
+  FirstExists filepath -> case filepath of
+    (file : files) -> do
+      exists <- runFilesIO $ fileExists file
+      if exists then
+        pure $ Just file
+      else
+        runFilesIO $ firstExists files
+    [] -> pure Nothing
 
   FindLuaFiles (IgnoreFiles ignoreFiles) path ->
     let
@@ -121,3 +125,7 @@ runFilesIO = interpret $ \_ -> \case
         ]
     in
       liftIO $ find always (fileName ~~? "*.lua" &&? ignoredGlobs) path
+
+  GetHomeDirectory -> liftIO Dir.getHomeDirectory
+
+  MakeAbsolute filepath -> liftIO $ Dir.makeAbsolute filepath
