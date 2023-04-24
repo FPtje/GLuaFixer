@@ -1,3 +1,4 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 module GLuaFixer.LintSettings where
 
@@ -11,9 +12,14 @@ import Data.Aeson
       Value(Object),
       KeyValue((.=)) )
 import Control.Monad ( MonadPlus(mzero) )
+import Data.String (IsString)
 import GLua.AG.PrettyPrint ( PrettyPrintConfig(..) )
 import GLuaFixer.LintMessage
     ( LogFormatChoice(AutoLogFormatChoice) )
+
+-- | Indentation used for pretty printing code
+newtype Indentation = Indentation { unIndentation :: String }
+  deriving IsString
 
 data LintSettings =
     LintSettings

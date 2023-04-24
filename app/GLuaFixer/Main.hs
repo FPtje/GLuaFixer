@@ -17,7 +17,8 @@ import GLuaFixer.LintMessage
       LogFormat(StandardLogFormat, GithubLogFormat),
       LogFormatChoice(..) )
 import GLuaFixer.LintSettings
-    ( LintSettings(lint_ignoreFiles, prettyprint_rejectInvalidCode,
+    ( Indentation(..),
+      LintSettings(lint_ignoreFiles, prettyprint_rejectInvalidCode,
                    lint_maxLineLength, prettyprint_indentation, log_format),
       lint2ppSetting )
 import GLuaFixer.Util
@@ -30,7 +31,6 @@ import GLuaFixer.Util
       parseFile,
       settingsFromFile,
       Abort(..),
-      Indentation(..),
       StdInOrFiles(..) )
 
 import qualified GLua.Lexer as Lex

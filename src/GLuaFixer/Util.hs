@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module GLuaFixer.Util where
 
 import GLua.AG.AST ( AST )
@@ -15,7 +14,7 @@ import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
     ( defaultLintSettings,
       LintSettings(lint_syntaxErrors, prettyprint_indentation,
-                   log_format, lint_ignoreFiles) )
+                   log_format, lint_ignoreFiles), Indentation (..))
 import GLuaFixer.BadSequenceFinder ( sequenceWarnings )
 
 import Control.DeepSeq (deepseq, force)
@@ -34,7 +33,6 @@ import Text.Parsec.Error (errorPos)
 
 import Control.Applicative ((<|>))
 import Data.Aeson (eitherDecode)
-import Data.String (IsString)
 
 data StdInOrFiles
   = UseStdIn
@@ -45,10 +43,6 @@ data Abort
   = Abort
   | Continue
   deriving (Show)
-
--- | Indentation used for pretty printing code
-newtype Indentation = Indentation { unIndentation :: String }
-  deriving IsString
 
 -- | Finds all Lua files in a folder
 findLuaFiles :: [GlobPattern] -> FilePath -> IO [FilePath]
