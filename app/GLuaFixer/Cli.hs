@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 
 -- | CLI interface of the glualint executable
-module GLuaFixer.Cli where
+module GLuaFixer.Cli (Options (..), Command (..), runParse) where
 
 import Control.Applicative ((<**>), (<|>))
 import GLuaFixer.LintMessage (LogFormat (..), LogFormatChoice (..))
@@ -26,6 +26,14 @@ data Command
   | Test [FilePath]
   | PrintVersion
   deriving (Show)
+
+-- | Run the parser against arguments
+runParse :: [String] -> Opt.ParserResult Options
+runParse = Opt.execParserPure cliPreferences cliParserInfo
+
+-- | Preferences passed to optparse-applicative
+cliPreferences :: Opt.ParserPrefs
+cliPreferences = Opt.defaultPrefs{Opt.prefShowHelpOnEmpty = True}
 
 -- | Metadata of the application
 cliParserInfo :: Opt.ParserInfo Options

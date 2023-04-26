@@ -9,6 +9,7 @@ import GLua.LineLimitParser (execParseLineLimits, LineLimit (LineLimit))
 import GLua.TokenTypes (isWhitespace)
 import GLuaFixer.AG.ASTLint ( astWarnings )
 import GLuaFixer.AnalyseProject ( analyseGlobals )
+import GLuaFixer.Cli (Options (..), Command (..), runParse)
 import GLuaFixer.LintMessage
     ( LintMessage,
       formatLintMessage,
@@ -51,7 +52,6 @@ import qualified Data.ByteString.Lazy as BL
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help.Types as Opt
 import qualified System.Signal as Signal
-import GLuaFixer.Cli (Options (..), Command (..), cliParserInfo)
 
 
 version :: String
@@ -70,10 +70,9 @@ main = do
   Signal.installHandler Signal.sigINT $ \_ -> atomicWriteIORef aborted Abort
 
   args <- getArgs
-  let prefs = Opt.defaultPrefs { Opt.prefShowHelpOnEmpty = True }
-  let cliParseResult = Opt.execParserPure prefs cliParserInfo args
+  let cliParseResult = runParse args
 
-  case cliParseResult of
+  case runParse args of
     Opt.Success options -> runGluaLint options aborted
     Opt.CompletionInvoked _completionResult -> void $ Opt.handleParseResult cliParseResult
     Opt.Failure parserFailure -> do
