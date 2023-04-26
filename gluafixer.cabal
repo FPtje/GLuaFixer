@@ -83,6 +83,7 @@ executable glualint
   main-is:             GLuaFixer/Main.hs
   other-modules:
     GLuaFixer.Cli
+    GLuaFixer.Effects.Cli
     GLuaFixer.Effects.Files
     GLuaFixer.Effects.Interruptible
     GLuaFixer.Effects.Logging
