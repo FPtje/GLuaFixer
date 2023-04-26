@@ -83,6 +83,8 @@ executable glualint
   if !impl(ghc >= 8.0.0)
     buildable: False
   main-is:             GLuaFixer/Main.hs
+  other-modules:
+    GLuaFixer.Cli
   other-extensions:
       FlexibleInstances
     , TypeSynonymInstances
