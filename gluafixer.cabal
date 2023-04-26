@@ -29,8 +29,6 @@ library
     , containers
     , deepseq
     , directory
-    , effectful
-    , effectful-th
     , filemanip
     , filepath >=1.3
     , mtl
@@ -85,6 +83,10 @@ executable glualint
   main-is:             GLuaFixer/Main.hs
   other-modules:
     GLuaFixer.Cli
+    GLuaFixer.Effects.Files
+    GLuaFixer.Effects.Interruptible
+    GLuaFixer.Effects.Logging
+    GLuaFixer.Effects.Settings
   other-extensions:
       FlexibleInstances
     , TypeSynonymInstances
@@ -99,6 +101,11 @@ executable glualint
     , base
     , bytestring
     , directory
+    , deepseq
+    , effectful
+    , effectful-th
+    , filemanip
+    , filepath
     , glualint-lib
     , optparse-applicative
     , signal
