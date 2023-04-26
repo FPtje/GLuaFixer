@@ -17,7 +17,7 @@ import GLuaFixer.Cli (Options, legacyCliParser, runParse)
 import qualified Options.Applicative as Opt
 import qualified Options.Applicative.Help.Types as Opt
 
--- | Effect for allowing graceful interruptions. Interruptions are polled, so they can be ignored.
+-- | Effect for parsing the CLI arguments.
 data Cli :: Effect
 
 type instance DispatchOf Cli = Static WithSideEffects
