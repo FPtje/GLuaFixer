@@ -83,26 +83,33 @@ main = do
 runGluaLint :: Options -> IORef Abort -> IO ()
 runGluaLint opts aborted = do
     case optsCommand opts of
-      Lint stdinOrFiles -> do
+      Lint -> do
+        let stdinOrFiles = optsFiles opts
         noErrorsOrWarnings <- and <$> forEachInput mbIndent mbOutputFormat stdinOrFiles aborted
           lintStdin
           lintFile
 
         unless noErrorsOrWarnings exitFailure
-      PrettyPrint stdinOrFiles -> do
+      PrettyPrint -> do
+        let stdinOrFiles = optsFiles opts
         noErrors <- and <$> forEachInput mbIndent mbOutputFormat stdinOrFiles aborted
           prettyPrintStdin
           prettyPrintFile
 
         unless noErrors exitFailure
-      AnalyseGlobals files ->
-        analyseGlobals files
-      DumpAst stdinOrFiles ->
+      AnalyseGlobals ->
+        case optsFiles opts of
+          UseFiles files -> analyseGlobals files
+          UseStdIn -> pure ()
+      DumpAst -> do
+        let stdinOrFiles = optsFiles opts
         forEachInput_ mbIndent mbOutputFormat stdinOrFiles aborted
           dumpASTStdin
           dumpASTFile
-      Test files ->
-        runTest files
+      Test -> do
+        case optsFiles opts of
+          UseFiles files -> runTest files
+          UseStdIn -> pure ()
       PrintVersion ->
         putStrLn version
   where

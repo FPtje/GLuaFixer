@@ -1,11 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
 
 -- | CLI interface of the glualint executable
-module GLuaFixer.Cli (Options (..), Command (..), runParse) where
+module GLuaFixer.Cli (Options (..), Command (..), runParse, legacyCliParser) where
 
 import Control.Applicative ((<**>), (<|>))
 import GLuaFixer.LintMessage (LogFormat (..), LogFormatChoice (..))
-import GLuaFixer.LintSettings (Indentation, StdInOrFiles (..))
+import GLuaFixer.LintSettings (Indentation (..), StdInOrFiles (..))
 import Options.Applicative (optional)
 import qualified Options.Applicative as Opt
 
@@ -15,15 +15,16 @@ data Options = Options
   , optsIndentation :: Maybe Indentation
   , optsOutputFormat :: Maybe LogFormatChoice
   , optsCommand :: Command
+  , optsFiles :: StdInOrFiles
   }
 
 -- | Available subcommands
 data Command
-  = Lint StdInOrFiles
-  | PrettyPrint StdInOrFiles
-  | AnalyseGlobals [FilePath]
-  | DumpAst StdInOrFiles
-  | Test [FilePath]
+  = Lint
+  | PrettyPrint
+  | AnalyseGlobals
+  | DumpAst
+  | Test
   | PrintVersion
   deriving (Show)
 
@@ -53,6 +54,7 @@ cliParser =
     <*> indentOption
     <*> outputFormatOption
     <*> commandParser
+    <*> parseStdInOrFiles
  where
   configOption :: Opt.Parser (Maybe FilePath)
   configOption =
@@ -94,27 +96,27 @@ cliParser =
     Opt.hsubparser
       ( Opt.command
           "lint"
-          ( Opt.info (Lint <$> parseStdInOrFiles) $
+          ( Opt.info (pure Lint) $
               Opt.progDesc "Lint the given files. Directories will be traversed recursively."
           )
           <> Opt.command
             "pretty-print"
-            ( Opt.info (PrettyPrint <$> parseStdInOrFiles) $
+            ( Opt.info (pure PrettyPrint) $
                 Opt.progDesc "Pretty print the given files, replacing their contents with the pretty printed code."
             )
           <> Opt.command
             "analyse-globals"
-            ( Opt.info (AnalyseGlobals <$> filesArgument) $
+            ( Opt.info (pure AnalyseGlobals) $
                 Opt.progDesc "Print a list of all globals used and defined in the given files/directories."
             )
           <> Opt.command
             "dump-ast"
-            ( Opt.info (DumpAst <$> parseStdInOrFiles) $
+            ( Opt.info (pure DumpAst) $
                 Opt.progDesc "Print a list of all globals used and defined in the given files/directories."
             )
           <> Opt.command
             "test"
-            ( Opt.info (Test <$> filesArgument) $
+            ( Opt.info (pure Test) $
                 Opt.progDesc "Run tests on the given files. Use for testing/debugging glualint."
             )
           <> Opt.command
@@ -134,4 +136,50 @@ cliParser =
       <|> UseFiles <$> filesArgument
 
   filesArgument :: Opt.Parser [FilePath]
-  filesArgument = Opt.some (Opt.argument Opt.str $ Opt.metavar "FILES")
+  filesArgument = Opt.many (Opt.argument Opt.str $ Opt.metavar "FILES")
+
+--
+-- Legacy
+--
+
+{- | Deprecated and naive command line interface, kept in place for backwards
+compatibility.
+-}
+legacyCliParser :: [String] -> Maybe Options
+legacyCliParser = go emptyOptions
+ where
+  emptyOptions =
+    Options
+      { optsConfigFile = Nothing
+      , optsIndentation = Nothing
+      , optsOutputFormat = Nothing
+      , optsCommand = PrintVersion
+      , optsFiles = UseFiles []
+      }
+
+  go options = \case
+    ["--config"] -> Nothing
+    -- fail when a subcommand of the new parser is given as argument
+    "lint" : _ -> Nothing
+    "pretty-print" : _ -> Nothing
+    "analyse-globals" : _ -> Nothing
+    "dump-ast" : _ -> Nothing
+    "test" : _ -> Nothing
+    "version" : _ -> Nothing
+    -- End of recursion case
+    [] -> Just options
+    "--pretty-print-files" : xs -> go options{optsCommand = PrettyPrint} xs
+    "--pretty-print" : xs -> go options{optsCommand = PrettyPrint} xs
+    "--analyse-globals" : xs -> go options{optsCommand = AnalyseGlobals} xs
+    "--dump-ast" : xs -> go options{optsCommand = DumpAst} xs
+    "--version" : xs -> go options{optsCommand = PrintVersion} xs
+    "--test" : xs -> go options{optsCommand = Test} xs
+    "--stdin" : xs -> go options{optsFiles = UseStdIn} xs
+    "--config" : f : xs -> go options{optsConfigFile = Just f} xs
+    ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : '\'' : ind') : xs ->
+      go options{optsIndentation = Just $ Indentation ind'} xs
+    ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : ind') : xs ->
+      go options{optsIndentation = Just $ Indentation ind'} xs
+    f : xs -> case optsFiles options of
+      UseStdIn -> go options{optsFiles = UseFiles [f]} xs
+      UseFiles fs -> go options{optsFiles = UseFiles $ f : fs} xs
