@@ -1,18 +1,18 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module GLuaFixer.Effects.Interruptible where
 
-
-import Effectful ( Effect, Dispatch(Static), DispatchOf, Eff, (:>), IOE )
-import Effectful.Dispatch.Static (SideEffects(WithSideEffects), StaticRep, evalStaticRep, unsafeEff_, getStaticRep)
-import Data.IORef (IORef, newIORef, atomicWriteIORef, readIORef)
+import Data.IORef (IORef, atomicWriteIORef, newIORef, readIORef)
+import Effectful (Dispatch (Static), DispatchOf, Eff, Effect, IOE, (:>))
+import Effectful.Dispatch.Static (SideEffects (WithSideEffects), StaticRep, evalStaticRep, getStaticRep, unsafeEff_)
+import qualified System.Signal as Signal
 
 -- | Effect for allowing graceful interruptions. Interruptions are polled, so they can be ignored.
 data Interruptible :: Effect
@@ -21,10 +21,14 @@ type instance DispatchOf Interruptible = Static WithSideEffects
 
 newtype instance StaticRep Interruptible = Interruptible (IORef Bool)
 
--- | Run an interruptible in IO
+-- | Run an interruptible in IO, installs signal handlers to take care of the interrupting
 runInterruptible :: IOE :> es => Eff (Interruptible : es) a -> Eff es a
 runInterruptible m = do
   aborted <- unsafeEff_ $ newIORef False
+  unsafeEff_ $ do
+    Signal.installHandler Signal.sigTERM $ \_ -> atomicWriteIORef aborted True
+    Signal.installHandler Signal.sigINT $ \_ -> atomicWriteIORef aborted True
+
   evalStaticRep (Interruptible aborted) m
 
 -- | Interrupt the computation
@@ -42,13 +46,13 @@ hasBeenInterrupted = do
 -- | For loop that stops iterating when interrupted. It does not interfere within a computation.
 interruptibleFor :: Interruptible :> es => [a] -> (a -> Eff es b) -> Eff es [b]
 interruptibleFor list f = go list
-  where
-    go = \case
-      [] -> pure []
-      (x : xs) -> do
-        weDone <- hasBeenInterrupted
-        if weDone then
-          pure []
+ where
+  go = \case
+    [] -> pure []
+    (x : xs) -> do
+      weDone <- hasBeenInterrupted
+      if weDone
+        then pure []
         else do
           let !res = f x
           (:) <$> res <*> go xs
