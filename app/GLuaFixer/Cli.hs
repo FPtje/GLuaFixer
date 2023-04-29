@@ -11,9 +11,11 @@ import GLuaFixer.LintSettings (Indentation (..), LintSettings (..), StdInOrFiles
 import Options.Applicative (optional)
 import qualified Options.Applicative as Opt
 
+newtype SettingsPath = SettingsPath FilePath
+
 -- | Command line options of glualint
 data Options = Options
-  { optsConfigFile :: Maybe FilePath
+  { optsConfigFile :: Maybe SettingsPath
   , optsOverridden :: OverriddenSettings
   , optsCommand :: Command
   , optsFiles :: StdInOrFiles
@@ -71,14 +73,15 @@ cliParser =
     <*> commandParser
     <*> parseStdInOrFiles
  where
-  configOption :: Opt.Parser (Maybe FilePath)
+  configOption :: Opt.Parser (Maybe SettingsPath)
   configOption =
     optional $
-      Opt.strOption
-        ( Opt.long "config"
-            <> Opt.metavar "PATH"
-            <> Opt.help "Explicitly define config file location. By default it will search for it."
-        )
+      SettingsPath
+        <$> Opt.strOption
+          ( Opt.long "config"
+              <> Opt.metavar "PATH"
+              <> Opt.help "Explicitly define config file location. By default it will search for it."
+          )
 
   indentOption :: Opt.Parser (Maybe Indentation)
   indentOption =
@@ -189,7 +192,7 @@ legacyCliParser = go emptyOptions
     "--version" : xs -> go options{optsCommand = PrintVersion} xs
     "--test" : xs -> go options{optsCommand = Test} xs
     "--stdin" : xs -> go options{optsFiles = UseStdIn} xs
-    "--config" : f : xs -> go options{optsConfigFile = Just f} xs
+    "--config" : f : xs -> go options{optsConfigFile = Just $ SettingsPath f} xs
     ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : '\'' : ind') : xs ->
       go options{optsOverridden = options.optsOverridden{indentation = Just $ Indentation ind'}} xs
     ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : ind') : xs ->
