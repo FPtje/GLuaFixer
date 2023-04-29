@@ -1,30 +1,34 @@
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+
 module GLuaFixer.Effects.Logging where
 
-
-import Effectful ( Effect, Dispatch(Dynamic), DispatchOf, IOE, (:>), Eff )
-import Effectful.TH ( makeEffect )
-import GLuaFixer.LintMessage (LintMessage, LogFormat(..), LogFormatChoice (..), formatLintMessage)
-import qualified Effectful.Environment as Env
-import Effectful.Dispatch.Dynamic (interpret)
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (isJust)
+import Effectful (Dispatch (Dynamic), DispatchOf, Eff, Effect, IOE, (:>))
+import Effectful.Dispatch.Dynamic (interpret)
+import qualified Effectful.Environment as Env
+import Effectful.TH (makeEffect)
+import GLuaFixer.LintMessage (LintMessage, LogFormat (..), LogFormatChoice (..), formatLintMessage)
+import System.IO (hPutStrLn, stderr)
 
 -- | The effect for emitting lint messages to the right channel
 data Logging :: Effect where
   -- | Emit a single lint message in the given format
   EmitLintMessage :: LogFormat -> LintMessage -> Logging m ()
-
   -- | Find out which logging format to use
   GetLogFormat :: LogFormatChoice -> Logging m LogFormat
+  -- | Print a string in stdout
+  PutStrLnStdOut :: String -> Logging m ()
+  -- | Print a string in stderr
+  PutStrLnStdError :: String -> Logging m ()
 
 type instance DispatchOf Logging = Dynamic
 
@@ -44,12 +48,19 @@ runLoggingIO = interpret $ \_ -> \case
     actionsExists <- isJust <$> Env.lookupEnv "GITHUB_ACTIONS"
     workflowExists <- isJust <$> Env.lookupEnv "GITHUB_WORKFLOW"
 
-    pure $ if actionsExists && workflowExists
-      then GithubLogFormat
-      else StandardLogFormat
+    pure $
+      if actionsExists && workflowExists
+        then GithubLogFormat
+        else StandardLogFormat
+  PutStrLnStdOut str ->
+    liftIO $ putStrLn str
+  PutStrLnStdError str ->
+    liftIO $ hPutStrLn stderr str
 
 runLoggingPureNoop :: Eff (Logging : es) a -> Eff es a
 runLoggingPureNoop = interpret $ \_ -> \case
   EmitLintMessage _ _ -> pure ()
   GetLogFormat (LogFormatChoice format) -> pure format
   GetLogFormat AutoLogFormatChoice -> pure StandardLogFormat
+  PutStrLnStdOut _ -> pure ()
+  PutStrLnStdError _ -> pure ()
