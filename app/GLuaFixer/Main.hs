@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 module Main where
 
@@ -9,7 +10,7 @@ import GLua.LineLimitParser (execParseLineLimits, LineLimit (LineLimit))
 import GLua.TokenTypes (isWhitespace)
 import GLuaFixer.AG.ASTLint ( astWarnings )
 import GLuaFixer.AnalyseProject ( analyseGlobals )
-import GLuaFixer.Cli (Options (..), Command (..), runParse)
+import GLuaFixer.Cli (Options (..), Command (..), OverriddenSettings (..), runParse)
 import GLuaFixer.LintMessage
     ( LintMessage,
       formatLintMessage,
@@ -113,8 +114,8 @@ runGluaLint opts aborted = do
       PrintVersion ->
         putStrLn version
   where
-    mbIndent = optsIndentation opts
-    mbOutputFormat = optsOutputFormat opts
+    mbIndent = opts.optsOverridden.indentation
+    mbOutputFormat = opts.optsOverridden.outputFormat
 
 -- | When the regulare CLI fails to parse, the legacy one might yet succeed
 handleCliFailure :: IORef Abort -> [String] -> (Opt.ParserHelp, ExitCode, Int) -> IO ()

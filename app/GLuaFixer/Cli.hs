@@ -1,19 +1,20 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 
 -- | CLI interface of the glualint executable
-module GLuaFixer.Cli (Options (..), Command (..), runParse, legacyCliParser) where
+module GLuaFixer.Cli (Options (..), Command (..), OverriddenSettings (..), overrideSettings, runParse, legacyCliParser) where
 
 import Control.Applicative ((<**>), (<|>))
+import Data.Maybe (fromMaybe)
 import GLuaFixer.LintMessage (LogFormat (..), LogFormatChoice (..))
-import GLuaFixer.LintSettings (Indentation (..), StdInOrFiles (..))
+import GLuaFixer.LintSettings (Indentation (..), LintSettings (..), StdInOrFiles (..))
 import Options.Applicative (optional)
 import qualified Options.Applicative as Opt
 
 -- | Command line options of glualint
 data Options = Options
   { optsConfigFile :: Maybe FilePath
-  , optsIndentation :: Maybe Indentation
-  , optsOutputFormat :: Maybe LogFormatChoice
+  , optsOverridden :: OverriddenSettings
   , optsCommand :: Command
   , optsFiles :: StdInOrFiles
   }
@@ -27,6 +28,21 @@ data Command
   | Test
   | PrintVersion
   deriving (Show)
+
+-- | Settings in the config file that can be overridden through the command line.
+data OverriddenSettings = OverriddenSettings
+  { indentation :: Maybe Indentation
+  , outputFormat :: Maybe LogFormatChoice
+  }
+
+-- | Override settings with the options passed on the command line
+overrideSettings :: OverriddenSettings -> LintSettings -> LintSettings
+overrideSettings overridden settings =
+  settings
+    { prettyprint_indentation =
+        maybe settings.prettyprint_indentation unIndentation overridden.indentation
+    , log_format = fromMaybe settings.log_format overridden.outputFormat
+    }
 
 -- | Run the parser against arguments
 runParse :: [String] -> Opt.ParserResult Options
@@ -51,8 +67,7 @@ cliParser :: Opt.Parser Options
 cliParser =
   Options
     <$> configOption
-    <*> indentOption
-    <*> outputFormatOption
+    <*> (OverriddenSettings <$> indentOption <*> outputFormatOption)
     <*> commandParser
     <*> parseStdInOrFiles
  where
@@ -151,8 +166,7 @@ legacyCliParser = go emptyOptions
   emptyOptions =
     Options
       { optsConfigFile = Nothing
-      , optsIndentation = Nothing
-      , optsOutputFormat = Nothing
+      , optsOverridden = OverriddenSettings Nothing Nothing
       , optsCommand = PrintVersion
       , optsFiles = UseFiles []
       }
@@ -177,9 +191,9 @@ legacyCliParser = go emptyOptions
     "--stdin" : xs -> go options{optsFiles = UseStdIn} xs
     "--config" : f : xs -> go options{optsConfigFile = Just f} xs
     ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : '\'' : ind') : xs ->
-      go options{optsIndentation = Just $ Indentation ind'} xs
+      go options{optsOverridden = options.optsOverridden{indentation = Just $ Indentation ind'}} xs
     ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : ind') : xs ->
-      go options{optsIndentation = Just $ Indentation ind'} xs
+      go options{optsOverridden = options.optsOverridden{indentation = Just $ Indentation ind'}} xs
     f : xs -> case optsFiles options of
       UseStdIn -> go options{optsFiles = UseFiles [f]} xs
       UseFiles fs -> go options{optsFiles = UseFiles $ f : fs} xs
