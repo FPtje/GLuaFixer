@@ -39,6 +39,7 @@ import GLuaFixer.Effects.AnalyseGlobals (execAnalysis, analyseFile, reportAnalys
 import Effectful.Error.Static (runErrorNoCallStack)
 import GLuaFixer.Version (version)
 
+-- | Top level run function
 run :: ( Interruptible :> es
   , Files :> es
   , Logging :> es
@@ -64,6 +65,7 @@ run = do
           pure $ ExitFailure 1
         Right exitCode -> pure exitCode
 
+-- | Run the given options
 runOptions :: ( Interruptible :> es
   , Files :> es
   , Settings :> es
@@ -194,6 +196,7 @@ foldLuaFiles mbSettingsPath overriddenSettings initial files f =
         contents <- readFile file
         f acc lintSettings file contents
 
+-- | Lint a file
 lint ::
   (Logging :> es, Eff.Environment :> es) =>
   LintSettings ->
@@ -220,6 +223,7 @@ lint lintSettings filepath contents = do
           mapM_ (emitLintMessage logFormat) msgs
           pure $ if null msgs then ExitSuccess else ExitFailure 1
 
+-- | Pretty print a file
 prettyprint ::
   LintSettings ->
   String ->
@@ -233,7 +237,7 @@ prettyprint lintSettings contents = do
   (ast, parseErrors) = Interface.parseUU tokens
   hasErrors = not (null lexErrors) || not (null parseErrors)
 
--- TODO: Refactor this into a nicer command
+-- | Test glualint itself against a file. TODO: Refactor this into a nicer command
 test ::
   (Logging :> es, Eff.Environment :> es) =>
   LintSettings ->
@@ -291,6 +295,8 @@ test lintSettings filepath contents = do
               putStrLnStdOut $ show err
             Right _ast -> pure ()
 
+-- | Function to easily parse a file's contents into an AST. This will log any parse failures and
+-- give an AST if it can.
 withParsed ::
   (Logging :> es, Eff.Environment :> es) =>
   LintSettings ->
