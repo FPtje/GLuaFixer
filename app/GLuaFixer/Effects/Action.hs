@@ -241,7 +241,7 @@ test ::
   String ->
   Eff es ()
 test lintSettings filepath contents = do
-  putStrLnStdOut "Running tests"
+  putStrLnStdOut $ "Testing " <> filepath
   let
     (uu_lex, uu_lex_errors) = Interface.lexUU lintSettings contents
     (_uu_ast, uu_parseErrs) = Interface.parseUU uu_lex

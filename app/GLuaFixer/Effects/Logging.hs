@@ -3,7 +3,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -13,9 +12,8 @@ module GLuaFixer.Effects.Logging where
 import Control.Monad.IO.Class (liftIO)
 import Data.Maybe (isJust)
 import Effectful (Dispatch (Dynamic), DispatchOf, Eff, Effect, IOE, (:>))
-import Effectful.Dispatch.Dynamic (interpret)
+import Effectful.Dispatch.Dynamic (interpret, send)
 import qualified Effectful.Environment as Env
-import Effectful.TH (makeEffect)
 import GLuaFixer.LintMessage (LintMessage, LogFormat (..), LogFormatChoice (..), formatLintMessage)
 import System.IO (hPutStrLn, stderr)
 
@@ -34,7 +32,20 @@ data Logging :: Effect where
 
 type instance DispatchOf Logging = Dynamic
 
-makeEffect ''Logging
+putStrLnStdError :: Logging :> es => String -> Eff es ()
+putStrLnStdError str = send $ PutStrLnStdError str
+
+putStrStdOut :: Logging :> es => String -> Eff es ()
+putStrStdOut str = send $ PutStrStdOut str
+
+putStrLnStdOut :: Logging :> es => String -> Eff es ()
+putStrLnStdOut str = send $ PutStrLnStdOut str
+
+getLogFormat :: Logging :> es => LogFormatChoice -> Eff es LogFormat
+getLogFormat logFormatChoice = send $ GetLogFormat logFormatChoice
+
+emitLintMessage :: Logging :> es => LogFormat -> LintMessage -> Eff es ()
+emitLintMessage logFormat lintMessage = send $ EmitLintMessage logFormat lintMessage
 
 -- | Run the logging in IO
 runLoggingIO :: (IOE :> es, Env.Environment :> es) => Eff (Logging : es) a -> Eff es a

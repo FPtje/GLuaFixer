@@ -3,7 +3,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -14,9 +13,8 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS8
 import Effectful (Dispatch (Dynamic), DispatchOf, Eff, Effect, (:>))
-import Effectful.Dispatch.Dynamic (interpret)
+import Effectful.Dispatch.Dynamic (interpret, send)
 import qualified Effectful.Error.Static as Err
-import Effectful.TH (makeEffect)
 import GLuaFixer.Cli (OverriddenSettings, SettingsPath (..), overrideSettings)
 import GLuaFixer.Effects.Files (Files)
 import qualified GLuaFixer.Effects.Files as Files
@@ -35,7 +33,17 @@ data Settings :: Effect where
 
 type instance DispatchOf Settings = Dynamic
 
-makeEffect ''Settings
+searchSettingsInHome :: Settings :> es => Eff es (Maybe FilePath)
+searchSettingsInHome = send SearchSettingsInHome
+
+searchSettingsInDirectory :: Settings :> es => FilePath -> Eff es (Maybe FilePath)
+searchSettingsInDirectory filepath = send $ SearchSettingsInDirectory filepath
+
+settingsFromFile :: Settings :> es => FilePath -> Eff es LintSettings
+settingsFromFile filepath = send $ SettingsFromFile filepath
+
+getSettings :: Settings :> es => FilePath -> Eff es LintSettings
+getSettings filepath = send $ GetSettings filepath
 
 newtype SettingsError = CouldNotParseSettings String
 
@@ -84,10 +92,11 @@ runSettings = interpret $ \_ -> \case
 
     Files.firstExists [fileWithDot, fileWithoutDot]
 
--- | Combines getting the settings from
--- - An explicitly passed path to a file
--- - Settings overridden in the CLI
--- - Settings that apply to a file
+{- | Combines getting the settings from
+- An explicitly passed path to a file
+- Settings overridden in the CLI
+- Settings that apply to a file
+-}
 getSettingsForFile ::
   Settings :> es =>
   Maybe SettingsPath ->

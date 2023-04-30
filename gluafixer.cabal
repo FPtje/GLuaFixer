@@ -98,7 +98,6 @@ executable glualint
     , deepseq
     , directory
     , effectful
-    , effectful-th
     , filemanip
     , filepath
     , glualint-lib
