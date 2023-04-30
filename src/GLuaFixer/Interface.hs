@@ -29,7 +29,7 @@ lex lintSettings filepath contents =
   case PSL.execParseTokens contents of
     Left lexErr ->
       Left [LintMessage LintError (PSL.sp2Rg $ errorPos lexErr) (IssueParseError lexErr) filepath | lintSettings.lint_syntaxErrors]
-    Right tokens -> Right tokens
+    Right tokens -> Right $ fixedLexPositions tokens
 
 -- | Use the (slower, but error-correcting) UU-parsinglib lexer to generate the lexicon
 lexUU :: LintSettings -> String -> ([MToken], [Error LineColPos])
