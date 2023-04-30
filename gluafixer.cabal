@@ -51,6 +51,7 @@ library
     , GLua.LineLimitParser
     , GLuaFixer.AnalyseProject
     , GLuaFixer.BadSequenceFinder
+    , GLuaFixer.Interface
     , GLuaFixer.LintMessage
     , GLuaFixer.LintSettings
     , GLuaFixer.Util
