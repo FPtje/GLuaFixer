@@ -43,16 +43,19 @@ hasBeenInterrupted = do
   Interruptible aborted <- getStaticRep
   unsafeEff_ $ readIORef aborted
 
--- | For loop that stops iterating when interrupted. It does not interfere within a computation.
-interruptibleFor :: Interruptible :> es => [a] -> (a -> Eff es b) -> Eff es [b]
-interruptibleFor list f = go list
- where
-  go = \case
-    [] -> pure []
-    (x : xs) -> do
-      weDone <- hasBeenInterrupted
-      if weDone
-        then pure []
-        else do
-          let !res = f x
-          (:) <$> res <*> go xs
+-- | Strict interruptible fold
+interruptibleFoldMStrict ::
+  Interruptible :> es =>
+  (a -> b -> Eff es a) ->
+  a ->
+  [b] ->
+  Eff es a
+interruptibleFoldMStrict f a = \case
+  [] -> pure a
+  (x : xs) -> do
+    weDone <- hasBeenInterrupted
+    if weDone then
+      pure a
+    else do
+      !res <- f a x
+      interruptibleFoldMStrict f res xs

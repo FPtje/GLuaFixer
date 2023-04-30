@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 
 -- | CLI interface of the glualint executable
-module GLuaFixer.Cli (Options (..), Command (..), OverriddenSettings (..), overrideSettings, runParse, legacyCliParser) where
+module GLuaFixer.Cli (SettingsPath (..), Options (..), Command (..), OverriddenSettings (..), overrideSettings, runParse, legacyCliParser) where
 
 import Control.Applicative ((<**>), (<|>))
 import Data.Maybe (fromMaybe)

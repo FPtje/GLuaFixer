@@ -27,6 +27,8 @@ data Logging :: Effect where
   GetLogFormat :: LogFormatChoice -> Logging m LogFormat
   -- | Print a string in stdout
   PutStrLnStdOut :: String -> Logging m ()
+  -- | Print a string in stdout
+  PutStrStdOut :: String -> Logging m ()
   -- | Print a string in stderr
   PutStrLnStdError :: String -> Logging m ()
 
@@ -54,6 +56,8 @@ runLoggingIO = interpret $ \_ -> \case
         else StandardLogFormat
   PutStrLnStdOut str ->
     liftIO $ putStrLn str
+  PutStrStdOut str ->
+    liftIO $ putStr str
   PutStrLnStdError str ->
     liftIO $ hPutStrLn stderr str
 
@@ -63,4 +67,5 @@ runLoggingPureNoop = interpret $ \_ -> \case
   GetLogFormat (LogFormatChoice format) -> pure format
   GetLogFormat AutoLogFormatChoice -> pure StandardLogFormat
   PutStrLnStdOut _ -> pure ()
+  PutStrStdOut _ -> pure ()
   PutStrLnStdError _ -> pure ()

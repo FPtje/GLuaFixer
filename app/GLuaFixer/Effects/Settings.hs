@@ -17,6 +17,7 @@ import Effectful (Dispatch (Dynamic), DispatchOf, Eff, Effect, (:>))
 import Effectful.Dispatch.Dynamic (interpret)
 import qualified Effectful.Error.Static as Err
 import Effectful.TH (makeEffect)
+import GLuaFixer.Cli (OverriddenSettings, SettingsPath (..), overrideSettings)
 import GLuaFixer.Effects.Files (Files)
 import qualified GLuaFixer.Effects.Files as Files
 import GLuaFixer.LintSettings (LintSettings, defaultLintSettings)
@@ -82,3 +83,19 @@ runSettings = interpret $ \_ -> \case
       fileWithoutDot = homeDir </> settingsFile
 
     Files.firstExists [fileWithDot, fileWithoutDot]
+
+-- | Combines getting the settings from
+-- - An explicitly passed path to a file
+-- - Settings overridden in the CLI
+-- - Settings that apply to a file
+getSettingsForFile ::
+  Settings :> es =>
+  Maybe SettingsPath ->
+  OverriddenSettings ->
+  FilePath ->
+  Eff es LintSettings
+getSettingsForFile mbSettingsPath overridden filepath = do
+  readSettings <- case mbSettingsPath of
+    Just (SettingsPath path) -> settingsFromFile path
+    Nothing -> getSettings filepath
+  pure $ overrideSettings overridden readSettings
