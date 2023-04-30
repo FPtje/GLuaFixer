@@ -5,7 +5,7 @@ import GLua.ASTInstances ()
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 
 import Effectful (runEff)
-import GLuaFixer.Effects.Action (run)
+import GLuaFixer.Effects.Run (run)
 import qualified Effectful.Environment as Env
 import System.Exit (exitWith)
 import GLuaFixer.Effects.Cli (runCliIO)

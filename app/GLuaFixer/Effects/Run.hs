@@ -10,7 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module GLuaFixer.Effects.Action where
+module GLuaFixer.Effects.Run where
 
 import Control.Monad (unless)
 import qualified Data.Aeson as JSON
