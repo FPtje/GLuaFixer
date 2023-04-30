@@ -12,6 +12,7 @@
 
 module GLuaFixer.Effects.Action where
 
+import Control.Monad (unless)
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import Effectful (Dispatch (Dynamic), DispatchOf, Eff, Effect, (:>))
@@ -20,6 +21,8 @@ import qualified Effectful.Environment as Eff
 import Effectful.TH (makeEffect)
 import GLua.AG.AST (AST)
 import GLua.ASTInstances ()
+import qualified GLua.PSParser as PSP
+import qualified GLua.Parser as UUP
 import GLuaFixer.Cli (Command (..), Options (..), OverriddenSettings, SettingsPath)
 import GLuaFixer.Effects.Cli (Cli, CliParseResult (..), parseCliOptions)
 import GLuaFixer.Effects.Files (Files, IgnoreFiles (..), findLuaFiles, getCurrentDirectory, isDirectory, readFile, readStdIn, writeFile)
@@ -119,11 +122,18 @@ runAction = interpret $ \_ -> \case
             putStrLnStdOut $ BL8.unpack $ JSON.encode ast
             pure exitCode
     (Test, UseStdIn) -> do
-      -- TODO
-      pure $ ExitFailure 1
-    (Test, UseFiles _files) ->
-      -- TODO
-      pure $ ExitFailure 1
+      (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
+      test lintSettings "stdin" contents
+      pure ExitSuccess
+    (Test, UseFiles files) -> do
+      foldLuaFiles
+        options.optsConfigFile
+        options.optsOverridden
+        ()
+        files
+        $ \() lintSettings filepath contents ->
+          test lintSettings filepath contents
+      pure ExitSuccess
     (PrintVersion, _) -> do
       putStrLnStdOut version
       pure ExitSuccess
@@ -206,6 +216,64 @@ prettyprint lintSettings contents = do
   (tokens, lexErrors) = Interface.lexUU lintSettings contents
   (ast, parseErrors) = Interface.parseUU tokens
   hasErrors = not (null lexErrors) || not (null parseErrors)
+
+-- TODO: Refactor this into a nicer command
+test ::
+  (Logging :> es, Eff.Environment :> es) =>
+  LintSettings ->
+  FilePath ->
+  String ->
+  Eff es ()
+test lintSettings filepath contents = do
+  putStrLnStdOut "Running tests"
+  let
+    (uu_lex, uu_lex_errors) = Interface.lexUU lintSettings contents
+    (_uu_ast, uu_parseErrs) = Interface.parseUU uu_lex
+
+  unless (null uu_lex_errors) $ do
+    putStrLnStdOut $
+      "Errors when trying to lex '"
+        ++ filepath
+        ++ "' with uu-parsinglib lexer!"
+    mapM_ (putStrLnStdOut . show) uu_lex_errors
+
+  unless (null uu_parseErrs) $ do
+    putStrLnStdOut $
+      "Errors when trying to parse '"
+        ++ filepath
+        ++ "' with uu-parsinglib parser!"
+    mapM_ (putStrLnStdOut . show) uu_parseErrs
+
+  logFormat <- getLogFormat lintSettings.log_format
+
+  case Interface.lex lintSettings filepath contents of
+    Left msgs ->
+      mapM_ (emitLintMessage logFormat) msgs
+    Right tokens ->
+      case Interface.parse lintSettings filepath tokens of
+        Left msgs -> do
+          putStrLnStdOut $
+            "Errors when trying to parse '" ++ filepath ++ "' with parsec parser!"
+          mapM_ (emitLintMessage logFormat) msgs
+        Right ast -> do
+          let
+            prettyprinted = Interface.prettyprint lintSettings ast
+            (_uu_ast_pp, uu_parseErrs_pp) = UUP.parseGLuaFromString prettyprinted
+
+          unless (null uu_parseErrs_pp) $ do
+            putStrLnStdOut $
+              "Errors when trying to parse '"
+                ++ filepath
+                ++ "' with uu-parsinglib parser after pretty print!"
+            mapM_ (putStrLnStdOut . show) uu_parseErrs_pp
+
+          case PSP.parseGLuaFromString prettyprinted of
+            Left err -> do
+              putStrLnStdOut $
+                "Errors when trying to parse '" ++ filepath ++ "' with parsec parser after pretty print!"
+
+              putStrLnStdOut $ show err
+            Right _ast -> pure ()
 
 withParsed ::
   (Logging :> es, Eff.Environment :> es) =>
