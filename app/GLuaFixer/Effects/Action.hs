@@ -37,6 +37,7 @@ import GLuaFixer.LintSettings (
  )
 import System.Exit (ExitCode (..))
 import Prelude hiding (lex, readFile, writeFile)
+import GLuaFixer.Effects.AnalyseGlobals (execAnalysis, analyseFile, reportAnalysis)
 
 version :: String
 version = "1.24.3"
@@ -101,11 +102,22 @@ runAction = interpret $ \_ -> \case
               writeFile filepath prettyprinted
               pure exitCode
     (AnalyseGlobals, UseStdIn) -> do
-      -- TODO
-      pure $ ExitFailure 1
-    (AnalyseGlobals, UseFiles _files) ->
-      -- TODO
-      pure $ ExitFailure 1
+      (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
+      withParsed lintSettings "stdin" contents (ExitFailure 1) $ \ast -> do
+        analysis <- execAnalysis $ analyseFile lintSettings "stdin" ast
+        reportAnalysis analysis
+        pure ExitSuccess
+    (AnalyseGlobals, UseFiles files) -> do
+      analysis <- execAnalysis $ foldLuaFiles
+        options.optsConfigFile
+        options.optsOverridden
+        ()
+        files
+        $ \() lintSettings filepath contents -> do
+          withParsed lintSettings filepath contents () $ \ast ->
+            analyseFile lintSettings filepath ast
+      reportAnalysis analysis
+      pure ExitSuccess
     (DumpAst, UseStdIn) -> do
       (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
       withParsed lintSettings "stdin" contents (ExitFailure 1) $ \ast -> do

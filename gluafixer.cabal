@@ -85,6 +85,7 @@ executable glualint
   other-modules:
     GLuaFixer.Cli
     GLuaFixer.Effects.Action
+    GLuaFixer.Effects.AnalyseGlobals
     GLuaFixer.Effects.Cli
     GLuaFixer.Effects.Files
     GLuaFixer.Effects.Interruptible
@@ -103,6 +104,7 @@ executable glualint
       aeson
     , base
     , bytestring
+    , containers
     , directory
     , deepseq
     , effectful
