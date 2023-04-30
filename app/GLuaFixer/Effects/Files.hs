@@ -65,42 +65,26 @@ findLuaFiles :: Files :> es => IgnoreFiles -> FilePath -> Eff es [FilePath]
 findLuaFiles ignoreFiles filepath
   = send $ FindLuaFiles ignoreFiles filepath
 
-firstExists ::
-  forall (es_a9mjb :: [Effect]). (HasCallStack, Files :> es_a9mjb) =>
-                                 [FilePath] -> Eff es_a9mjb (Maybe FilePath)
-firstExists x_a9mjc = send ((FirstExists @(Eff es_a9mjb)) x_a9mjc)
+firstExists :: Files :> es => [FilePath] -> Eff es (Maybe FilePath)
+firstExists files = send $ FirstExists files
 
-searchUpwardsForFile ::
-  forall (es_a9mj8 :: [Effect]). (HasCallStack, Files :> es_a9mj8) =>
-                                 Directory -> FileNames -> Eff es_a9mj8 (Maybe FilePath)
-searchUpwardsForFile x_a9mj9 x_a9mja
-  = send ((SearchUpwardsForFile @(Eff es_a9mj8)) x_a9mj9 x_a9mja)
+searchUpwardsForFile :: Files :> es => Directory -> FileNames -> Eff es (Maybe FilePath)
+searchUpwardsForFile directory files = send $ SearchUpwardsForFile directory files
 
-isDirectory ::
-  forall (es_a9mj6 :: [Effect]). (HasCallStack, Files :> es_a9mj6) =>
-                                 FilePath -> Eff es_a9mj6 Bool
-isDirectory x_a9mj7 = send ((IsDirectory @(Eff es_a9mj6)) x_a9mj7)
+isDirectory :: Files :> es => FilePath -> Eff es Bool
+isDirectory filepath = send $ IsDirectory filepath
 
-fileExists ::
-  forall (es_a9mj4 :: [Effect]). (HasCallStack, Files :> es_a9mj4) =>
-                                 FilePath -> Eff es_a9mj4 Bool
-fileExists x_a9mj5 = send ((FileExists @(Eff es_a9mj4)) x_a9mj5)
+fileExists :: Files :> es => FilePath -> Eff es Bool
+fileExists filepath = send $ FileExists  filepath
 
-writeFile ::
-  forall (es_a9mj1 :: [Effect]). (HasCallStack, Files :> es_a9mj1) =>
-                                 FilePath -> String -> Eff es_a9mj1 ()
-writeFile x_a9mj2 x_a9mj3
-  = send ((WriteFile @(Eff es_a9mj1)) x_a9mj2 x_a9mj3)
+writeFile :: Files :> es => FilePath -> String -> Eff es ()
+writeFile filepath contents = send $ WriteFile filepath contents
 
-readFile ::
-  forall (es_a9miZ :: [Effect]). (HasCallStack, Files :> es_a9miZ) =>
-                                 FilePath -> Eff es_a9miZ String
-readFile x_a9mj0 = send ((ReadFile @(Eff es_a9miZ)) x_a9mj0)
+readFile :: Files :> es => FilePath -> Eff es String
+readFile filepath = send $ ReadFile filepath
 
-readStdIn ::
-  forall (es_a9miY :: [Effect]). (HasCallStack, Files :> es_a9miY) =>
-                                 Eff es_a9miY String
-readStdIn = send (ReadStdIn @(Eff es_a9miY))
+readStdIn :: Files :> es => Eff es String
+readStdIn = send ReadStdIn
 
 getCurrentDirectory ::
   forall (es_a9miX :: [Effect]). (HasCallStack, Files :> es_a9miX) =>
