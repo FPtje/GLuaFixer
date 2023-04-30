@@ -164,7 +164,11 @@ cliParser =
 compatibility.
 -}
 legacyCliParser :: [String] -> Maybe Options
-legacyCliParser = go emptyOptions
+legacyCliParser args = case go emptyOptions args of
+  Nothing -> Nothing
+  -- Fall through case, where some valid arguments are passed, but no command
+  Just Options{optsCommand = PrintVersion} -> Nothing
+  Just opts -> Just opts
  where
   emptyOptions =
     Options
