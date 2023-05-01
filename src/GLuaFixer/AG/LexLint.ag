@@ -253,7 +253,8 @@ inh_MTokenList conf =
 lintWarnings        :: LintSettings -> [MToken] -> [String -> LintMessage]
 lintWarnings conf p = warnings_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) (inh_MTokenList conf))
 
--- Necessary because uu-parsinglib parses tabs as 8 spaces
+-- Necessary because uu-parsinglib's LineColPos walks over tabs as though they are 8 spaces. Note
+-- that this also applies when the code is lexed by the Parsec lexer.
 fixedLexPositions   :: [MToken] -> [MToken]
 fixedLexPositions p = copy_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) (inh_MTokenList defaultLintSettings))
 }

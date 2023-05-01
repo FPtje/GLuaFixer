@@ -1,0 +1,3 @@
+# Ignore the ETA reduce, because I think explicitly naming arguments provides
+# clarity.
+- ignore: {name: Eta reduce}

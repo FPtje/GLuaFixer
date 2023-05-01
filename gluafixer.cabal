@@ -21,23 +21,14 @@ library
 
   build-depends:
       base
-    , ListLike >=4.1
-    , MissingH
     , aeson
-    , array
     , bytestring
     , containers
-    , deepseq
-    , directory
-    , filemanip
-    , filepath >=1.3
-    , mtl
     , parsec
     , pretty
     , uu-parsinglib >=2.8
     , uuagc >= 0.9.40.3
     , uuagc-cabal >= 1.0.3.0
-    , vector
 
   hs-source-dirs: src
 
@@ -49,11 +40,10 @@ library
     , GLua.TokenTypes
     , GLua.ASTInstances
     , GLua.LineLimitParser
-    , GLuaFixer.AnalyseProject
     , GLuaFixer.BadSequenceFinder
+    , GLuaFixer.Interface
     , GLuaFixer.LintMessage
     , GLuaFixer.LintSettings
-    , GLuaFixer.Util
     , GLua.AG.AST
     , GLua.AG.PrettyPrint
     , GLuaFixer.AG.LexLint
@@ -81,6 +71,16 @@ executable glualint
   if !impl(ghc >= 8.0.0)
     buildable: False
   main-is:             GLuaFixer/Main.hs
+  other-modules:
+    GLuaFixer.Cli
+    GLuaFixer.Effects.Run
+    GLuaFixer.Effects.AnalyseGlobals
+    GLuaFixer.Effects.Cli
+    GLuaFixer.Effects.Files
+    GLuaFixer.Effects.Interruptible
+    GLuaFixer.Effects.Logging
+    GLuaFixer.Effects.Settings
+    GLuaFixer.Version
   other-extensions:
       FlexibleInstances
     , TypeSynonymInstances
@@ -94,7 +94,12 @@ executable glualint
       aeson
     , base
     , bytestring
+    , containers
+    , deepseq
     , directory
+    , effectful
+    , filemanip
+    , filepath
     , glualint-lib
     , optparse-applicative
     , signal

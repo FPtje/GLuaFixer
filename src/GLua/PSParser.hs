@@ -79,6 +79,10 @@ parseGLua :: [MToken] -> Either ParseError AST
 parseGLua mts = let (cms, ts) = splitComments . filter (not . isWhitespace) $ mts in
                  execAParser "source.lua" (parseChunk cms) ts
 
+parseGLuaFromString :: String -> Either ParseError AST
+parseGLuaFromString contents =
+    parseGLua $ filter (not . isWhitespace) $ fst $ Lex.execParseTokens contents
+
 -- | Region start to SourcePos
 rgStart2sp :: Region -> SourcePos
 rgStart2sp (Region start _) = lcp2sp start
