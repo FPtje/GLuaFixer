@@ -1,4 +1,7 @@
 module GLuaFixer.Version where
 
+import Data.Version (showVersion)
+import qualified Paths_glualint (version)
+
 version :: String
-version = "1.24.3"
+version = showVersion Paths_glualint.version
