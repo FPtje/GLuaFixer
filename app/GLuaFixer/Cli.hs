@@ -164,11 +164,13 @@ cliParser =
 compatibility.
 -}
 legacyCliParser :: [String] -> Maybe Options
-legacyCliParser args = case go emptyOptions args of
-  Nothing -> Nothing
-  -- Fall through case, where some valid arguments are passed, but no command
-  Just Options{optsCommand = PrintVersion} -> Nothing
-  Just opts -> Just opts
+legacyCliParser args = case go False emptyOptions args of
+  (False, _) -> Nothing
+  (True, opts@Options{optsCommand = PrintVersion, optsFiles = files}) -> case files of
+    -- This is an indication that random arguments were passed
+    UseFiles (_ : _) -> Nothing
+    _ -> Just opts
+  (True, opts) -> Just opts
  where
   emptyOptions =
     Options
@@ -178,29 +180,29 @@ legacyCliParser args = case go emptyOptions args of
       , optsFiles = UseFiles []
       }
 
-  go options = \case
-    ["--config"] -> Nothing
+  go hasSuccessfulParse options = \case
+    ["--config"] -> (False, options)
     -- fail when a subcommand of the new parser is given as argument
-    "lint" : _ -> Nothing
-    "pretty-print" : _ -> Nothing
-    "analyse-globals" : _ -> Nothing
-    "dump-ast" : _ -> Nothing
-    "test" : _ -> Nothing
-    "version" : _ -> Nothing
+    "lint" : _ -> (False, options)
+    "pretty-print" : _ -> (False, options)
+    "analyse-globals" : _ -> (False, options)
+    "dump-ast" : _ -> (False, options)
+    "test" : _ -> (False, options)
+    "version" : _ -> (False, options)
     -- End of recursion case
-    [] -> Just options
-    "--pretty-print-files" : xs -> go options{optsCommand = PrettyPrint} xs
-    "--pretty-print" : xs -> go options{optsCommand = PrettyPrint} xs
-    "--analyse-globals" : xs -> go options{optsCommand = AnalyseGlobals} xs
-    "--dump-ast" : xs -> go options{optsCommand = DumpAst} xs
-    "--version" : xs -> go options{optsCommand = PrintVersion} xs
-    "--test" : xs -> go options{optsCommand = Test} xs
-    "--stdin" : xs -> go options{optsFiles = UseStdIn} xs
-    "--config" : f : xs -> go options{optsConfigFile = Just $ SettingsPath f} xs
+    [] -> (hasSuccessfulParse, options)
+    "--pretty-print-files" : xs -> go True options{optsCommand = PrettyPrint} xs
+    "--pretty-print" : xs -> go True options{optsCommand = PrettyPrint} xs
+    "--analyse-globals" : xs -> go True options{optsCommand = AnalyseGlobals} xs
+    "--dump-ast" : xs -> go True options{optsCommand = DumpAst} xs
+    "--version" : xs -> go True options{optsCommand = PrintVersion} xs
+    "--test" : xs -> go True options{optsCommand = Test} xs
+    "--stdin" : xs -> go True options{optsFiles = UseStdIn} xs
+    "--config" : f : xs -> go True options{optsConfigFile = Just $ SettingsPath f} xs
     ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : '\'' : ind') : xs ->
-      go options{optsOverridden = options.optsOverridden{indentation = Just $ Indentation ind'}} xs
+      go True options{optsOverridden = options.optsOverridden{indentation = Just $ Indentation ind'}} xs
     ('-' : '-' : 'i' : 'n' : 'd' : 'e' : 'n' : 't' : 'a' : 't' : 'i' : 'o' : 'n' : '=' : ind') : xs ->
-      go options{optsOverridden = options.optsOverridden{indentation = Just $ Indentation ind'}} xs
+      go True options{optsOverridden = options.optsOverridden{indentation = Just $ Indentation ind'}} xs
     f : xs -> case optsFiles options of
-      UseStdIn -> go options{optsFiles = UseFiles [f]} xs
-      UseFiles fs -> go options{optsFiles = UseFiles $ f : fs} xs
+      UseStdIn -> go True options{optsFiles = UseFiles [f]} xs
+      UseFiles fs -> go True options{optsFiles = UseFiles $ f : fs} xs
