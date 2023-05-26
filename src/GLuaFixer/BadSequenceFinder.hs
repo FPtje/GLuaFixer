@@ -413,9 +413,6 @@ profanitySequence opts = if not (lint_profanity opts) then parserZero else Profa
     ident "knob"                    <|>
     ident "knobs"                   <|>
     ident "motherfucker"            <|>
-    ident "nigger"                  <|>
-    ident "niggers"                 <|>
-    ident "niggertits"              <|>
     ident "nipple"                  <|>
     ident "shit"
     )
