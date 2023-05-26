@@ -34,7 +34,7 @@ src = lib.cleanSourceWith rec {
 in mkDerivation {
   inherit src;
 
-  pname = "glualint-lib";
+  pname = "glualint";
   version = "0.1.0.0";
   isLibrary = true;
   isExecutable = true;
