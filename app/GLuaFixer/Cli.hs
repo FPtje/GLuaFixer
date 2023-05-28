@@ -166,9 +166,8 @@ compatibility.
 legacyCliParser :: [String] -> Maybe Options
 legacyCliParser args = case go False emptyOptions args of
   (False, _) -> Nothing
-  (True, opts@Options{optsCommand = PrintVersion, optsFiles = files}) -> case files of
-    -- This is an indication that random arguments were passed
-    UseFiles (_ : _) -> Nothing
+  (True, opts@Options{optsCommand = Lint, optsFiles = files}) -> case files of
+    UseFiles [] -> Nothing
     _ -> Just opts
   (True, opts) -> Just opts
  where
@@ -176,7 +175,7 @@ legacyCliParser args = case go False emptyOptions args of
     Options
       { optsConfigFile = Nothing
       , optsOverridden = OverriddenSettings Nothing Nothing
-      , optsCommand = PrintVersion
+      , optsCommand = Lint
       , optsFiles = UseFiles []
       }
 
