@@ -117,7 +117,7 @@ runFilesIO = interpret $ \_ -> \case
           Nothing -> do
             let up = takeDirectory subdir
             dirExists <- runFilesIO $ isDirectory up
-            if not dirExists
+            if up == subdir || not dirExists
               then pure Nothing
               else go up
      in
