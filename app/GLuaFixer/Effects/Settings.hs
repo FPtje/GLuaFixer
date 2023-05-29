@@ -114,13 +114,13 @@ getSettingsForFile mbSettingsPath overridden filepath = do
 traceSettings :: (Settings :> es, IOE :> es) => Eff es a -> Eff es a
 traceSettings = interpose $ \_ -> \case
   GetSettings filepath -> do
-    liftIO $ putStrLn "GetSettings filepath"
+    liftIO $ putStrLn $ "GetSettings " <> filepath
     send $ GetSettings filepath
   SettingsFromFile filepath -> do
-    liftIO $ putStrLn "SettingsFromFile filepath"
+    liftIO $ putStrLn $ "SettingsFromFile " <> filepath
     send $ SettingsFromFile filepath
   SearchSettingsInDirectory filepath -> do
-    liftIO $ putStrLn "SearchSettingsInDirectory filepath"
+    liftIO $ putStrLn $ "SearchSettingsInDirectory " <> filepath
     send $ SearchSettingsInDirectory filepath
   SearchSettingsInHome -> do
     liftIO $ putStrLn "SearchSettingsInHome"

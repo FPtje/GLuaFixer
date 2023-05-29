@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -162,29 +163,29 @@ traceFiles = interpose $ \_ -> \case
     liftIO $ putStrLn "ReadStdIn"
     send ReadStdIn
   ReadFile filepath -> do
-    liftIO $ putStrLn "ReadFile"
+    liftIO $ putStrLn $ "ReadFile " <> filepath
     send $ ReadFile filepath
   WriteFile filepath contents -> do
-    liftIO $ putStrLn "WriteFile"
+    liftIO $ putStrLn $ "WriteFile " <> filepath
     send $ WriteFile  filepath contents
   FileExists filepath -> do
     liftIO $ putStrLn "FileExists"
     send $ FileExists filepath
   IsDirectory filepath -> do
-    liftIO $ putStrLn "IsDirectory"
+    liftIO $ putStrLn $ "IsDirectory " <> filepath
     send $ IsDirectory filepath
   SearchUpwardsForFile directory filenames -> do
-    liftIO $ putStrLn "SearchUpwardsForFile"
+    liftIO $ putStrLn $ "SearchUpwardsForFile " <> directory.dir <> " " <> show filenames.names
     send $ SearchUpwardsForFile directory filenames
   FirstExists filepath -> do
-    liftIO $ putStrLn "FirstExists"
+    liftIO $ putStrLn $ "FirstExists " <> show filepath
     send $ FirstExists filepath
   FindLuaFiles ignores filepath -> do
-    liftIO $ putStrLn "FindLuaFiles"
+    liftIO $ putStrLn $ "FindLuaFiles " <> show ignores.ignore <> " " <> filepath
     send $ FindLuaFiles ignores filepath
-  GetHomeDirectory {} -> do
+  GetHomeDirectory -> do
     liftIO $ putStrLn "GetHomeDirectory"
     send GetHomeDirectory
   MakeAbsolute filepath -> do
-    liftIO $ putStrLn "MakeAbsolute"
+    liftIO $ putStrLn $ "MakeAbsolute " <> filepath
     send $ MakeAbsolute filepath
