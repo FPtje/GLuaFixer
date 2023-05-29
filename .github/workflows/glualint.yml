@@ -46,20 +46,27 @@ jobs:
 
       - name: Get config file
         run: |
-          GLUALINT_PATH=${{ inputs.config }}
-          if [[ "$GLUALINT_PATH" != "" ]];
+          GLUALINT_CONFIG_PATH=${{ inputs.config }}
+          if [[ "$GLUALINT_CONFIG_PATH" != "" ]];
           then
-            if [[ "$GLUALINT_PATH" == http* ]];
+            if [[ "$GLUALINT_CONFIG_PATH" == http* ]];
             then
                 echo "::info:: Given remote glualint path. Downloading..."
-                curl --verbose --retry 3 --location "$GLUALINT_PATH" --output "$GITHUB_WORKSPACE/.glualint.json"
+                curl --verbose --retry 3 --location "$GLUALINT_CONFIG_PATH" --output "$GITHUB_WORKSPACE/.glualint.json"
             else
                 echo "::info:: Given local path to glualint config. Copying..."
-                cp --verbose "$GITHUB_WORKSPACE/project/$GLUALINT_PATH" "$GITHUB_WORKSPACE/.glualint.json"
+                cp --verbose "$GITHUB_WORKSPACE/project/$GLUALINT_CONFIG_PATH" "$GITHUB_WORKSPACE/.glualint.json"
             fi
+          else
+            echo "::info:: No explicit path to config file passed, glualint will use config files in the project if present."
           fi
 
       - name: Lint with GLuaLint
         run: |
           cd "$GITHUB_WORKSPACE/project/"
-          "$GITHUB_WORKSPACE/glualint" --output-format github --config "$GITHUB_WORKSPACE/.glualint.json" lint .
+          if [[ "${{ inputs.config }}" != "" ]];
+          then
+            "$GITHUB_WORKSPACE/glualint" --output-format github --config "$GITHUB_WORKSPACE/.glualint.json" lint .
+          else
+            "$GITHUB_WORKSPACE/glualint" --output-format github lint .
+          fi
