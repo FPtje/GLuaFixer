@@ -179,6 +179,18 @@ convertComment conf (MToken p t) = MToken p $ convert' t
         cComment (DashBlockComment _ s) = SlashBlockComment s
         cComment t' = t'
 
+-- | Whether there are comments that live within the given region
+-- Assumes the comments are sorted.
+commentsWithinRegion :: [MToken] -> Region -> Bool
+commentsWithinRegion comments region = case comments of
+    [] -> False
+    (comment : restComments)
+        -- If the comment is entirely before the region, look at the next comment
+        | mpos comment `before` region -> commentsWithinRegion restComments region
+        -- If the comment ends before the end of the region, then it's within the region. If it ends
+        -- after, then this comment and all subsequent ones are sure not to be within this region.
+        | otherwise -> mpos comment `beforeEnd` region
+
 indent :: PrettyPrintConfig -> Int -> Doc -> Doc
 indent conf n = (<>) $ zeroWidthText (concat . replicate n $ indentation conf)
 
@@ -267,7 +279,7 @@ attr MStatList
 attr MStat Stat
     inh isLastStatement :: Bool
 
-attr MStat MExprList MExpr Field MElseIf ElseIfList MElse Else
+attr MStat MExprList MExpr Field MElseIf ElseIfList MElse Else Field FieldList ExprSuffixList PFExprSuffix PrefixExp Args
     syn pos :: Region
 
 attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList ElseIf MElseIf ElseIfList Else MElse Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
@@ -353,7 +365,7 @@ sem MExprList
     | Cons       lhs.pretty = (if @lhs.isHead then empty else @loc.comma) <> @hd.pretty <> @tl.pretty
                  loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  tl.isHead  = False
-                 lhs.pos    = @hd.pos
+                 lhs.pos    = @hd.pos `unionRegionsIfNotEmpty` @tl.pos
                  hd.parentOperatorPrecedence = TopLevelExpression
                  hd.parentOperatorAssociative = True
     | Nil        lhs.pretty = empty
@@ -363,6 +375,7 @@ sem FieldList
     | Cons       lhs.pretty = @loc.prettyCommentsBefore $+$ @loc.indentAfterComment (@hd.pretty <-> @loc.prettyCommentsAfter) `@loc.sep` @loc.ind @tl.pretty
                  lhs.canFitOnSameLine = @hd.canFitOnSameLine
                  lhs.isNil  = False
+                 lhs.pos = @hd.pos `unionRegionsIfNotEmpty` @tl.pos
 
                  hd.comments = snd @loc.commentsAfter
 
@@ -391,6 +404,7 @@ sem FieldList
     | Nil        lhs.pretty = empty
                  lhs.isNil  = True
                  lhs.canFitOnSameLine = True
+                 lhs.pos = emptyRg
 
 sem MaybeMExpr
     | Just
@@ -435,7 +449,7 @@ sem MElseIf
 sem ElseIfList
     | Cons      lhs.pretty = indent @lhs.ppconf @lhs.indent @hd.pretty $+$ @tl.pretty
                 lhs.elsesExist = True
-                lhs.pos = @hd.pos
+                lhs.pos = @hd.pos `unionRegionsIfNotEmpty` @tl.pos
     | Nil       lhs.pretty = empty
                 lhs.pos = emptyRg
 
@@ -454,7 +468,9 @@ sem MElse
 
 sem ExprSuffixList
     | Cons       lhs.pretty = @hd.pretty <> @tl.pretty
+                 lhs.pos = @hd.pos `unionRegionsIfNotEmpty` @tl.pos
     | Nil        lhs.pretty = empty
+                 lhs.pos = emptyRg
 
 sem AST
     | AST       lhs.pretty = @chunk.pretty $+$ @loc.prettyComments
@@ -569,6 +585,7 @@ sem FuncName
 sem PrefixExp
     | PFVar      lhs.pretty = tok @name <> @suffixes.pretty
                  lhs.isLiteral = False
+                 lhs.pos = mpos @name `unionRegionsIfNotEmpty` @suffixes.pos
     | ExprVar    lhs.pretty = (if @loc.noparens then @expr.pretty else parens @lhs.ppconf NonEmpty @expr.pretty) <> @suffixes.pretty
                  lhs.precedence = if @loc.noparens then @expr.precedence else OperatorLevel8
                  lhs.isLiteral = False
@@ -606,11 +623,15 @@ sem PrefixExp
 
 sem PFExprSuffix
     | Call       lhs.pretty = @args.pretty
+                 lhs.pos = @args.pos
     | MetaCall   lhs.pretty = zchr ':' <> tok @fn <> @args.pretty
+                 lhs.pos = mpos @fn `unionRegionsIfNotEmpty` @args.pos
     | ExprIndex  lhs.pretty = brackets @lhs.ppconf @index.pretty
+                 lhs.pos = @index.pos
                  index.parentOperatorPrecedence = TopLevelExpression
                  index.parentOperatorAssociative = True
     | DotIndex   lhs.pretty = zchr '.' <> tok @index
+                 lhs.pos = mpos @index
 
 sem MExpr
     | MExpr             lhs.pos    = @pos
@@ -660,19 +681,24 @@ sem Expr
 
 sem Args
     | ListArgs  lhs.pretty = parens @lhs.ppconf @loc.emptyParams @args.pretty
+                lhs.pos = @args.pos
                 loc.emptyParams = toEmpty $ null @args.copy
                 args.isHead = True
-    | TableArg  lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
+    | TableArg  lhs.pretty = if @loc.commentsInArgRegion || @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
+                lhs.pos = @arg.pos
                 loc.prettyMulti = zchr '{' $+$ indent @lhs.ppconf (@lhs.indent + 1) @arg.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
                 loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @arg.pretty
+                loc.commentsInArgRegion = trace (show @arg.pos ++ "\nCOMMENTS: " ++ show @lhs.comments) $ commentsWithinRegion @lhs.comments @arg.pos
                 loc.emptyContents = toEmpty $ null @arg.copy
                 arg.indent = @lhs.indent + (if @arg.isMultiline then 1 else 0)
     | StringArg lhs.pretty = tok @arg
+                lhs.pos = mpos @arg
 
 sem Field
     | ExprField     lhs.pretty = brackets @lhs.ppconf @key.pretty <-> zchr '=' <-> @value.pretty <> @sep.pretty
                     lhs.isMultiline = True
                     lhs.canFitOnSameLine = False
+                    lhs.pos = @key.pos `unionRegionsIfNotEmpty` @value.pos
                     key.parentOperatorPrecedence = TopLevelExpression
                     key.parentOperatorAssociative = True
                     value.parentOperatorPrecedence = TopLevelExpression
@@ -680,10 +706,12 @@ sem Field
     | NamedField    lhs.pretty = tok @key <-> zchr '=' <-> @value.pretty <> @sep.pretty
                     lhs.isMultiline = True
                     lhs.canFitOnSameLine = False
+                    lhs.pos = mpos @key `unionRegionsIfNotEmpty` @value.pos
                     value.parentOperatorPrecedence = TopLevelExpression
                     value.parentOperatorAssociative = True
     | UnnamedField  lhs.pretty = @value.pretty <> @sep.pretty
                     lhs.canFitOnSameLine = @sep.canFitOnSameLine && not @value.isMultiline
+                    lhs.pos = @value.pos
                     value.parentOperatorPrecedence = TopLevelExpression
                     value.parentOperatorAssociative = True
 

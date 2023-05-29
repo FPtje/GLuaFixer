@@ -112,6 +112,14 @@ beforeEnd (Region _ (LineColPos _ _ p)) (Region _ (LineColPos _ _ p')) = p < p'
 beforeEndLine :: Region -> Region -> Bool
 beforeEndLine (Region _ (LineColPos l _ _)) (Region _ (LineColPos l' _ _)) = l <= l'
 
+-- | Combine the region such that the resulting region spans both given regions. If one of the
+-- regions is the empty region, the other region will be returned.
+unionRegionsIfNotEmpty :: Region -> Region -> Region
+unionRegionsIfNotEmpty lr@(Region leftStart leftEnd) rr@(Region rightStart rightEnd)
+    | lr == emptyRg = rr
+    | rr == emptyRg = lr
+    | otherwise = Region (min leftStart rightStart) (max leftEnd rightEnd)
+
 rgStart :: Region -> LineColPos
 rgStart (Region s _) = s
 
