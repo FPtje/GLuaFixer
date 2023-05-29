@@ -188,6 +188,9 @@ legacyCliParser args = case go False emptyOptions args of
     "dump-ast" : _ -> (False, options)
     "test" : _ -> (False, options)
     "version" : _ -> (False, options)
+    "--bash-completion-script" : _ -> (False, options)
+    "--fish-completion-script" : _ -> (False, options)
+    "--zsh-completion-script" : _ -> (False, options)
     -- End of recursion case
     [] -> (hasSuccessfulParse, options)
     "--pretty-print-files" : xs -> go True options{optsCommand = PrettyPrint} xs
