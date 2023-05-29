@@ -24,6 +24,7 @@ import System.FilePath.Find (FindClause, always, fileName, filePath, find, (&&?)
 import System.FilePath.GlobPattern (GlobPattern)
 import System.IO (IOMode (..), hGetContents, hPutStrLn, hSetEncoding, utf8_bom, withFile)
 import Prelude hiding (readFile, writeFile)
+import GLuaFixer.Effects.Logging (Logging, putStrLnStdError)
 
 newtype Directory = Directory {dir :: FilePath}
 newtype FileNames = FileNames {names :: [String]}
@@ -154,38 +155,41 @@ runFilesIO = interpret $ \_ -> \case
   MakeAbsolute filepath -> liftIO $ Dir.makeAbsolute filepath
 
 -- | Trace actions on files, useful for debugging
-traceFiles :: (Files :> es, IOE :> es) => Eff es a -> Eff es a
+traceFiles :: (Files :> es, Logging :> es) => Eff es a -> Eff es a
 traceFiles = interpose $ \_ -> \case
   GetCurrentDirectory -> do
-    liftIO $ putStrLn "GetCurrentDirectory"
+    putStrLnStdError "GetCurrentDirectory"
     send GetCurrentDirectory
   ReadStdIn -> do
-    liftIO $ putStrLn "ReadStdIn"
+    putStrLnStdError "ReadStdIn"
     send ReadStdIn
   ReadFile filepath -> do
-    liftIO $ putStrLn $ "ReadFile " <> filepath
+    putStrLnStdError $ "ReadFile " <> filepath
     send $ ReadFile filepath
   WriteFile filepath contents -> do
-    liftIO $ putStrLn $ "WriteFile " <> filepath
+    putStrLnStdError $ "WriteFile " <> filepath
     send $ WriteFile  filepath contents
   FileExists filepath -> do
-    liftIO $ putStrLn "FileExists"
+    putStrLnStdError "FileExists"
     send $ FileExists filepath
   IsDirectory filepath -> do
-    liftIO $ putStrLn $ "IsDirectory " <> filepath
+    putStrLnStdError $ "IsDirectory " <> filepath
     send $ IsDirectory filepath
   SearchUpwardsForFile directory filenames -> do
-    liftIO $ putStrLn $ "SearchUpwardsForFile " <> directory.dir <> " " <> show filenames.names
+    putStrLnStdError $ "SearchUpwardsForFile " <> directory.dir <> " " <> show filenames.names
     send $ SearchUpwardsForFile directory filenames
   FirstExists filepath -> do
-    liftIO $ putStrLn $ "FirstExists " <> show filepath
+    putStrLnStdError $ "FirstExists " <> show filepath
     send $ FirstExists filepath
   FindLuaFiles ignores filepath -> do
-    liftIO $ putStrLn $ "FindLuaFiles " <> show ignores.ignore <> " " <> filepath
+    putStrLnStdError $ "FindLuaFiles " <> show ignores.ignore <> " " <> filepath
     send $ FindLuaFiles ignores filepath
   GetHomeDirectory -> do
-    liftIO $ putStrLn "GetHomeDirectory"
+    putStrLnStdError "GetHomeDirectory"
     send GetHomeDirectory
   MakeAbsolute filepath -> do
-    liftIO $ putStrLn $ "MakeAbsolute " <> filepath
+    putStrLnStdError $ "MakeAbsolute " <> filepath
     send $ MakeAbsolute filepath
+
+traceFilesIfEnabled :: (Files :> es, Logging :> es) => Bool -> Eff es a -> Eff es a
+traceFilesIfEnabled enabled = if enabled then traceFiles else id

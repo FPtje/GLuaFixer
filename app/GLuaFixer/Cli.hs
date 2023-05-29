@@ -22,6 +22,7 @@ data Options = Options
   , optsOverridden :: OverriddenSettings
   , optsCommand :: Command
   , optsFiles :: StdInOrFiles
+  , optsDebug :: Bool
   } deriving (Show)
 
 -- | Available subcommands
@@ -75,6 +76,7 @@ cliParser =
     <*> (OverriddenSettings <$> indentOption <*> outputFormatOption)
     <*> commandParser
     <*> parseStdInOrFiles
+    <*> parseDebug
  where
   configOption :: Opt.Parser (Maybe SettingsPath)
   configOption =
@@ -111,6 +113,13 @@ cliParser =
     "github" -> Right $ LogFormatChoice GithubLogFormat
     "auto" -> Right AutoLogFormatChoice
     val -> Left $ "Bad output format '" <> val <> "', must be either 'auto', 'standard' or 'github'."
+
+  parseDebug :: Opt.Parser Bool
+  parseDebug =
+      Opt.switch
+        ( Opt.long "debug"
+            <> Opt.help "Whether to enable some debug prints."
+        )
 
   commandParser :: Opt.Parser Command
   commandParser =
@@ -180,6 +189,7 @@ legacyCliParser args = case go False emptyOptions args of
       , optsOverridden = OverriddenSettings Nothing Nothing
       , optsCommand = Lint
       , optsFiles = UseFiles []
+      , optsDebug = False
       }
 
   go hasSuccessfulParse options = \case

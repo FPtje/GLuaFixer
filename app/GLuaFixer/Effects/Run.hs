@@ -23,10 +23,10 @@ import qualified GLua.PSParser as PSP
 import qualified GLua.Parser as UUP
 import GLuaFixer.Cli (Command (..), Options (..), OverriddenSettings, SettingsPath)
 import GLuaFixer.Effects.Cli (Cli, CliParseResult (..), parseCliOptions)
-import GLuaFixer.Effects.Files (Files, IgnoreFiles (..), findLuaFiles, getCurrentDirectory, isDirectory, readFile, readStdIn, writeFile)
+import GLuaFixer.Effects.Files (Files, IgnoreFiles (..), findLuaFiles, getCurrentDirectory, isDirectory, readFile, readStdIn, writeFile, traceFilesIfEnabled)
 import GLuaFixer.Effects.Interruptible (Interruptible, interruptibleFoldMStrict)
 import GLuaFixer.Effects.Logging (Logging, emitLintMessage, getLogFormat, putStrLnStdError, putStrLnStdOut, putStrStdOut)
-import GLuaFixer.Effects.Settings (Settings, getSettingsForFile, SettingsError (CouldNotParseSettings), runSettings)
+import GLuaFixer.Effects.Settings (Settings, getSettingsForFile, SettingsError (CouldNotParseSettings), runSettings, traceSettingsIfEnabled)
 import qualified GLuaFixer.Interface as Interface
 import GLuaFixer.LintMessage (sortLintMessages)
 import GLuaFixer.LintSettings (
@@ -75,86 +75,89 @@ runOptions :: ( Interruptible :> es
   ) =>
   Options ->
   Eff es ExitCode
-runOptions options = case (options.optsCommand, options.optsFiles) of
-  (Lint, UseStdIn) -> do
-    (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
-    lint lintSettings "stdin" contents
-  (Lint, UseFiles files) ->
-    foldLuaFiles
-      options.optsConfigFile
-      options.optsOverridden
-      ExitSuccess
-      files
-      $ \exitCode lintSettings filepath contents ->
-        worstExitCode exitCode <$> lint lintSettings filepath contents
-  (PrettyPrint, UseStdIn) -> do
-    (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
-    case prettyprint lintSettings contents of
-      Nothing -> pure $ ExitFailure 1
-      Just prettyprinted -> do
-        putStrStdOut prettyprinted
+runOptions options =
+  traceFilesIfEnabled options.optsDebug $
+  traceSettingsIfEnabled options.optsDebug $
+  case (options.optsCommand, options.optsFiles) of
+    (Lint, UseStdIn) -> do
+      (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
+      lint lintSettings "stdin" contents
+    (Lint, UseFiles files) ->
+      foldLuaFiles
+        options.optsConfigFile
+        options.optsOverridden
+        ExitSuccess
+        files
+        $ \exitCode lintSettings filepath contents ->
+          worstExitCode exitCode <$> lint lintSettings filepath contents
+    (PrettyPrint, UseStdIn) -> do
+      (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
+      case prettyprint lintSettings contents of
+        Nothing -> pure $ ExitFailure 1
+        Just prettyprinted -> do
+          putStrStdOut prettyprinted
+          pure ExitSuccess
+    (PrettyPrint, UseFiles files) ->
+      foldLuaFiles
+        options.optsConfigFile
+        options.optsOverridden
+        ExitSuccess
+        files
+        $ \exitCode lintSettings filepath contents -> do
+          putStrLnStdOut $ "Pretty printing " <> filepath
+          case prettyprint lintSettings contents of
+            Nothing -> pure $ ExitFailure 1
+            Just prettyprinted -> do
+              writeFile filepath prettyprinted
+              pure exitCode
+    (AnalyseGlobals, UseStdIn) -> do
+      (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
+      withParsed lintSettings "stdin" contents (ExitFailure 1) $ \ast -> do
+        analysis <- execAnalysis $ analyseFile lintSettings "stdin" ast
+        reportAnalysis analysis
         pure ExitSuccess
-  (PrettyPrint, UseFiles files) ->
-    foldLuaFiles
-      options.optsConfigFile
-      options.optsOverridden
-      ExitSuccess
-      files
-      $ \exitCode lintSettings filepath contents -> do
-        putStrLnStdOut $ "Pretty printing " <> filepath
-        case prettyprint lintSettings contents of
-          Nothing -> pure $ ExitFailure 1
-          Just prettyprinted -> do
-            writeFile filepath prettyprinted
-            pure exitCode
-  (AnalyseGlobals, UseStdIn) -> do
-    (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
-    withParsed lintSettings "stdin" contents (ExitFailure 1) $ \ast -> do
-      analysis <- execAnalysis $ analyseFile lintSettings "stdin" ast
+    (AnalyseGlobals, UseFiles files) -> do
+      analysis <- execAnalysis $ foldLuaFiles
+        options.optsConfigFile
+        options.optsOverridden
+        ()
+        files
+        $ \() lintSettings filepath contents -> do
+          withParsed lintSettings filepath contents () $ \ast ->
+            analyseFile lintSettings filepath ast
       reportAnalysis analysis
       pure ExitSuccess
-  (AnalyseGlobals, UseFiles files) -> do
-    analysis <- execAnalysis $ foldLuaFiles
-      options.optsConfigFile
-      options.optsOverridden
-      ()
-      files
-      $ \() lintSettings filepath contents -> do
-        withParsed lintSettings filepath contents () $ \ast ->
-          analyseFile lintSettings filepath ast
-    reportAnalysis analysis
-    pure ExitSuccess
-  (DumpAst, UseStdIn) -> do
-    (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
-    withParsed lintSettings "stdin" contents (ExitFailure 1) $ \ast -> do
-      putStrLnStdOut $ BL8.unpack $ JSON.encode ast
+    (DumpAst, UseStdIn) -> do
+      (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
+      withParsed lintSettings "stdin" contents (ExitFailure 1) $ \ast -> do
+        putStrLnStdOut $ BL8.unpack $ JSON.encode ast
+        pure ExitSuccess
+    (DumpAst, UseFiles files) ->
+      foldLuaFiles
+        options.optsConfigFile
+        options.optsOverridden
+        ExitSuccess
+        files
+        $ \exitCode lintSettings filepath contents ->
+          withParsed lintSettings filepath contents (ExitFailure 1) $ \ast -> do
+            putStrLnStdOut $ BL8.unpack $ JSON.encode ast
+            pure exitCode
+    (Test, UseStdIn) -> do
+      (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
+      test lintSettings "stdin" contents
       pure ExitSuccess
-  (DumpAst, UseFiles files) ->
-    foldLuaFiles
-      options.optsConfigFile
-      options.optsOverridden
-      ExitSuccess
-      files
-      $ \exitCode lintSettings filepath contents ->
-        withParsed lintSettings filepath contents (ExitFailure 1) $ \ast -> do
-          putStrLnStdOut $ BL8.unpack $ JSON.encode ast
-          pure exitCode
-  (Test, UseStdIn) -> do
-    (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
-    test lintSettings "stdin" contents
-    pure ExitSuccess
-  (Test, UseFiles files) -> do
-    foldLuaFiles
-      options.optsConfigFile
-      options.optsOverridden
-      ()
-      files
-      $ \() lintSettings filepath contents ->
-        test lintSettings filepath contents
-    pure ExitSuccess
-  (PrintVersion, _) -> do
-    putStrLnStdOut version
-    pure ExitSuccess
+    (Test, UseFiles files) -> do
+      foldLuaFiles
+        options.optsConfigFile
+        options.optsOverridden
+        ()
+        files
+        $ \() lintSettings filepath contents ->
+          test lintSettings filepath contents
+      pure ExitSuccess
+    (PrintVersion, _) -> do
+      putStrLnStdOut version
+      pure ExitSuccess
 
 -- | Retrieves the contents of stdin and the settings that apply.
 getStdIn ::
