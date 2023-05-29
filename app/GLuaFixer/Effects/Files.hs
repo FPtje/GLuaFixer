@@ -15,7 +15,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.List (foldl', stripPrefix)
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Effectful (Dispatch (Dynamic), DispatchOf, Eff, Effect, IOE, (:>))
-import Effectful.Dispatch.Dynamic (interpret, send)
+import Effectful.Dispatch.Dynamic (interpret, send, interpose)
 import Effectful.Dispatch.Static (HasCallStack)
 import qualified System.Directory as Dir
 import System.FilePath (takeDirectory, (</>))
@@ -151,3 +151,40 @@ runFilesIO = interpret $ \_ -> \case
       liftIO $ find always (fileName ~~? "*.lua" &&? ignoredGlobs) path
   GetHomeDirectory -> liftIO Dir.getHomeDirectory
   MakeAbsolute filepath -> liftIO $ Dir.makeAbsolute filepath
+
+-- | Trace actions on files, useful for debugging
+traceFiles :: (Files :> es, IOE :> es) => Eff es a -> Eff es a
+traceFiles = interpose $ \_ -> \case
+  GetCurrentDirectory -> do
+    liftIO $ putStrLn "GetCurrentDirectory"
+    send GetCurrentDirectory
+  ReadStdIn -> do
+    liftIO $ putStrLn "ReadStdIn"
+    send ReadStdIn
+  ReadFile filepath -> do
+    liftIO $ putStrLn "ReadFile"
+    send $ ReadFile filepath
+  WriteFile filepath contents -> do
+    liftIO $ putStrLn "WriteFile"
+    send $ WriteFile  filepath contents
+  FileExists filepath -> do
+    liftIO $ putStrLn "FileExists"
+    send $ FileExists filepath
+  IsDirectory filepath -> do
+    liftIO $ putStrLn "IsDirectory"
+    send $ IsDirectory filepath
+  SearchUpwardsForFile directory filenames -> do
+    liftIO $ putStrLn "SearchUpwardsForFile"
+    send $ SearchUpwardsForFile directory filenames
+  FirstExists filepath -> do
+    liftIO $ putStrLn "FirstExists"
+    send $ FirstExists filepath
+  FindLuaFiles ignores filepath -> do
+    liftIO $ putStrLn "FindLuaFiles"
+    send $ FindLuaFiles ignores filepath
+  GetHomeDirectory {} -> do
+    liftIO $ putStrLn "GetHomeDirectory"
+    send GetHomeDirectory
+  MakeAbsolute filepath -> do
+    liftIO $ putStrLn "MakeAbsolute"
+    send $ MakeAbsolute filepath

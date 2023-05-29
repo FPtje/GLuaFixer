@@ -12,14 +12,15 @@ module GLuaFixer.Effects.Settings where
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS8
-import Effectful (Dispatch (Dynamic), DispatchOf, Eff, Effect, (:>))
-import Effectful.Dispatch.Dynamic (interpret, send)
+import Effectful (Dispatch (Dynamic), DispatchOf, Eff, Effect, (:>), IOE)
+import Effectful.Dispatch.Dynamic (interpret, send, interpose)
 import qualified Effectful.Error.Static as Err
 import GLuaFixer.Cli (OverriddenSettings, SettingsPath (..), overrideSettings)
 import GLuaFixer.Effects.Files (Files)
 import qualified GLuaFixer.Effects.Files as Files
 import GLuaFixer.LintSettings (LintSettings, defaultLintSettings)
 import System.FilePath (takeDirectory, (</>))
+import Control.Monad.IO.Class (liftIO)
 
 data Settings :: Effect where
   -- | Search for settings in various locations, returns default settings if nothing is found
@@ -108,3 +109,19 @@ getSettingsForFile mbSettingsPath overridden filepath = do
     Just (SettingsPath path) -> settingsFromFile path
     Nothing -> getSettings filepath
   pure $ overrideSettings overridden readSettings
+
+-- | Trace the steps of a settings effect
+traceSettings :: (Settings :> es, IOE :> es) => Eff es a -> Eff es a
+traceSettings = interpose $ \_ -> \case
+  GetSettings filepath -> do
+    liftIO $ putStrLn "GetSettings filepath"
+    send $ GetSettings filepath
+  SettingsFromFile filepath -> do
+    liftIO $ putStrLn "SettingsFromFile filepath"
+    send $ SettingsFromFile filepath
+  SearchSettingsInDirectory filepath -> do
+    liftIO $ putStrLn "SearchSettingsInDirectory filepath"
+    send $ SearchSettingsInDirectory filepath
+  SearchSettingsInHome -> do
+    liftIO $ putStrLn "SearchSettingsInHome"
+    send SearchSettingsInHome
