@@ -1,6 +1,6 @@
 cabal-version:       3.4
 name:                glualint
-version:             1.24.4
+version:             1.24.5
 synopsis:            Attempts to fix your syntax erroring Lua files.
 description:         Linter for Lua, specifically the variant used in Garry's mod.
 homepage:            https://github.com/FPtje/GLuaFixer
