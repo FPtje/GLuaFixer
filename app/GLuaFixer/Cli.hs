@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralisedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 
@@ -12,6 +14,7 @@ import Options.Applicative (optional)
 import qualified Options.Applicative as Opt
 
 newtype SettingsPath = SettingsPath FilePath
+  deriving newtype Show
 
 -- | Command line options of glualint
 data Options = Options
@@ -19,7 +22,7 @@ data Options = Options
   , optsOverridden :: OverriddenSettings
   , optsCommand :: Command
   , optsFiles :: StdInOrFiles
-  }
+  } deriving (Show)
 
 -- | Available subcommands
 data Command
@@ -35,7 +38,7 @@ data Command
 data OverriddenSettings = OverriddenSettings
   { indentation :: Maybe Indentation
   , outputFormat :: Maybe LogFormatChoice
-  }
+  } deriving Show
 
 -- | Override settings with the options passed on the command line
 overrideSettings :: OverriddenSettings -> LintSettings -> LintSettings

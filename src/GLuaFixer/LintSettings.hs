@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 module GLuaFixer.LintSettings where
@@ -20,6 +21,7 @@ import GLuaFixer.LintMessage
 -- | Indentation used for pretty printing code
 newtype Indentation = Indentation { unIndentation :: String }
   deriving IsString
+  deriving newtype Show
 
 -- | Whether a file is read from stdin or from files
 data StdInOrFiles
