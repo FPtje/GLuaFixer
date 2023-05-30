@@ -2,17 +2,15 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
 module GLuaFixer.Effects.Run where
 
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import Effectful (Eff, (:>))
@@ -77,7 +75,9 @@ runOptions :: ( Interruptible :> es
   Eff es ExitCode
 runOptions options =
   traceFilesIfEnabled options.optsDebug $
-  traceSettingsIfEnabled options.optsDebug $
+  traceSettingsIfEnabled options.optsDebug $ do
+  when (options.optsDebug) $
+    putStrLnStdError $ show options
   case (options.optsCommand, options.optsFiles) of
     (Lint, UseStdIn) -> do
       (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden

@@ -206,6 +206,7 @@ legacyCliParser args = case go False emptyOptions args of
     "--zsh-completion-script" : _ -> (False, options)
     -- End of recursion case
     [] -> (hasSuccessfulParse, options)
+    "--debug" : xs -> go True options{optsDebug = True} xs
     "--pretty-print-files" : xs -> go True options{optsCommand = PrettyPrint} xs
     "--pretty-print" : xs -> go True options{optsCommand = PrettyPrint} xs
     "--analyse-globals" : xs -> go True options{optsCommand = AnalyseGlobals} xs
