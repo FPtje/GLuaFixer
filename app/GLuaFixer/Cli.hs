@@ -208,7 +208,7 @@ legacyCliParser args = case go False emptyOptions args of
     [] -> (hasSuccessfulParse, options)
     "--debug" : xs -> go True options{optsDebug = True} xs
     "--pretty-print-files" : xs -> go True options{optsCommand = PrettyPrint} xs
-    "--pretty-print" : xs -> go True options{optsCommand = PrettyPrint} xs
+    "--pretty-print" : xs -> go True options{optsCommand = PrettyPrint, optsFiles = UseStdIn} xs
     "--analyse-globals" : xs -> go True options{optsCommand = AnalyseGlobals} xs
     "--dump-ast" : xs -> go True options{optsCommand = DumpAst} xs
     "--version" : xs -> go True options{optsCommand = PrintVersion} xs
