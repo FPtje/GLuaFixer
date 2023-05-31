@@ -1,4 +1,4 @@
-cabal-version:      3.4
+cabal-version:      3.0
 name:               glualint
 version:            1.24.5
 synopsis:           Attempts to fix your syntax erroring Lua files.
