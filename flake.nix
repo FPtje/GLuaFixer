@@ -37,6 +37,7 @@
         buildInputs = [
           cabal-install
           pkgs.cachix
+          cabal-fmt
           haskell-language-server
         ];
       };
