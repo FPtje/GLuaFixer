@@ -172,8 +172,11 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pBinary <|> pNumber) <*> (
         pDecimal :: Parser String
         pDecimal = (:) <$> char '.' <*> many digit
 
+        pHexDecimal :: Parser String
+        pHexDecimal = (:) <$> char '.' <*> many pHex
+
         pHexadecimal :: Parser String
-        pHexadecimal = (++) <$> (try (string "0x") <|> try (string "0X")) <*> ((++) <$> many1 pHex <*> option "" pDecimal)
+        pHexadecimal = (++) <$> (try (string "0x") <|> try (string "0X")) <*> ((++) <$> many1 pHex <*> option "" pHexDecimal)
 
         pHex :: Parser Char
         pHex = digit <|> oneOf ['a', 'b', 'c', 'd', 'e', 'f', 'A', 'B', 'C', 'D', 'E', 'F']

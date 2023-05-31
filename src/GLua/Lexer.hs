@@ -186,8 +186,11 @@ parseNumber = TNumber <$> ((++) <$> (pZeroPrefixedNumber <<|> pNumber) <*> (pLLU
         pDecimal :: LParser String
         pDecimal = (:) <$> pSym '.' <*> pMany pDigit
 
+        pHexDecimal :: LParser String
+        pHexDecimal = (:) <$> pSym '.' <*> pMany pHex
+
         pHexadecimal :: LParser String
-        pHexadecimal = (:) <$> (pSym 'x' <<|> pSym 'X') <*> ((++) <$> pSome pHex <*> opt pDecimal "")
+        pHexadecimal = (:) <$> (pSym 'x' <<|> pSym 'X') <*> ((++) <$> pSome pHex <*> opt pHexDecimal "")
 
         pBinary :: LParser String
         pBinary = (:) <$> (pSym 'b' <<|> pSym 'B') <*> ((++) <$> pSome pBin <*> opt pDecimal "")

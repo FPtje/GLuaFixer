@@ -197,3 +197,6 @@ foo = { -- Single line comment
 a(function() end)
 a(function() -- foo
 end)
+
+-- https://github.com/FPtje/GLuaFixer/issues/153
+print(0x1.a)
