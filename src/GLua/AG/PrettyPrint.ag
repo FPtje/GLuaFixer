@@ -576,6 +576,8 @@ sem PrefixExp
                  -- Whether this ExprVar contains another PrefixExp. In this case the parentheses
                  -- can be removed.
                  loc.containsParenthesizedExpr = case @expr.copy of
+                                                    -- Except when that expression is a VarArg
+                                                    MExpr _ (APrefixExpr (ExprVar (MExpr _ AVarArg) _)) -> False
                                                     MExpr _ (APrefixExpr _) -> True
                                                     _ -> False
                  loc.noparens =

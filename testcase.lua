@@ -200,3 +200,7 @@ end)
 
 -- https://github.com/FPtje/GLuaFixer/issues/153
 print(0x1.a)
+
+-- This should pretty print to something that is parseable again
+-- https://github.com/FPtje/GLuaFixer/issues/155
+r=function(...)((...))[...]=nil;end
