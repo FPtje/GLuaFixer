@@ -30,6 +30,7 @@ data Command
   = Lint
   | PrettyPrint
   | AnalyseGlobals
+  | DumpLexicon
   | DumpAst
   | Test
   | PrintVersion
@@ -138,6 +139,11 @@ cliParser =
             "analyse-globals"
             ( Opt.info (pure AnalyseGlobals) $
                 Opt.progDesc "Print a list of all globals used and defined in the given files/directories."
+            )
+          <> Opt.command
+            "dump-lexicon"
+            ( Opt.info (pure DumpLexicon) $
+                Opt.progDesc "Debug command to dump the tokens parsed in the Lua code."
             )
           <> Opt.command
             "dump-ast"
