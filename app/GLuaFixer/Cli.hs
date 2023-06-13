@@ -142,7 +142,7 @@ cliParser =
           <> Opt.command
             "dump-ast"
             ( Opt.info (pure DumpAst) $
-                Opt.progDesc "Print a list of all globals used and defined in the given files/directories."
+                Opt.progDesc "Debug command to dump the internal Abstract Syntax Tree of the Lua code."
             )
           <> Opt.command
             "test"
