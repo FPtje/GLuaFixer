@@ -307,10 +307,10 @@ attr Stat MStat MStatList VarsList Declaration PrefixExp
     -- Lua does not accept this ambiguity, and will throw a Syntax error. With a semicolon, this 
     -- ambiguity can be resolved.
     --
-    -- Ambiguity occurs when the last thing in one statement is a PrefixExpression, specifically an
-    -- _expression_ prefix expression (one in parentheses, like the anonymous function above), and
-    -- the first thing in the next statement is also a prefixexpression. In this case, a semicolon
-    -- must be placed.
+    -- Ambiguity occurs when the last thing in one statement is a PrefixExpression, and the first
+    -- thing in the next statement is also a prefixexpression, specifically an _expression_ prefix
+    -- expression (one in parentheses, like the anonymous function above). In this case, a semicolon
+    -- MUST be placed between the two statements.
     syn startsWithExprPrefixExpression :: Bool
 
 attr MStat Stat VarsList Declaration MaybeMExpr MExpr Expr
@@ -452,7 +452,7 @@ sem VarsList
                 lhs.startsWithExprPrefixExpression = False
                 lhs.endsWithPrefixExpression = False
 
-sem ElseIf
+sem ElseIf156
     | Tuple     lhs.pretty = zeroWidthText "elseif" <-> @x1.pretty <-> zeroWidthText "then" $+$ @x2.pretty
                 x2.indent = @lhs.indent + 1
                 x2.statRegion = emptyRg
