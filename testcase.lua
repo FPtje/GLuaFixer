@@ -204,3 +204,21 @@ print(0x1.a)
 -- This should pretty print to something that is parseable again
 -- https://github.com/FPtje/GLuaFixer/issues/155
 r=function(...)((...))[...]=nil;end
+
+-- The semicolon below must NOT be removed by the pretty printer. If it does,
+-- the syntax becomes ambiguous, and parsing will fail.
+-- See https://github.com/FPtje/GLuaFixer/issues/156
+a = b;
+(c)[1] = 1
+
+a = 1 + b;
+(c)[1] = 1
+
+-- No semicolon needed
+a = 1 + b
+c[1] = 1
+
+-- Edge case: it's really about the last _defined_ variable. The `b` and `c`
+-- here should not break the adding of the semicolon
+a, b, c = b;
+(c)[1] = 1

@@ -295,19 +295,31 @@ attr ElseIfList Else MElse
 attr Stat Block MStatList Else MElse Expr
     inh statRegion :: Region
 
-attr MStatList MStat Stat PrefixExp
-    -- Long name because of very specific use case:
-    -- placing semicolons to prevent ambiguous statements
-    syn potentiallyAmbiguousAsStatement use {||} {False} :: Bool
+attr Stat MStat MStatList VarsList Declaration PrefixExp
+    -- Used to decide whether two statements should be separated by a semicolon. Lua becomes
+    -- ambiguous when you have a statement like this:
+    -- a = 1 + a
+    -- (function() end)()
+    --
+    -- The ambiguity arises from: is this two statements, or is it one statement like so:
+    -- a = a(function() end)()
+    --
+    -- Lua does not accept this ambiguity, and will throw a Syntax error. With a semicolon, this 
+    -- ambiguity can be resolved.
+    --
+    -- Ambiguity occurs when the last thing in one statement is a PrefixExpression, specifically an
+    -- _expression_ prefix expression (one in parentheses, like the anonymous function above), and
+    -- the first thing in the next statement is also a prefixexpression. In this case, a semicolon
+    -- must be placed.
+    syn startsWithExprPrefixExpression :: Bool
+
+attr MStat Stat VarsList Declaration MaybeMExpr MExpr Expr
+    -- See startsWithPrefixExpression
+    syn endsWithPrefixExpression :: Bool
 
 attr MStat Stat
-    inh potentiallyAmbiguousAsStatement :: Bool
-
-attr VarsList Declaration MaybeMExpr MExpr Expr
-    syn wouldBeAmbiguousIfNextStatementIsExprVar use {||} {False} :: Bool
-
-attr VarsList
-    syn isLastDefinedVar :: Bool
+    -- See startsWithPrefixExpression
+    inh wouldBeAmbiguousWithoutSemicolon :: Bool
 
 sem MStatList
     | Cons
@@ -318,7 +330,8 @@ sem MStatList
                     $+$ indent @lhs.ppconf @lhs.indent @hd.pretty
                     <-> @loc.prettyCommentsAfter <> @loc.addNewline
                     $+$ @tl.pretty
-
+                 lhs.startsWithExprPrefixExpression = @hd.startsWithExprPrefixExpression
+                 
                  loc.prettyCommentsBefore = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
                  loc.prettyCommentsAfter = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
                  loc.commentsBefore =
@@ -334,11 +347,15 @@ sem MStatList
 
                  tl.isHead  = False
                  hd.isLastStatement = @tl.isLast
-                 hd.potentiallyAmbiguousAsStatement = @tl.potentiallyAmbiguousAsStatement
-                 lhs.potentiallyAmbiguousAsStatement = @hd.potentiallyAmbiguousAsStatement
+                 -- A pair of statements are ambiguous without a semicolon if the first ends with a
+                 -- prefix expression, and the second starts specifically with an expression prefix
+                 -- expression.
+                 -- Pass that info to the head, because that one places semicolons.
+                 hd.wouldBeAmbiguousWithoutSemicolon = @hd.endsWithPrefixExpression && @tl.startsWithExprPrefixExpression
                  lhs.isLast = False
     | Nil        lhs.pretty = @loc.renderedComments
                  lhs.statementCount = 0
+                 lhs.startsWithExprPrefixExpression = False
                  loc.renderedComments = renderMLComments @lhs.ppconf @lhs.indent $ fst @loc.commentsBeforeEnd
                  --  Don't print any comments if this is an empty MStatList, otherwise the `end`
                  --  keyword may be hidden by the comments printed here.
@@ -347,7 +364,10 @@ sem MStatList
 
 sem MStat
     | MStat      lhs.pos    = @pos
+                 lhs.startsWithExprPrefixExpression = @stat.startsWithExprPrefixExpression
+                 lhs.endsWithPrefixExpression = @stat.endsWithPrefixExpression
                  stat.statRegion = @pos
+                 stat.wouldBeAmbiguousWithoutSemicolon = @lhs.wouldBeAmbiguousWithoutSemicolon
 
 sem MExprList
     | Cons       lhs.pretty = (if @lhs.isHead then empty else @loc.comma) <> @hd.pretty <> @tl.pretty
@@ -396,31 +416,41 @@ sem MaybeMExpr
     | Just
                 lhs.pretty = @just.pretty
                 lhs.isDefined = True
+                lhs.endsWithPrefixExpression = @just.endsWithPrefixExpression
                 just.parentOperatorPrecedence = TopLevelExpression
                 just.parentOperatorAssociative = True
     | Nothing
                 lhs.pretty = empty
                 lhs.isDefined = False
+                lhs.endsWithPrefixExpression = False
 
 sem Declaration
     | Tuple     lhs.varPretty = @x1.pretty
                 lhs.exprPretty = @x2.pretty
+                lhs.startsWithExprPrefixExpression = @x1.startsWithExprPrefixExpression
+                lhs.endsWithPrefixExpression = @x2.endsWithPrefixExpression
                 x1.parentOperatorPrecedence = TopLevelExpression
                 x1.parentOperatorAssociative = True
 
 sem VarsList
     | Cons      lhs.pretty = @loc.varPretty <-> if @loc.isDefined then zchr '=' <-> @loc.exprPretty else empty
+                lhs.startsWithExprPrefixExpression = @hd.startsWithExprPrefixExpression
+                lhs.endsWithPrefixExpression = 
+                    -- A list of vars ends with a prefix expression if the last defined variable
+                    -- ends with a prefix expression
+                    -- e.g.
+                    -- `a, b, c = 1, foo()`
+                    -- `c` is not defined, but `b` is.
+                    if @tl.isDefined then @tl.endsWithPrefixExpression else @hd.endsWithPrefixExpression
                 loc.isDefined = @hd.isDefined || @tl.isDefined
                 loc.varPretty = (if @lhs.isHead then empty else @loc.comma) <> @hd.varPretty <> @tl.varPretty
                 loc.exprPretty = (if @lhs.isHead || not @hd.isDefined then empty else @loc.comma) <> @hd.exprPretty <> @tl.exprPretty
                 loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                 tl.isHead  = False
-                loc.isLastDefinedVar = @tl.isLastDefinedVar
-                lhs.isLastDefinedVar = @loc.isLastDefinedVar && not @hd.isDefined
-                lhs.wouldBeAmbiguousIfNextStatementIsExprVar = @tl.wouldBeAmbiguousIfNextStatementIsExprVar || @loc.isLastDefinedVar && @hd.wouldBeAmbiguousIfNextStatementIsExprVar
 
     | Nil       lhs.pretty = empty
-                lhs.isLastDefinedVar = True
+                lhs.startsWithExprPrefixExpression = False
+                lhs.endsWithPrefixExpression = False
 
 sem ElseIf
     | Tuple     lhs.pretty = zeroWidthText "elseif" <-> @x1.pretty <-> zeroWidthText "then" $+$ @x2.pretty
@@ -469,44 +499,64 @@ sem Block
 
 sem Stat
     | Def        lhs.pretty = @vars.pretty <> @loc.semicolon
-                 loc.semicolon = if semicolons @lhs.ppconf || @loc.wouldBeAmbiguous then zchr ';' else empty
-                 loc.wouldBeAmbiguous = @lhs.potentiallyAmbiguousAsStatement && @vars.wouldBeAmbiguousIfNextStatementIsExprVar
+                 lhs.startsWithExprPrefixExpression = @vars.startsWithExprPrefixExpression
+                 lhs.endsWithPrefixExpression = @vars.endsWithPrefixExpression
+                 loc.semicolon = if semicolons @lhs.ppconf || @lhs.wouldBeAmbiguousWithoutSemicolon then zchr ';' else empty
                  vars.isHead = True
     | LocDef     lhs.pretty = zeroWidthText "local" <-> @vars.pretty <> @loc.semicolon
-                 loc.semicolon = if semicolons @lhs.ppconf || @loc.wouldBeAmbiguous then zchr ';' else empty
-                 loc.wouldBeAmbiguous = @lhs.potentiallyAmbiguousAsStatement && @vars.wouldBeAmbiguousIfNextStatementIsExprVar
+                 lhs.startsWithExprPrefixExpression = @vars.startsWithExprPrefixExpression
+                 lhs.endsWithPrefixExpression = @vars.endsWithPrefixExpression
+                 loc.semicolon = if semicolons @lhs.ppconf || @lhs.wouldBeAmbiguousWithoutSemicolon then zchr ';' else empty
                  vars.isHead = True
     | AFuncCall  lhs.pretty = @fn.pretty <> @loc.semicolon
-                 loc.semicolon = if semicolons @lhs.ppconf || @lhs.potentiallyAmbiguousAsStatement then zchr ';' else empty
+                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
+                 lhs.startsWithExprPrefixExpression = @fn.startsWithExprPrefixExpression
+                 lhs.endsWithPrefixExpression = True
                  fn.parentOperatorPrecedence = TopLevelExpression
                  fn.parentOperatorAssociative = True
     | ALabel     lhs.pretty = zeroWidthText "::" <> @loc.whitespace <> tok @lbl <> @loc.whitespace <> zeroWidthText "::"
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  loc.whitespace = if spaceAfterLabel @lhs.ppconf then zeroWidthText " " else empty
     | ABreak     lhs.pretty = zeroWidthText "break" <> @loc.semicolon
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  lhs.hasBreaking = True
     | AContinue  lhs.pretty = zeroWidthText "continue" <> @loc.semicolon
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
                  lhs.hasBreaking = True
     | AGoto      lhs.pretty = zeroWidthText "goto" <-> tok @lbl <> @loc.semicolon
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
     | ADo
                  lhs.isMultiline = True
                  lhs.pretty = zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
     | AWhile     lhs.isMultiline = True
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  cond.parentOperatorPrecedence = TopLevelExpression
                  cond.parentOperatorAssociative = True
                  lhs.pretty = zeroWidthText "while" <-> @cond.pretty <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
     | ARepeat    lhs.pretty = zeroWidthText "repeat" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "until" <-> @cond.pretty)
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  body.indent = @lhs.indent + 1
                  cond.parentOperatorPrecedence = TopLevelExpression
                  cond.parentOperatorAssociative = True
                  lhs.hasBreaking = False
     | AIf        loc.isMultiline = @cond.isMultiline || @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking || @elifs.elsesExist || @els.elsesExist
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  loc.singleLinePretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" <-> @body.pretty <-> zeroWidthText "end"
                  loc.multilinePretty  = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" $+$ @body.pretty $+$ @elifs.pretty $+$ @els.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  cond.parentOperatorPrecedence = TopLevelExpression
@@ -516,6 +566,8 @@ sem Stat
                  lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
                  lhs.hasBreaking = False
     | ANFor      lhs.isMultiline = True
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  loc.step = case @step.copy of
                                 MExpr _ (ANumber "1") -> empty
                                 _ -> @loc.comma <> @step.pretty
@@ -530,12 +582,16 @@ sem Stat
                  body.indent = @lhs.indent + 1
                  lhs.hasBreaking = False
     | AGFor      lhs.isMultiline = True
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  lhs.pretty = zeroWidthText "for" <-> printList tok (render @loc.comma) @vars <-> zeroWidthText "in" <-> @vals.pretty <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  body.indent = @lhs.indent + 1
                  loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  vals.isHead = True
                  lhs.hasBreaking = False
     | AFunc      lhs.isMultiline = True
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  lhs.pretty = zeroWidthText "function" <-> @name.pretty <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @args) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                  loc.emptyParams = toEmpty $ null @args
                  loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
@@ -543,6 +599,8 @@ sem Stat
                  lhs.hasBreaking = False
     | ALocFunc   lhs.isMultiline = True
                  lhs.pretty = zeroWidthText "local function" <-> @name.pretty <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @args) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+                 lhs.startsWithExprPrefixExpression = False
+                 lhs.endsWithPrefixExpression = False
                  loc.emptyParams = toEmpty $ null @args
                  loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  body.indent = @lhs.indent + 1
@@ -569,9 +627,11 @@ sem FuncName
 sem PrefixExp
     | PFVar      lhs.pretty = tok @name <> @suffixes.pretty
                  lhs.isLiteral = False
+                 lhs.startsWithExprPrefixExpression = False
     | ExprVar    lhs.pretty = (if @loc.noparens then @expr.pretty else parens @lhs.ppconf NonEmpty @expr.pretty) <> @suffixes.pretty
                  lhs.precedence = if @loc.noparens then @expr.precedence else OperatorLevel8
                  lhs.isLiteral = False
+                 lhs.startsWithExprPrefixExpression = True
 
                  -- Whether this ExprVar contains another PrefixExp. In this case the parentheses
                  -- can be removed.
@@ -604,7 +664,6 @@ sem PrefixExp
                         && @lhs.parentOperatorAssociative
                         )
                     )
-                 lhs.potentiallyAmbiguousAsStatement = True
 
 sem PFExprSuffix
     | Call       lhs.pretty = @args.pretty
@@ -616,22 +675,30 @@ sem PFExprSuffix
 
 sem MExpr
     | MExpr             lhs.pos    = @pos
+                        lhs.endsWithPrefixExpression = @expr.endsWithPrefixExpression
                         expr.statRegion = @pos
 
 sem Expr
     | ANil              lhs.pretty = zeroWidthText "nil"
                         lhs.isLiteral = True
+                        lhs.endsWithPrefixExpression = False
     | AFalse            lhs.pretty = zeroWidthText "false"
                         lhs.isLiteral = True
+                        lhs.endsWithPrefixExpression = False
     | ATrue             lhs.pretty = zeroWidthText "true"
                         lhs.isLiteral = True
+                        lhs.endsWithPrefixExpression = False
     | ANumber           lhs.pretty = zeroWidthText @num
                         lhs.isLiteral = True
+                        lhs.endsWithPrefixExpression = False
     | AString           lhs.pretty = tok @str
                         lhs.isLiteral = True
+                        lhs.endsWithPrefixExpression = False
     | AVarArg           lhs.pretty = zeroWidthText "..."
                         lhs.isLiteral = True
+                        lhs.endsWithPrefixExpression = False
     | AnonymousFunc     loc.isMultiline = @body.isMultiline || @body.statementCount > 1 || (@body.statementCount == 1 && not @body.hasBreaking)
+                        lhs.endsWithPrefixExpression = False
                         loc.singleLinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) <-> @body.pretty <-> zeroWidthText "end"
                         loc.multilinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
                         loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
@@ -639,16 +706,18 @@ sem Expr
                         body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
                         lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
     | APrefixExpr       lhs.pretty = @pexpr.pretty
-                        lhs.wouldBeAmbiguousIfNextStatementIsExprVar = True
+                        lhs.endsWithPrefixExpression = True
     | ATableConstructor
                         lhs.pretty = if @fields.isMultiline then @loc.prettyMulti else @loc.prettySingle
                         lhs.isMultiline = not $ null $ @fields.copy
                         lhs.isLiteral = True
+                        lhs.endsWithPrefixExpression = False
                         loc.prettyMulti = zchr '{' $+$ indent @lhs.ppconf (@lhs.indent + 1) @fields.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
                         loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @fields.pretty
                         loc.emptyContents = toEmpty $ null @fields.copy
                         fields.indent = @lhs.indent + (if @fields.isMultiline then 1 else 0)
     | BinOpExpr         lhs.pretty = @left.pretty <-> @op.pretty <-> @right.pretty
+                        lhs.endsWithPrefixExpression = @right.endsWithPrefixExpression
                         -- Note: the AST doesn't always represent precedence correctly in
                         -- unparenthesized unary/binary expressions
                         lhs.precedence = min @op.precedence $ min @left.precedence @right.precedence
@@ -658,6 +727,7 @@ sem Expr
                         right.parentOperatorAssociative = @op.isAssociative
     | UnOpExpr          lhs.pretty = @op.pretty <> @right.pretty
                         lhs.precedence = min @right.precedence OperatorLevel7
+                        lhs.endsWithPrefixExpression = @right.endsWithPrefixExpression
                         right.parentOperatorPrecedence = OperatorLevel7
 
 sem Args
@@ -759,7 +829,7 @@ pp_block :: Block -> Int -> Doc
 pp_block p i = pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] i defaultPPConfig emptyRg))
 
 pp_mstat :: MStat -> Int -> Doc
-pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] i False False defaultPPConfig))
+pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] i False defaultPPConfig False))
 
 pp_prefixexp :: PrefixExp -> Doc
 pp_prefixexp p = pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 True TopLevelExpression defaultPPConfig))
@@ -783,10 +853,10 @@ renderBlock        :: Block -> String
 renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] 0 defaultPPConfig emptyRg))
 
 renderStat         :: Stat -> String
-renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat [] 0 False False defaultPPConfig emptyRg))
+renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat [] 0 False defaultPPConfig emptyRg False))
 
 renderMStat         :: MStat -> String
-renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] 0 False False defaultPPConfig))
+renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] 0 False defaultPPConfig False))
 
 renderAReturn      :: AReturn -> String
 renderAReturn p    = render $ pretty_Syn_AReturn (wrap_AReturn (sem_AReturn p) (Inh_AReturn [] 0 defaultPPConfig))
