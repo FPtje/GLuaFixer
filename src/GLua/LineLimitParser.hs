@@ -4,12 +4,11 @@ module GLua.LineLimitParser where
 
 import Control.Applicative ((<|>))
 import Control.Monad (void)
-import Text.Parsec (eof, satisfy, skipMany1, endOfLine, parse)
-import Text.Parsec.String (Parser)
-import GLua.AG.Token (Region(Region))
+import GLua.AG.Token (Region (Region))
 import GLua.PSLexer (pPos)
-import GLuaFixer.LintMessage (LintMessage(..), Issue (LineTooLong), Severity (LintWarning))
-
+import GLuaFixer.LintMessage (Issue (LineTooLong), LintMessage (..), Severity (LintWarning))
+import Text.Parsec (endOfLine, eof, parse, satisfy, skipMany1)
+import Text.Parsec.String (Parser)
 
 -- | The maximum line length
 newtype LineLimit = LineLimit Int
@@ -17,16 +16,17 @@ newtype LineLimit = LineLimit Int
 execParseLineLimits :: FilePath -> LineLimit -> String -> [LintMessage]
 execParseLineLimits filePath lineLimit@(LineLimit limit) contents =
   -- No point in parsing anything if the limit is 0
-  if limit <= 0 then []
-  else case parse (lineLimitParser filePath lineLimit) "input" contents of
-    Left parseError -> error $ "Parse error while checking line limit: " ++ show parseError
-    Right lintWarnings -> lintWarnings
+  if limit <= 0
+    then []
+    else case parse (lineLimitParser filePath lineLimit) "input" contents of
+      Left parseError -> error $ "Parse error while checking line limit: " ++ show parseError
+      Right lintWarnings -> lintWarnings
 
 -- | Parser that produces warnings about lines being too long
 lineLimitParser :: FilePath -> LineLimit -> Parser [LintMessage]
 lineLimitParser filePath lineLimit =
-  [] <$ eof <|>
-  recurse filePath lineLimit
+  [] <$ eof
+    <|> recurse filePath lineLimit
 
 -- | Recursive case of 'lineLimitParser',
 recurse :: FilePath -> LineLimit -> Parser [LintMessage]
@@ -34,8 +34,8 @@ recurse filePath lineLimit@(LineLimit limit) = do
   countAtMost limit notNewline
   -- If it finds line endings, it recurses without producing warnings. Otherwise, if it finds
   -- anything else, produce a warning and still recurse.
-  endOfLines *> lineLimitParser filePath lineLimit <|>
-    (:) <$> lineLimitWarning filePath <*> lineLimitParser filePath lineLimit
+  endOfLines *> lineLimitParser filePath lineLimit
+    <|> (:) <$> lineLimitWarning filePath <*> lineLimitParser filePath lineLimit
 
 -- | Succeeds when a character is not a line
 notNewline :: Parser Char
@@ -52,7 +52,8 @@ lineLimitWarning filePath = do
   skipMany1 notNewline
   endPos <- pPos
 
-  let warnRegion = Region startPos endPos
+  let
+    warnRegion = Region startPos endPos
 
   pure $ LintMessage LintWarning warnRegion LineTooLong filePath
 

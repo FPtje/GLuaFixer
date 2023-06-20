@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+
 module GLuaFixer.LintMessage where
 
 import Control.Monad
@@ -10,11 +11,12 @@ import System.Environment (lookupEnv)
 import Text.Parsec (ParseError)
 import Text.ParserCombinators.UU.BasicInstances hiding (msgs)
 
-import GLua.AG.Token
 import GLua.AG.PrettyPrint
+import GLua.AG.Token
 
 -- | Output formats for logging
 data LogFormat = StandardLogFormat | GithubLogFormat
+
 data LogFormatChoice = AutoLogFormatChoice | LogFormatChoice !LogFormat
 
 instance Show LogFormat where
@@ -38,7 +40,7 @@ instance FromJSON LogFormatChoice where
     "standard" -> pure $ LogFormatChoice StandardLogFormat
     "github" -> pure $ LogFormatChoice GithubLogFormat
     "auto" -> pure AutoLogFormatChoice
-    _ -> fail ( "Please use either \"auto\" \"standard\" or \"github\" but was " ++ show logFormat )
+    _ -> fail ("Please use either \"auto\" \"standard\" or \"github\" but was " ++ show logFormat)
   parseJSON _ = mzero
 
 data Severity = LintWarning | LintError
@@ -56,12 +58,15 @@ data RemoveOrAddSpace
 -- Many of these Strings can later be rewritten to their own types if necessary.
 data Issue
   = IssueParseError ParseError
+  | -- From BadSequenceFinder
 
-    -- From BadSequenceFinder
-  | Deprecated !String -- ^ Reason
+    -- | Reason
+    Deprecated !String
   | Profanity
-  | BeginnerMistake !String -- ^ message
-  | WhitespaceStyle !String -- ^ message
+  | -- | message
+    BeginnerMistake !String
+  | -- | message
+    WhitespaceStyle !String
   | SpaceAfterParenthesis !RemoveOrAddSpace
   | SpaceBeforeParenthesis !RemoveOrAddSpace
   | SpaceAfterBracket !RemoveOrAddSpace
@@ -70,25 +75,27 @@ data Issue
   | SpaceBeforeBrace !RemoveOrAddSpace
   | SpaceAfterComma !RemoveOrAddSpace
   | SpaceBeforeComma !RemoveOrAddSpace
-
-  -- Issues found in the lexicon (see LexLint.ag)
-  | TrailingWhitespace
+  | -- Issues found in the lexicon (see LexLint.ag)
+    TrailingWhitespace
   | InconsistentTabsSpaces
   | SyntaxInconsistency
-    !String -- ^ First encountered
-    !String -- ^ Second encountered
-
-  -- Line length limit (see LineLimitParser.hs)
-  | LineTooLong
-
-  -- Issues found in the AST (see ASTLint.ag)
-  | VariableShadows
-    !String -- ^ Name of the variable being shadowed
-    !Region -- ^ Definition location of variable being shadowed
+      !String
+      -- ^ First encountered
+      !String
+      -- ^ Second encountered
+  | -- Line length limit (see LineLimitParser.hs)
+    LineTooLong
+  | -- Issues found in the AST (see ASTLint.ag)
+    VariableShadows
+      !String
+      -- ^ Name of the variable being shadowed
+      !Region
+      -- ^ Definition location of variable being shadowed
   | GotoAsIdentifier
   | InconsistentVariableNaming
   | ScopePyramids
-  | UnusedVariable !String -- ^ Variable name
+  | -- | Variable name
+    UnusedVariable !String
   | AvoidGoto
   | EmptyDoBlock
   | EmptyWhileLoop
@@ -102,27 +109,27 @@ data Issue
   | SelfEntity
   | SelfWeapon
   | UnnecessaryParentheses
-  | SillyNegation !String -- ^ Alternative to using the negation
-  | DuplicateKeyInTable !Token -- ^ The key that is duplicated
-  deriving Eq
+  | -- | Alternative to using the negation
+    SillyNegation !String
+  | -- | The key that is duplicated
+    DuplicateKeyInTable !Token
+  deriving (Eq)
 
 -- | Represents lint messages
-data LintMessage
-  = LintMessage
-    { lintmsg_severity :: !Severity
-    , lintmsg_region   :: !Region
-    , lintmsg_message  :: !Issue
-    , lintmsg_file     :: !FilePath
-    }
+data LintMessage = LintMessage
+  { lintmsg_severity :: !Severity
+  , lintmsg_region :: !Region
+  , lintmsg_message :: !Issue
+  , lintmsg_file :: !FilePath
+  }
   deriving (Eq)
 
 instance Show LintMessage where
-    show = formatLintMessageDefault
+  show = formatLintMessageDefault
 
 issueDescription :: Issue -> String
 issueDescription = \case
   IssueParseError parseError -> renderPSError parseError
-
   Deprecated reason -> "Deprecated: " ++ reason
   Profanity -> "Watch your profanity"
   BeginnerMistake msg -> msg
@@ -143,14 +150,11 @@ issueDescription = \case
   SpaceAfterComma AddSpace -> "Style: Please add a space after the comma"
   SpaceBeforeComma RemoveSpace -> "Style: Please remove the space before the comma"
   SpaceBeforeComma AddSpace -> "Style: Please add a space before the comma"
-
   TrailingWhitespace -> "Trailing whitespace"
   InconsistentTabsSpaces -> "Inconsistent use of tabs and spaces for indentation"
   SyntaxInconsistency firstEncountered secondEncountered ->
     "Inconsistent use of '" ++ firstEncountered ++ "' and '" ++ secondEncountered ++ "'"
-
   LineTooLong -> "Style: Line too long"
-
   VariableShadows lbl (Region start _) ->
     "Variable '" ++ lbl ++ "' shadows existing binding, defined at " ++ renderPos start
   GotoAsIdentifier ->
@@ -225,7 +229,6 @@ issueTitle = \case
   SillyNegation _ -> "Unnecessary negation"
   DuplicateKeyInTable _ -> "Duplicate key"
 
-
 logFormatChoiceToLogFormat :: LogFormatChoice -> IO LogFormat
 logFormatChoiceToLogFormat = \case
   LogFormatChoice format -> pure format
@@ -233,9 +236,8 @@ logFormatChoiceToLogFormat = \case
     actionsExists <- isJust <$> lookupEnv "GITHUB_ACTIONS"
     workflowExists <- isJust <$> lookupEnv "GITHUB_WORKFLOW"
     if actionsExists && workflowExists
-    then pure GithubLogFormat
-    else pure StandardLogFormat
-
+      then pure GithubLogFormat
+      else pure StandardLogFormat
 
 formatLintMessage :: LogFormat -> LintMessage -> String
 formatLintMessage StandardLogFormat lintMsg = formatLintMessageDefault lintMsg
@@ -248,11 +250,14 @@ formatLintMessageDefault (LintMessage severity region msg file) =
       LintWarning -> "Warning"
       LintError -> "Error"
   in
-    showString file .
-    showString ": [" . showString level . showString "] " .
-    showString (renderRegion region) . showString ": " .
-    showString (issueDescription msg) $
-    ""
+    showString file
+      . showString ": ["
+      . showString level
+      . showString "] "
+      . showString (renderRegion region)
+      . showString ": "
+      . showString (issueDescription msg)
+      $ ""
 
 formatLintMessageGithub :: LintMessage -> String
 formatLintMessageGithub (LintMessage severity (Region (LineColPos line col _) (LineColPos endLine endCol _)) msg file) =
@@ -261,15 +266,23 @@ formatLintMessageGithub (LintMessage severity (Region (LineColPos line col _) (L
       LintWarning -> "warning"
       LintError -> "error"
   in
-    showString "::" . showString level .
-    showString " file=" . showString file .
-    showString ",line=" . shows (succ line) .
-    showString ",col=" . shows (succ col) .
-    showString ",endLine=" . shows (succ endLine) .
-    showString ",endColumn=" . shows (succ endCol) .
-    showString ",title=" . shows (issueTitle msg) .
-    showString "::" . showString (issueDescription msg) $
-    ""
+    showString "::"
+      . showString level
+      . showString " file="
+      . showString file
+      . showString ",line="
+      . shows (succ line)
+      . showString ",col="
+      . shows (succ col)
+      . showString ",endLine="
+      . shows (succ endLine)
+      . showString ",endColumn="
+      . shows (succ endCol)
+      . showString ",title="
+      . shows (issueTitle msg)
+      . showString "::"
+      . showString (issueDescription msg)
+      $ ""
 
 -- | Sort lint messages on file and then region
 sortLintMessages :: [LintMessage] -> [LintMessage]

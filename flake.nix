@@ -39,6 +39,7 @@
           pkgs.cachix
           cabal-fmt
           haskell-language-server
+          fourmolu
         ];
       };
     }

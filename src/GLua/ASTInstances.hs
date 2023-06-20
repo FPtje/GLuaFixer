@@ -5,56 +5,56 @@
 -- declarations, causing duplicate instances errors.
 module GLua.ASTInstances where
 
-import GLua.AG.AST
 import Data.Aeson
+import GLua.AG.AST
 
-instance ToJSON AST where
-instance FromJSON AST where
+instance ToJSON AST
+instance FromJSON AST
 
-instance ToJSON Block where
-instance FromJSON Block where
+instance ToJSON Block
+instance FromJSON Block
 
-instance ToJSON MStat where
-instance FromJSON MStat where
+instance ToJSON MStat
+instance FromJSON MStat
 
-instance ToJSON MElse where
-instance FromJSON MElse where
+instance ToJSON MElse
+instance FromJSON MElse
 
-instance ToJSON MElseIf where
-instance FromJSON MElseIf where
+instance ToJSON MElseIf
+instance FromJSON MElseIf
 
-instance ToJSON Stat where
-instance FromJSON Stat where
+instance ToJSON Stat
+instance FromJSON Stat
 
-instance ToJSON AReturn where
-instance FromJSON AReturn where
+instance ToJSON AReturn
+instance FromJSON AReturn
 
-instance ToJSON FuncName where
-instance FromJSON FuncName where
+instance ToJSON FuncName
+instance FromJSON FuncName
 
-instance ToJSON PrefixExp where
-instance FromJSON PrefixExp where
+instance ToJSON PrefixExp
+instance FromJSON PrefixExp
 
-instance ToJSON PFExprSuffix where
-instance FromJSON PFExprSuffix where
+instance ToJSON PFExprSuffix
+instance FromJSON PFExprSuffix
 
-instance ToJSON MExpr where
-instance FromJSON MExpr where
+instance ToJSON MExpr
+instance FromJSON MExpr
 
-instance ToJSON Expr where
-instance FromJSON Expr where
+instance ToJSON Expr
+instance FromJSON Expr
 
-instance ToJSON Args where
-instance FromJSON Args where
+instance ToJSON Args
+instance FromJSON Args
 
-instance ToJSON Field where
-instance FromJSON Field where
+instance ToJSON Field
+instance FromJSON Field
 
-instance ToJSON FieldSep where
-instance FromJSON FieldSep where
+instance ToJSON FieldSep
+instance FromJSON FieldSep
 
-instance ToJSON BinOp where
-instance FromJSON BinOp where
+instance ToJSON BinOp
+instance FromJSON BinOp
 
-instance ToJSON UnOp where
-instance FromJSON UnOp where
+instance ToJSON UnOp
+instance FromJSON UnOp

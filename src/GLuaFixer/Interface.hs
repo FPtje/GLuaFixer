@@ -54,9 +54,8 @@ parse lintSettings filepath tokens =
       Left [LintMessage LintError (PSL.sp2Rg $ errorPos err) (IssueParseError err) filepath | lint_syntaxErrors lintSettings]
     Right ast -> Right ast
 
-{- | Parse a lexicon into an Abstract Syntax Tree using the slower, but error-correcting
-uu-parsinglib
--}
+-- | Parse a lexicon into an Abstract Syntax Tree using the slower, but error-correcting
+-- uu-parsinglib
 parseUU :: [MToken] -> (AST, [Error Region])
 parseUU = UUP.parseGLua
 
