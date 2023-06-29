@@ -1,0 +1,3 @@
+r = function(...)
+    (...)[...] = nil
+end

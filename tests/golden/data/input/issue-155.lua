@@ -1,0 +1,1 @@
+r=function(...)((...))[...]=nil;end
