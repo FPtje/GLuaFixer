@@ -304,7 +304,7 @@ attr Stat MStat MStatList VarsList Declaration PrefixExp
     -- The ambiguity arises from: is this two statements, or is it one statement like so:
     -- a = a(function() end)()
     --
-    -- Lua does not accept this ambiguity, and will throw a Syntax error. With a semicolon, this 
+    -- Lua does not accept this ambiguity, and will throw a Syntax error. With a semicolon, this
     -- ambiguity can be resolved.
     --
     -- Ambiguity occurs when the last thing in one statement is a PrefixExpression, and the first
@@ -331,7 +331,7 @@ sem MStatList
                     <-> @loc.prettyCommentsAfter <> @loc.addNewline
                     $+$ @tl.pretty
                  lhs.startsWithExprPrefixExpression = @hd.startsWithExprPrefixExpression
-                 
+
                  loc.prettyCommentsBefore = renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
                  loc.prettyCommentsAfter = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
                  loc.commentsBefore =
@@ -435,7 +435,7 @@ sem Declaration
 sem VarsList
     | Cons      lhs.pretty = @loc.varPretty <-> if @loc.isDefined then zchr '=' <-> @loc.exprPretty else empty
                 lhs.startsWithExprPrefixExpression = @hd.startsWithExprPrefixExpression
-                lhs.endsWithPrefixExpression = 
+                lhs.endsWithPrefixExpression =
                     -- A list of vars ends with a prefix expression if the last defined variable
                     -- ends with a prefix expression
                     -- e.g.
@@ -452,7 +452,7 @@ sem VarsList
                 lhs.startsWithExprPrefixExpression = False
                 lhs.endsWithPrefixExpression = False
 
-sem ElseIf156
+sem ElseIf
     | Tuple     lhs.pretty = zeroWidthText "elseif" <-> @x1.pretty <-> zeroWidthText "then" $+$ @x2.pretty
                 x2.indent = @lhs.indent + 1
                 x2.statRegion = emptyRg
