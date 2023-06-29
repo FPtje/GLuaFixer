@@ -388,7 +388,7 @@ sem FieldList
 
                  loc.sep = if @loc.onSameLine then @loc.optionalSpaceAfterSep else ($+$)
                  loc.ind = if @loc.onSameLine then id else indent @lhs.ppconf @lhs.indent
-                 loc.onSameLine = (@hd.canFitOnSameLine || @tl.isNil) && null (fst @loc.commentsAfter)
+                 loc.onSameLine = (@hd.canFitOnSameLine && null (fst @loc.commentsAfter)) || @tl.isNil
 
                  loc.optionalSpaceAfterSep = if spaceAfterComma @lhs.ppconf then (<->) else (<>)
                  loc.indentAfterComment = if null $ fst @loc.commentsBefore then id else indent @lhs.ppconf @lhs.indent
