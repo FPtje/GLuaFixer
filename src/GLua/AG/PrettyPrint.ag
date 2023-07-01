@@ -3,7 +3,7 @@ module {GLua.AG.PrettyPrint}{}{}
 imports
 {
 import Prelude hiding ((<>))
-import Data.List (foldl')
+import Data.List (foldl', isInfixOf)
 import GLua.AG.AST
 import Text.PrettyPrint hiding (parens, brackets, braces)
 import GLua.TokenTypes
@@ -225,6 +225,22 @@ data OperatorLevel
     | OperatorLevel7
     | OperatorLevel8
     deriving (Eq, Ord)
+
+-- | Returns true when any of the comments contain the string "format: multiline"
+commentsForceMultiline :: [MToken] -> Bool
+commentsForceMultiline commentTokens = any containsFormatMultiline commentTokens
+  where
+    containsFormatMultiline :: MToken -> Bool
+    containsFormatMultiline (MToken _pos t) = case t of
+        DashComment comment -> stringForcesFormat comment
+        DashBlockComment _ comment -> stringForcesFormat comment
+        SlashComment comment -> stringForcesFormat comment
+        SlashBlockComment comment -> stringForcesFormat comment
+        _ -> False
+
+    stringForcesFormat :: String -> Bool
+    stringForcesFormat s = "format: multiline" `isInfixOf` s
+
 }
 
 
@@ -321,9 +337,15 @@ attr MStat Stat
     -- See startsWithPrefixExpression
     inh wouldBeAmbiguousWithoutSemicolon :: Bool
 
+attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList MElseIf ElseIf ElseIfList MElse Else Block MStat Stat AReturn PrefixExp PFExprSuffix MExpr Expr Args Field
+    -- A comment may indicate `format: multiline`. This will be passed to the next statement all the
+    -- way downwards. Then at any point where a decision is made whether to render something single
+    -- line or multiline, this variable jumps in to force the decision to multiline.
+    inh forceMultiline :: Bool
+
 sem MStatList
     | Cons
-                 lhs.isMultiline = @hd.isMultiline
+                 lhs.isMultiline = @tl.isMultiline
                  loc.addNewline = if not @tl.isLast && (@hd.isMultiline || @tl.isMultiline) then zchr '\n' else empty
                  lhs.pretty =
                     @loc.prettyCommentsBefore
@@ -337,11 +359,12 @@ sem MStatList
                  loc.commentsBefore =
                     if @hd.isMultiline
                     then span (\(MToken pos' _) -> pos' `beforeOrOnLine` @hd.pos) @lhs.comments
-                    else span (\(MToken pos' _) -> pos' `before`         @hd.pos) @lhs.comments
+                    else @loc.commentsBeforeLine
                  loc.commentsAfter  =
                     if @hd.isMultiline
                     then span (\(MToken pos' _) -> pos' `beforeOrOnLine` @hd.pos) (snd @loc.commentsBefore)
                     else span (\(MToken pos' _) -> pos' `beforeEndLine`  @hd.pos) (snd @loc.commentsBefore)
+                 loc.commentsBeforeLine = span (\(MToken pos' _) -> pos' `before` @hd.pos) @lhs.comments
                  hd.comments = snd @loc.commentsAfter
                  tl.comments = @hd.comments
 
@@ -352,6 +375,8 @@ sem MStatList
                  -- expression.
                  -- Pass that info to the head, because that one places semicolons.
                  hd.wouldBeAmbiguousWithoutSemicolon = @hd.endsWithPrefixExpression && @tl.startsWithExprPrefixExpression
+
+                 hd.forceMultiline = commentsForceMultiline $ fst @loc.commentsBeforeLine
                  lhs.isLast = False
     | Nil        lhs.pretty = @loc.renderedComments
                  lhs.statementCount = 0
@@ -370,12 +395,27 @@ sem MStat
                  stat.wouldBeAmbiguousWithoutSemicolon = @lhs.wouldBeAmbiguousWithoutSemicolon
 
 sem MExprList
-    | Cons       lhs.pretty = (if @lhs.isHead then empty else @loc.comma) <> @hd.pretty <> @tl.pretty
-                 loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
+    | Cons       lhs.pretty =
+                    if @lhs.isHead then
+                        @hd.pretty <> @tl.pretty
+                    else
+                        if @loc.isMultiline then @loc.prettyMultiLine else @loc.prettySingleLine
+                 loc.prettySingleLine =
+                        @loc.comma <>
+                        (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty) <>
+                        @hd.pretty <>
+                        @tl.pretty
+                 loc.prettyMultiLine =
+                        @loc.comma $+$
+                        indent @lhs.ppconf @lhs.indent @hd.pretty <>
+                        @tl.pretty
+                 loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ','
+
                  tl.isHead  = False
                  lhs.pos    = @hd.pos
                  hd.parentOperatorPrecedence = TopLevelExpression
                  hd.parentOperatorAssociative = True
+                 loc.isMultiline = @lhs.forceMultiline || @hd.isMultiline || @tl.isMultiline
     | Nil        lhs.pretty = empty
                  lhs.pos    = emptyRg
 
@@ -388,12 +428,12 @@ sem FieldList
 
                  loc.sep = if @loc.onSameLine then @loc.optionalSpaceAfterSep else ($+$)
                  loc.ind = if @loc.onSameLine then id else indent @lhs.ppconf @lhs.indent
-                 loc.onSameLine = (@hd.canFitOnSameLine && null (fst @loc.commentsAfter)) || @tl.isNil
+                 loc.onSameLine = (@hd.canFitOnSameLine && null (fst @loc.commentsAfter) && not @loc.isMultiline) || @tl.isNil
 
                  loc.optionalSpaceAfterSep = if spaceAfterComma @lhs.ppconf then (<->) else (<>)
                  loc.indentAfterComment = if null $ fst @loc.commentsBefore then id else indent @lhs.ppconf @lhs.indent
 
-                 loc.isMultiline = @hd.isMultiline || @tl.isMultiline
+                 loc.isMultiline = @lhs.forceMultiline || @hd.isMultiline || @tl.isMultiline
 
                  loc.prettyCommentsBefore = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
                  loc.prettyCommentsAfter = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
@@ -491,6 +531,7 @@ sem AST
                 loc.prettyComments = renderMLComments @lhs.ppconf @lhs.indent @chunk.comments
                 chunk.comments = @comments
                 chunk.statRegion = emptyRg
+                chunk.forceMultiline = False
 
 sem Block
     | Block      loc.newl = if @stats.statementCount > 0 && @ret.hasBreaking then zchr '\n' else empty
@@ -554,7 +595,8 @@ sem Stat
                  cond.parentOperatorPrecedence = TopLevelExpression
                  cond.parentOperatorAssociative = True
                  lhs.hasBreaking = False
-    | AIf        loc.isMultiline = @cond.isMultiline || @body.isMultiline || @body.statementCount > 1 || @body.statementCount == 1 && not @body.hasBreaking || @elifs.elsesExist || @els.elsesExist
+    | AIf        loc.isMultiline =
+                    @lhs.forceMultiline || @cond.isMultiline || @body.isMultiline || @body.statementCount > 1 || (@body.statementCount == 1 && not @body.hasBreaking) || @elifs.elsesExist || @els.elsesExist
                  lhs.startsWithExprPrefixExpression = False
                  lhs.endsWithPrefixExpression = False
                  loc.singleLinePretty = zeroWidthText "if" <-> @cond.pretty <-> zeroWidthText "then" <-> @body.pretty <-> zeroWidthText "end"
@@ -588,6 +630,8 @@ sem Stat
                  body.indent = @lhs.indent + 1
                  loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
                  vals.isHead = True
+                 --  Force no multiline here as it looks odd.
+                 vals.forceMultiline = False
                  lhs.hasBreaking = False
     | AFunc      lhs.isMultiline = True
                  lhs.startsWithExprPrefixExpression = False
@@ -617,6 +661,10 @@ sem AReturn
                  values.comments = snd @loc.commentsAfter
                  lhs.comments = @values.comments
                  values.isHead = True
+                 -- Disable forcing of multilines for returns, as that looks odd. Possible todo:
+                 -- render multiline nicely, and allow a "force: multiline" comment right before a
+                 -- return.
+                 values.forceMultiline = False
                  lhs.hasBreaking = True
     | NoReturn   lhs.pretty = empty
                  lhs.statementCount = 0
@@ -697,7 +745,7 @@ sem Expr
     | AVarArg           lhs.pretty = zeroWidthText "..."
                         lhs.isLiteral = True
                         lhs.endsWithPrefixExpression = False
-    | AnonymousFunc     loc.isMultiline = @body.isMultiline || @body.statementCount > 1 || (@body.statementCount == 1 && not @body.hasBreaking)
+    | AnonymousFunc     loc.isMultiline = @lhs.forceMultiline || @body.isMultiline || @body.statementCount > 1 || (@body.statementCount == 1 && not @body.hasBreaking)
                         lhs.endsWithPrefixExpression = False
                         loc.singleLinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) <-> @body.pretty <-> zeroWidthText "end"
                         loc.multilinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
@@ -708,8 +756,8 @@ sem Expr
     | APrefixExpr       lhs.pretty = @pexpr.pretty
                         lhs.endsWithPrefixExpression = True
     | ATableConstructor
-                        lhs.pretty = if @fields.isMultiline then @loc.prettyMulti else @loc.prettySingle
-                        lhs.isMultiline = not $ null $ @fields.copy
+                        lhs.pretty = if @loc.isMultiline then @loc.prettyMulti else @loc.prettySingle
+                        loc.isMultiline = @lhs.forceMultiline || @fields.isMultiline
                         lhs.isLiteral = True
                         lhs.endsWithPrefixExpression = False
                         loc.prettyMulti = zchr '{' $+$ indent @lhs.ppconf (@lhs.indent + 1) @fields.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
@@ -731,9 +779,16 @@ sem Expr
                         right.parentOperatorPrecedence = OperatorLevel7
 
 sem Args
-    | ListArgs  lhs.pretty = parens @lhs.ppconf @loc.emptyParams @args.pretty
+    | ListArgs  lhs.pretty =
+                    if @args.isMultiline then
+                        zchr '(' $+$
+                        indent @lhs.ppconf (@lhs.indent + 1) @args.pretty $+$
+                        indent @lhs.ppconf @lhs.indent (zchr ')')
+                    else
+                        parens @lhs.ppconf @loc.emptyParams @args.pretty
                 loc.emptyParams = toEmpty $ null @args.copy
                 args.isHead = True
+                args.indent = if @args.isMultiline then @lhs.indent + 1 else 0
     | TableArg  lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
                 loc.prettyMulti = zchr '{' $+$ indent @lhs.ppconf (@lhs.indent + 1) @arg.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
                 loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @arg.pretty
@@ -826,57 +881,175 @@ sem UnOp
 {
 
 pp_block :: Block -> Int -> Doc
-pp_block p i = pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] i defaultPPConfig emptyRg))
+pp_block p i = pretty_Syn_Block (wrap_Block (sem_Block p) (emptyInh_Block {indent_Inh_Block = i}))
 
 pp_mstat :: MStat -> Int -> Doc
-pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] i False defaultPPConfig False))
+pp_mstat p i = pretty_Syn_MStat (wrap_MStat (sem_MStat p) emptyInh_MStat {indent_Inh_MStat = i})
 
 pp_prefixexp :: PrefixExp -> Doc
-pp_prefixexp p = pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 True TopLevelExpression defaultPPConfig))
+pp_prefixexp p = pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) emptyInh_PrefixExp)
 
 pp_pfexprsuffix :: PFExprSuffix -> Doc
-pp_pfexprsuffix p = pretty_Syn_PFExprSuffix (wrap_PFExprSuffix (sem_PFExprSuffix p) (Inh_PFExprSuffix [] 0 defaultPPConfig))
+pp_pfexprsuffix p = pretty_Syn_PFExprSuffix (wrap_PFExprSuffix (sem_PFExprSuffix p) emptyInh_PFExprSuffix)
 
 pp_field :: Field -> Doc
-pp_field p = pretty_Syn_Field (wrap_Field (sem_Field p) (Inh_Field [] 0 defaultPPConfig))
+pp_field p = pretty_Syn_Field (wrap_Field (sem_Field p) emptyInh_Field)
 
 pp_mexpr :: MExpr -> Doc
-pp_mexpr p = pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 True TopLevelExpression defaultPPConfig))
+pp_mexpr p = pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) emptyInh_MExpr)
 
 prettyprint :: AST -> String
-prettyprint p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0 defaultPPConfig))
+prettyprint p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) emptyInh_AST)
 
 prettyprintConf :: PrettyPrintConfig -> AST -> String
-prettyprintConf conf p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) (Inh_AST 0 conf))
+prettyprintConf conf p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) emptyInh_AST {ppconf_Inh_AST = conf})
 
 renderBlock        :: Block -> String
-renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) (Inh_Block [] 0 defaultPPConfig emptyRg))
+renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) emptyInh_Block)
 
 renderStat         :: Stat -> String
-renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) (Inh_Stat [] 0 False defaultPPConfig emptyRg False))
+renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) emptyInh_Stat)
 
 renderMStat         :: MStat -> String
-renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) (Inh_MStat [] 0 False defaultPPConfig False))
+renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) emptyInh_MStat)
 
 renderAReturn      :: AReturn -> String
-renderAReturn p    = render $ pretty_Syn_AReturn (wrap_AReturn (sem_AReturn p) (Inh_AReturn [] 0 defaultPPConfig))
+renderAReturn p    = render $ pretty_Syn_AReturn (wrap_AReturn (sem_AReturn p) emptyInh_AReturn)
 
 renderFuncName     :: FuncName -> String
-renderFuncName p   = render $ pretty_Syn_FuncName (wrap_FuncName (sem_FuncName p) (Inh_FuncName [] 0 defaultPPConfig))
+renderFuncName p   = render $ pretty_Syn_FuncName (wrap_FuncName (sem_FuncName p) emptyInh_FuncName)
 
 renderPrefixExp    :: PrefixExp -> String
-renderPrefixExp p  = render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) (Inh_PrefixExp [] 0 True TopLevelExpression defaultPPConfig))
+renderPrefixExp p  = render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) emptyInh_PrefixExp)
 
 renderExpr         :: Expr -> String
-renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) (Inh_Expr [] 0 True TopLevelExpression defaultPPConfig emptyRg))
+renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) emptyInh_Expr)
 
 renderMExpr         :: MExpr -> String
-renderMExpr p       = render $ pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) (Inh_MExpr [] 0 True TopLevelExpression defaultPPConfig))
+renderMExpr p       = render $ pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) emptyInh_MExpr)
 
 renderArgs         :: Args -> String
-renderArgs p       = render $ pretty_Syn_Args (wrap_Args (sem_Args p) (Inh_Args [] 0 defaultPPConfig))
+renderArgs p       = render $ pretty_Syn_Args (wrap_Args (sem_Args p) emptyInh_Args)
 
 renderField        :: Field -> String
-renderField p      = render $ pretty_Syn_Field (wrap_Field (sem_Field p) (Inh_Field [] 0 defaultPPConfig))
+renderField p      = render $ pretty_Syn_Field (wrap_Field (sem_Field p) emptyInh_Field)
+
+emptyInh_Field :: Inh_Field
+emptyInh_Field =
+    Inh_Field
+      { comments_Inh_Field = []
+      , forceMultiline_Inh_Field = False
+      , indent_Inh_Field = 0
+      , ppconf_Inh_Field = defaultPPConfig
+      }
+
+emptyInh_Args :: Inh_Args
+emptyInh_Args =
+    Inh_Args
+      { comments_Inh_Args = []
+      , forceMultiline_Inh_Args = False
+      , indent_Inh_Args = 0
+      , ppconf_Inh_Args = defaultPPConfig
+      }
+
+emptyInh_MExpr :: Inh_MExpr
+emptyInh_MExpr =
+    Inh_MExpr
+      { comments_Inh_MExpr = []
+      , forceMultiline_Inh_MExpr = False
+      , indent_Inh_MExpr = 0
+      , parentOperatorAssociative_Inh_MExpr = True
+      , parentOperatorPrecedence_Inh_MExpr = TopLevelExpression
+      , ppconf_Inh_MExpr = defaultPPConfig
+      }
+
+emptyInh_Expr :: Inh_Expr
+emptyInh_Expr =
+    Inh_Expr
+      { comments_Inh_Expr = []
+      , forceMultiline_Inh_Expr = False
+      , indent_Inh_Expr = 0
+      , parentOperatorAssociative_Inh_Expr = True
+      , parentOperatorPrecedence_Inh_Expr = TopLevelExpression
+      , ppconf_Inh_Expr = defaultPPConfig
+      , statRegion_Inh_Expr = emptyRg
+      }
+
+emptyInh_PrefixExp :: Inh_PrefixExp
+emptyInh_PrefixExp =
+    Inh_PrefixExp
+      { comments_Inh_PrefixExp = []
+      , forceMultiline_Inh_PrefixExp = False
+      , indent_Inh_PrefixExp = 0
+      , parentOperatorAssociative_Inh_PrefixExp = True
+      , parentOperatorPrecedence_Inh_PrefixExp = TopLevelExpression
+      , ppconf_Inh_PrefixExp = defaultPPConfig
+      }
+
+emptyInh_FuncName :: Inh_FuncName
+emptyInh_FuncName =
+    Inh_FuncName
+      { comments_Inh_FuncName = []
+      , indent_Inh_FuncName = 0
+      , ppconf_Inh_FuncName = defaultPPConfig
+      }
+
+emptyInh_AReturn :: Inh_AReturn
+emptyInh_AReturn =
+    Inh_AReturn
+      { comments_Inh_AReturn = []
+      , forceMultiline_Inh_AReturn = False
+      , indent_Inh_AReturn = 0
+      , ppconf_Inh_AReturn = defaultPPConfig
+      }
+
+emptyInh_MStat :: Inh_MStat
+emptyInh_MStat =
+    Inh_MStat
+      { comments_Inh_MStat = []
+      , forceMultiline_Inh_MStat = False
+      , indent_Inh_MStat = 0
+      , isLastStatement_Inh_MStat = False
+      , ppconf_Inh_MStat = defaultPPConfig
+      , wouldBeAmbiguousWithoutSemicolon_Inh_MStat = False
+      }
+
+emptyInh_Stat :: Inh_Stat
+emptyInh_Stat =
+    Inh_Stat
+      { comments_Inh_Stat = []
+      , forceMultiline_Inh_Stat = False
+      , indent_Inh_Stat = 0
+      , isLastStatement_Inh_Stat = False
+      , ppconf_Inh_Stat = defaultPPConfig
+      , statRegion_Inh_Stat = emptyRg
+      , wouldBeAmbiguousWithoutSemicolon_Inh_Stat = False
+      }
+
+emptyInh_Block :: Inh_Block
+emptyInh_Block =
+    Inh_Block
+      { comments_Inh_Block = []
+      , forceMultiline_Inh_Block = False
+      , indent_Inh_Block = 0
+      , ppconf_Inh_Block = defaultPPConfig
+      , statRegion_Inh_Block = emptyRg
+      }
+
+emptyInh_AST :: Inh_AST
+emptyInh_AST =
+    Inh_AST
+      { indent_Inh_AST = 0
+      , ppconf_Inh_AST = defaultPPConfig
+      }
+
+emptyInh_PFExprSuffix :: Inh_PFExprSuffix
+emptyInh_PFExprSuffix =
+    Inh_PFExprSuffix
+      { comments_Inh_PFExprSuffix = []
+      , forceMultiline_Inh_PFExprSuffix = False
+      , indent_Inh_PFExprSuffix = 0
+      , ppconf_Inh_PFExprSuffix = defaultPPConfig
+      }
 
 }
