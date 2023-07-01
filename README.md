@@ -146,6 +146,26 @@ Option | Description
 
 - `log_format`: Decides how to format linter warnings and error messages. Possible values are `"auto"`, `"standard"` and `"github"`. The `"github"` output format is specifically designed for usage with GitHub actions. The default value is `"auto"`, With `"auto"`, the log format will be `"github"` when the environment variables `GITHUB_ACTIONS` and `GITHUB_WORKFLOW` are both present, and `"standard"` otherwise.
 
+### In-code directives
+
+If you add a comment containing the text `format: multiline`, the next statement will be forced to be pretty printed as multiline. Example:
+
+```lua
+-- format: multiline
+a = {1, 2, 3}
+```
+
+Will be turned into:
+
+```lua
+-- format: multiline
+a = {
+  1,
+  2,
+  3
+}
+```
+
 ## Editor Plugins
 
 Through community support, GLuaFixer is supported across a wide variety of popular editors.
