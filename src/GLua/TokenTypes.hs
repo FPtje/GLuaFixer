@@ -212,7 +212,7 @@ type TokenAlgebra token =
     , token -- RSquare
     )
   , ( -- Other
-      String -> token -- Label
+      String -> String -> String -> token -- Label
     , String -> token -- Identifier
     )
   )
@@ -227,7 +227,7 @@ foldToken ((tWhitespace, tDashComment, tDashBlockComment, tSlashComment, tSlashB
     fold (SlashComment str) = tSlashComment str
     fold (SlashBlockComment str) = tSlashBlockComment str
     fold (TNumber str) = tTNumber str
-    fold (Label str) = tLabel str
+    fold (Label whitespaceBefore str whitespaceAfter) = tLabel whitespaceBefore str whitespaceAfter
     fold (Identifier str) = tIdentifier str
     fold (DQString str) = tDQString str
     fold (SQString str) = tSQString str
@@ -361,25 +361,25 @@ instance Show Token where
         , "]" -- RSquare
         )
       ,
-        ( id -- Label
+        ( \spaceBefore ident spaceAfter -> spaceBefore ++ ident ++ spaceAfter -- Label
         , id -- Identifier
         )
       )
 
 -- | Whether an mtoken is a comment
 isWhitespace :: MToken -> Bool
-isWhitespace = mFold ((const True, const False, \_ _ -> False, const False, const False, False), (const False, const False, const False, const False, False, False, False, False), (False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False), (False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False), (False, False, False, False, False, False), (const False, const False))
+isWhitespace = mFold ((const True, const False, \_ _ -> False, const False, const False, False), (const False, const False, const False, const False, False, False, False, False), (False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False), (False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False), (False, False, False, False, False, False), (\_ _ _ -> False, const False))
 
 -- | Whether an mtoken is a comment
 isComment :: MToken -> Bool
-isComment = mFold ((const False, const True, \_ _ -> True, const True, const True, False), (const False, const False, const False, const False, False, False, False, False), (False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False), (False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False), (False, False, False, False, False, False), (const False, const False))
+isComment = mFold ((const False, const True, \_ _ -> True, const True, const True, False), (const False, const False, const False, const False, False, False, False, False), (False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False), (False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False), (False, False, False, False, False, False), (\_ _ _ -> False, const False))
 
 -- | Split the tokens by comments and other tokens
 splitComments :: [MToken] -> ([MToken], [MToken])
 splitComments = partition isComment
 
 tokenLabel :: MToken -> String
-tokenLabel = mFold ((const "", const "", \_ _ -> "", const "", const "", ""), (const "", const "", const "", const "", "", "", "", ""), ("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""), ("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""), ("", "", "", "", "", ""), (id, id))
+tokenLabel = mFold ((const "", const "", \_ _ -> "", const "", const "", ""), (const "", const "", const "", const "", "", "", "", ""), ("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""), ("", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""), ("", "", "", "", "", ""), (\_ ident _ -> ident, id))
 
 -- | The size of a token in characters
 tokenSize :: Token -> Int
@@ -457,7 +457,8 @@ tokenSize =
       , 1 -- RSquare
       )
     ,
-      ( (+ 2) . length -- Label
+      ( \spaceBefore ident spaceAfter ->
+          2 + length spaceBefore + length ident + length spaceAfter + 2 -- Label
       , length -- Identifier
       )
     )

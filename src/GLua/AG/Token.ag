@@ -85,8 +85,8 @@ data Token
     | RCurly                         -- ^ }
     | LSquare                        -- ^ [
     | RSquare                        -- ^ ]
-    | Label 		lbl :: String                   -- ^ ::label
-    | Identifier 	ident :: String
+    | Label whitespaceBefore :: String lbl :: String whitespaceAfter :: String
+    | Identifier 	 ident :: String
 
 -- | Metatoken, stores line and column position of token
 data MToken

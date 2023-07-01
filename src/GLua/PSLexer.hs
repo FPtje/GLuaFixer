@@ -228,8 +228,15 @@ parseIdentifier :: Parser String
 parseIdentifier = (:) <$> pNonDigitIdentifierCharacter <*> many pIdentifierCharacter <?> "Identifier"
 
 -- | Parse a label.
-parseLabel :: Parser String
-parseLabel = string "::" *> (optionMaybe parseWhitespace *> parseIdentifier <* optionMaybe parseWhitespace) <* string "::" <?> "Label"
+parseLabel :: Parser Token
+parseLabel =
+  Label
+    <$ string "::"
+    <*> parseOptionalWhitespace
+    <*> parseIdentifier
+    <*> parseOptionalWhitespace
+    <* string "::"
+    <?> "Label"
 
 -- | Parse anything to do with dots. Indexaction (.), concatenation (..), varargs (...) or numbers that start with a dot
 parseDots :: Parser Token
@@ -302,7 +309,7 @@ parseToken =
     <|> TLT <$ string "<"
     <|> TGEQ <$ try (string ">=")
     <|> TGT <$ string ">"
-    <|> Label <$> try parseLabel
+    <|> try parseLabel
     <|> Colon <$ string ":"
     <|> Comma <$ string ","
     <|> Hash <$ string "#"

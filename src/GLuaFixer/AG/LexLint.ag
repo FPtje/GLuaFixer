@@ -230,7 +230,7 @@ sem Token
                             (:) $ SyntaxInconsistency "!=" "~="
 
     | Label
-        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos (showString "::" . showString @lbl . showString "::" $ "")
+        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos (show @loc.copy)
 
 {
 

@@ -18,7 +18,6 @@ import Text.ParserCombinators.UU (
   pEnd,
   pErrors,
   pMany,
-  pMaybe,
   pPos,
   pReturn,
   pSome,
@@ -263,8 +262,14 @@ parseIdentifier :: LParser String
 parseIdentifier = (:) <$> pNonDigitIdentifierCharacter <*> pMany pIdentifierCharacter
 
 -- | Parse a label.
-parseLabel :: LParser String
-parseLabel = pToken "::" *> (pMaybe parseWhitespace *> parseIdentifier <* pMaybe parseWhitespace) <* pToken "::"
+parseLabel :: LParser Token
+parseLabel =
+    Label
+      <$ pToken "::"
+      <*> parseOptionalWhitespace
+      <*> parseIdentifier
+      <*> parseOptionalWhitespace
+      <* pToken "::"
 
 -- | Parse anything to do with dots. Indexaction (.), concatenation (..) or varargs (...)
 parseDots :: LParser Token
@@ -346,8 +351,7 @@ parseToken =
     <$ pToken ">="
     <<|> TGT
     <$ pToken ">"
-    <<|> Label
-    <$> parseLabel
+    <<|> parseLabel
     <<|> Colon
     <$ pToken ":"
     <<|> Comma
