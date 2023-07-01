@@ -163,18 +163,20 @@ sem Token
         +tokenWarnings = if @loc.consistent then id else
                             (:) $ SyntaxInconsistency "/* */" "--[[ ]]"
 
-    | Semicolon TNumber DQString SQString TTrue TFalse Nil VarArg Plus Minus Multiply Divide Modulus Power TEq TNEq TCNEq TLEQ TGEQ TLT TGT Equals Concatenate Colon Dot Comma Hash Not CNot And CAnd Or COr Function Local If Then Elseif Else For In Do While Until Repeat Continue Break Return End LRound RRound LCurly RCurly LSquare RSquare Identifier
+    | Semicolon TNumber TTrue TFalse Nil VarArg Plus Minus Multiply Divide Modulus Power TEq TNEq TCNEq TLEQ TGEQ TLT TGT Equals Concatenate Colon Dot Comma Hash Not CNot And CAnd Or COr Function Local If Then Elseif Else For In Do While Until Repeat Continue Break Return End LRound RRound LCurly RCurly LSquare RSquare Identifier
         lhs.nextTokenPos = customAdvanceToken @lhs.nextTokenPos @loc.copy
 
     | DQString
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.strSyntax)
         loc.strSyntax = SyntaxUsed @loc.consistent False
+        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @str
         +tokenWarnings = if @loc.consistent then id else
                             (:) $ SyntaxInconsistency "double quoted strings" "single quoted strings"
 
     | SQString
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.strSyntax) || isSingleChar @str -- Allow single character ' ' strings
         loc.strSyntax = SyntaxUsed False (@loc.consistent && not (isSingleChar @str))
+        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @str
         +tokenWarnings = if @loc.consistent then id else
                             (:) $ SyntaxInconsistency "single quoted strings" "double quoted strings"
 
