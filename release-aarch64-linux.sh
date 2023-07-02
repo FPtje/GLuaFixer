@@ -33,9 +33,9 @@ fi;
 DRV_PATH=$(nix path-info --derivation .#packages.aarch64-linux.glualint-static)
 
 BUILD_HOST=$1
-nix copy --derivation --to "ssh://$BUILD_HOST" "$DRV_PATH"
+nix copy --derivation --to "ssh://$BUILD_HOST" "$DRV_PATH^*"
 echo "Copied $DRV_PATH to $BUILD_HOST"
-OUT_PATH=$(ssh "$BUILD_HOST" "nix build --print-build-logs --print-out-paths $DRV_PATH")
+OUT_PATH=$(ssh "$BUILD_HOST" "nix build --print-build-logs --print-out-paths '$DRV_PATH^*'")
 VERSION=$(ssh "$BUILD_HOST" $OUT_PATH/bin/glualint --version)
 nix copy --from "ssh://$BUILD_HOST" --no-check-sigs "$OUT_PATH"
 cp "$OUT_PATH/bin/glualint" ./glualint
