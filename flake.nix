@@ -17,6 +17,12 @@
         inherit system;
         overlays = [ self.overlays.${system}.glualint ];
       };
+
+      # Function to build a devshell for glualint
+      mkDevShell = mkBuildInputs: pkgs.glualintPkgs.haskellPackages.shellFor {
+        packages = p: [ p.glualint ];
+        buildInputs = mkBuildInputs pkgs.glualintPkgs.haskellPackages;
+      };
     in
     {
       overlays.glualint = (import ./nix/overlay.nix);
@@ -32,15 +38,22 @@
         program = "${self.packages.${system}.glualint-static}/bin/glualint";
       };
 
-      devShell = with pkgs.glualintPkgs.haskellPackages; shellFor {
-        packages = p: [ p.glualint ];
-        buildInputs = [
+      devShells = {
+        default = mkDevShell (haskellPackages: with haskellPackages; [
           cabal-install
           pkgs.cachix
           cabal-fmt
           haskell-language-server
           fourmolu
-        ];
+        ]);
+
+        # The CI shell is similar to the dev shell, but requires fewer packages. Leaving them out
+        # prevents downloading them unnecessarily.
+        ci = mkDevShell (haskellPackages: with haskellPackages; [
+          cabal-install
+          cabal-fmt
+          fourmolu
+        ]);
       };
     }
   );
