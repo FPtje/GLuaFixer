@@ -13,3 +13,8 @@ jobs:
         with:
           name: glualint
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Build Nix environment
+        run:
+          cachix watch-exec glualint -- nix print-dev-env .#ci > "$HOME/.devenv"
+      - name: Activate Nix environment
+        run: source "$HOME/.devenv"
