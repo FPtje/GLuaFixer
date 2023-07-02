@@ -23,3 +23,18 @@ jobs:
           cachix watch-exec glualint -- nix print-dev-env --accept-flake-config .#ci > "$HOME/.devenv"
       - name: Activate Nix environment
         run: source "$HOME/.devenv"
+
+      - run: cabal check
+      - run: cabal-fmt --check --Werror glualint.cabal
+
+      # Note: This check must run BEFORE the AG files are compiled to Haskell
+      # files. Those files are generated with no regard to fourmolu's style, so
+      # fourmolu would throw errors for them.
+      # TODO: Find a way to properly exclude them.
+      - run: fourmolu --mode check app src
+
+      - name: Generate .hs files from .ag
+        run: ./AGGenerator.sh
+
+      - run: cabal run glualint -- test testcase.lua tests
+      - run: cabal run golden
