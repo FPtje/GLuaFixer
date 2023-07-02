@@ -22,7 +22,7 @@ jobs:
         run:
           cachix watch-exec glualint -- nix print-dev-env --accept-flake-config .#ci > "$HOME/.devenv"
       - name: Activate Nix environment
-        run: source "$HOME/.devenv"
+        run: source "$HOME/.devenv" && env >> "$GITHUB_ENV"
 
       - run: cabal check
       - run: cabal-fmt --check --Werror glualint.cabal
