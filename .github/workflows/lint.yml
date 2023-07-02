@@ -1,5 +1,9 @@
 name: Lint and test glualint
-on: [pull_request, push]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
