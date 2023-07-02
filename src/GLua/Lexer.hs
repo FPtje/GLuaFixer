@@ -264,12 +264,12 @@ parseIdentifier = (:) <$> pNonDigitIdentifierCharacter <*> pMany pIdentifierChar
 -- | Parse a label.
 parseLabel :: LParser Token
 parseLabel =
-    Label
-      <$ pToken "::"
-      <*> parseOptionalWhitespace
-      <*> parseIdentifier
-      <*> parseOptionalWhitespace
-      <* pToken "::"
+  Label
+    <$ pToken "::"
+    <*> parseOptionalWhitespace
+    <*> parseIdentifier
+    <*> parseOptionalWhitespace
+    <* pToken "::"
 
 -- | Parse anything to do with dots. Indexaction (.), concatenation (..) or varargs (...)
 parseDots :: LParser Token

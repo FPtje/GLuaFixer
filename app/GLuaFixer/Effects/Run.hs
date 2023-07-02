@@ -39,14 +39,14 @@ import System.Exit (ExitCode (..))
 import Prelude hiding (lex, readFile, writeFile)
 
 -- | Top level run function
-run ::
-  ( Interruptible :> es
-  , Files :> es
-  , Logging :> es
-  , Eff.Environment :> es
-  , Cli :> es
-  ) =>
-  Eff es ExitCode
+run
+  :: ( Interruptible :> es
+     , Files :> es
+     , Logging :> es
+     , Eff.Environment :> es
+     , Cli :> es
+     )
+  => Eff es ExitCode
 run = do
   pareResult <- parseCliOptions
 
@@ -67,16 +67,16 @@ run = do
         Right exitCode -> pure exitCode
 
 -- | Run the given options
-runOptions ::
-  ( Interruptible :> es
-  , Files :> es
-  , Settings :> es
-  , Logging :> es
-  , Eff.Environment :> es
-  , Cli :> es
-  ) =>
-  Options ->
-  Eff es ExitCode
+runOptions
+  :: ( Interruptible :> es
+     , Files :> es
+     , Settings :> es
+     , Logging :> es
+     , Eff.Environment :> es
+     , Cli :> es
+     )
+  => Options
+  -> Eff es ExitCode
 runOptions options =
   traceFilesIfEnabled options.optsDebug $
     traceSettingsIfEnabled options.optsDebug $ do
@@ -187,61 +187,63 @@ runOptions options =
           pure ExitSuccess
 
 -- | Retrieves the contents of stdin and the settings that apply.
-getStdIn ::
-  (Files :> es, Settings :> es) =>
-  Maybe SettingsPath ->
-  OverriddenSettings ->
-  Eff es (LintSettings, String)
+getStdIn
+  :: (Files :> es, Settings :> es)
+  => Maybe SettingsPath
+  -> OverriddenSettings
+  -> Eff es (LintSettings, String)
 getStdIn mbSettingsPath overriddenSettings = do
   cwd <- getCurrentDirectory
   settings <- getSettingsForFile mbSettingsPath overriddenSettings cwd
   code <- readStdIn
   pure (settings, code)
 
-{- | Fold over all the Lua files. Recurses into directories, retrieves settings and passes file
-contents to the fold function.
--}
-foldLuaFiles ::
-  forall es a.
-  (Files :> es, Interruptible :> es, Settings :> es) =>
-  Maybe SettingsPath ->
-  OverriddenSettings ->
-  a ->
-  [FilePath] ->
-  (a -> LintSettings -> FilePath -> String -> Eff es a) ->
-  Eff es a
+-- | Fold over all the Lua files. Recurses into directories, retrieves settings and passes file
+-- contents to the fold function.
+foldLuaFiles
+  :: forall es a
+   . (Files :> es, Interruptible :> es, Settings :> es)
+  => Maybe SettingsPath
+  -> OverriddenSettings
+  -> a
+  -> [FilePath]
+  -> (a -> LintSettings -> FilePath -> String -> Eff es a)
+  -> Eff es a
 foldLuaFiles mbSettingsPath overriddenSettings initial files f =
   interruptibleFoldMStrict go initial files
- where
-  go :: a -> FilePath -> Eff es a
-  go acc file = do
-    isDir <- isDirectory file
-    lintSettings <- getSettingsForFile mbSettingsPath overriddenSettings file
-    if isDir
-      then do
-        let ignoreFiles = IgnoreFiles $ lintSettings.lint_ignoreFiles
-        recurseFiles <- findLuaFiles ignoreFiles file
-        interruptibleFoldMStrict go acc recurseFiles
-      else do
-        contents <- readFile file
-        f acc lintSettings file contents
+  where
+    go :: a -> FilePath -> Eff es a
+    go acc file = do
+      isDir <- isDirectory file
+      lintSettings <- getSettingsForFile mbSettingsPath overriddenSettings file
+      if isDir
+        then do
+          let
+            ignoreFiles = IgnoreFiles $ lintSettings.lint_ignoreFiles
+          recurseFiles <- findLuaFiles ignoreFiles file
+          interruptibleFoldMStrict go acc recurseFiles
+        else do
+          contents <- readFile file
+          f acc lintSettings file contents
 
 -- | Lint a file
-lint ::
-  (Logging :> es, Eff.Environment :> es) =>
-  LintSettings ->
-  FilePath ->
-  String ->
-  Eff es ExitCode
+lint
+  :: (Logging :> es, Eff.Environment :> es)
+  => LintSettings
+  -> FilePath
+  -> String
+  -> Eff es ExitCode
 lint lintSettings filepath contents = do
   logFormat <- getLogFormat lintSettings.log_format
-  let sourceLint = Interface.sourceLint lintSettings filepath contents
+  let
+    sourceLint = Interface.sourceLint lintSettings filepath contents
   case Interface.lex lintSettings filepath contents of
     Left msgs -> do
       mapM_ (emitLintMessage logFormat) msgs
       pure $ ExitFailure 1
     Right tokens -> do
-      let !lextLint = Interface.lexiconLint filepath lintSettings tokens
+      let
+        !lextLint = Interface.lexiconLint filepath lintSettings tokens
       case Interface.parse lintSettings filepath tokens of
         Left msgs -> do
           mapM_ (emitLintMessage logFormat) msgs
@@ -254,26 +256,26 @@ lint lintSettings filepath contents = do
           pure $ if null msgs then ExitSuccess else ExitFailure 1
 
 -- | Pretty print a file
-prettyprint ::
-  LintSettings ->
-  String ->
-  Maybe String
+prettyprint
+  :: LintSettings
+  -> String
+  -> Maybe String
 prettyprint lintSettings contents = do
   if lintSettings.prettyprint_rejectInvalidCode && hasErrors
     then Nothing
     else Just $ Interface.prettyprint lintSettings ast
- where
-  (tokens, lexErrors) = Interface.lexUU lintSettings contents
-  (ast, parseErrors) = Interface.parseUU tokens
-  hasErrors = not (null lexErrors) || not (null parseErrors)
+  where
+    (tokens, lexErrors) = Interface.lexUU lintSettings contents
+    (ast, parseErrors) = Interface.parseUU tokens
+    hasErrors = not (null lexErrors) || not (null parseErrors)
 
 -- | Test glualint itself against a file. TODO: Refactor this into a nicer command
-test ::
-  (Logging :> es, Eff.Environment :> es) =>
-  LintSettings ->
-  FilePath ->
-  String ->
-  Eff es ()
+test
+  :: (Logging :> es, Eff.Environment :> es)
+  => LintSettings
+  -> FilePath
+  -> String
+  -> Eff es ()
 test lintSettings filepath contents = do
   putStrLnStdOut $ "Testing " <> filepath
   let
@@ -327,14 +329,14 @@ test lintSettings filepath contents = do
 
 -- | Function to easily parse a file's contents into an AST. This will log any parse failures and
 -- give an AST if it can.
-withParsed ::
-  (Logging :> es, Eff.Environment :> es) =>
-  LintSettings ->
-  FilePath ->
-  String ->
-  a ->
-  (AST -> Eff es a) ->
-  Eff es a
+withParsed
+  :: (Logging :> es, Eff.Environment :> es)
+  => LintSettings
+  -> FilePath
+  -> String
+  -> a
+  -> (AST -> Eff es a)
+  -> Eff es a
 withParsed lintSettings filepath contents defaultValue f = do
   lexicon <- getLexicon lintSettings filepath contents
   case lexicon of

@@ -294,7 +294,7 @@ parseLabel :: AParser MToken
 parseLabel = pMSatisfy isLabel (Label "" "someLabel" "") "Some label"
   where
     isLabel :: MToken -> Bool
-    isLabel (MToken _ (Label {})) = True
+    isLabel (MToken _ (Label{})) = True
     isLabel _ = False
 
 -- | Function name (includes dot indices and meta indices)

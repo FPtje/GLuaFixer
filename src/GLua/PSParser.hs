@@ -197,7 +197,7 @@ parseLabel :: AParser MToken
 parseLabel = pMSatisfy isLabel <?> "label"
   where
     isLabel :: MToken -> Bool
-    isLabel (MToken _ (Label {})) = True
+    isLabel (MToken _ (Label{})) = True
     isLabel _ = False
 
 -- | Parse a single statement

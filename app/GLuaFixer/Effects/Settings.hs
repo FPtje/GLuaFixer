@@ -13,14 +13,14 @@ import Control.Applicative ((<|>))
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Char8 as BS8
 import Effectful (Dispatch (Dynamic), DispatchOf, Eff, Effect, (:>))
-import Effectful.Dispatch.Dynamic (interpret, send, interpose)
+import Effectful.Dispatch.Dynamic (interpose, interpret, send)
 import qualified Effectful.Error.Static as Err
 import GLuaFixer.Cli (OverriddenSettings, SettingsPath (..), overrideSettings)
 import GLuaFixer.Effects.Files (Files)
 import qualified GLuaFixer.Effects.Files as Files
+import GLuaFixer.Effects.Logging (Logging, putStrLnStdError)
 import GLuaFixer.LintSettings (LintSettings, defaultLintSettings)
 import System.FilePath (takeDirectory, (</>))
-import GLuaFixer.Effects.Logging (Logging, putStrLnStdError)
 
 data Settings :: Effect where
   -- | Search for settings in various locations, returns default settings if nothing is found
@@ -93,17 +93,16 @@ runSettings = interpret $ \_ -> \case
 
     Files.firstExists [fileWithDot, fileWithoutDot]
 
-{- | Combines getting the settings from
-- An explicitly passed path to a file
-- Settings overridden in the CLI
-- Settings that apply to a file
--}
-getSettingsForFile ::
-  Settings :> es =>
-  Maybe SettingsPath ->
-  OverriddenSettings ->
-  FilePath ->
-  Eff es LintSettings
+-- | Combines getting the settings from
+-- - An explicitly passed path to a file
+-- - Settings overridden in the CLI
+-- - Settings that apply to a file
+getSettingsForFile
+  :: Settings :> es
+  => Maybe SettingsPath
+  -> OverriddenSettings
+  -> FilePath
+  -> Eff es LintSettings
 getSettingsForFile mbSettingsPath overridden filepath = do
   readSettings <- case mbSettingsPath of
     Just (SettingsPath path) -> settingsFromFile path

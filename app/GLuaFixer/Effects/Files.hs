@@ -16,15 +16,15 @@ import Control.Monad.IO.Class (liftIO)
 import Data.List (foldl', stripPrefix)
 import Data.Maybe (fromMaybe, listToMaybe, mapMaybe)
 import Effectful (Dispatch (Dynamic), DispatchOf, Eff, Effect, IOE, (:>))
-import Effectful.Dispatch.Dynamic (interpret, send, interpose)
+import Effectful.Dispatch.Dynamic (interpose, interpret, send)
 import Effectful.Dispatch.Static (HasCallStack)
+import GLuaFixer.Effects.Logging (Logging, putStrLnStdError)
 import qualified System.Directory as Dir
 import System.FilePath (takeDirectory, (</>))
 import System.FilePath.Find (FindClause, always, fileName, filePath, find, (&&?), (/~?), (~~?))
 import System.FilePath.GlobPattern (GlobPattern)
 import System.IO (IOMode (..), hGetContents, hPutStrLn, hSetEncoding, utf8_bom, withFile)
 import Prelude hiding (readFile, writeFile)
-import GLuaFixer.Effects.Logging (Logging, putStrLnStdError)
 
 newtype Directory = Directory {dir :: FilePath}
 newtype FileNames = FileNames {names :: [String]}
@@ -64,8 +64,8 @@ getHomeDirectory :: Files :> es => Eff es FilePath
 getHomeDirectory = send GetHomeDirectory
 
 findLuaFiles :: Files :> es => IgnoreFiles -> FilePath -> Eff es [FilePath]
-findLuaFiles ignoreFiles filepath
-  = send $ FindLuaFiles ignoreFiles filepath
+findLuaFiles ignoreFiles filepath =
+  send $ FindLuaFiles ignoreFiles filepath
 
 firstExists :: Files :> es => [FilePath] -> Eff es (Maybe FilePath)
 firstExists files = send $ FirstExists files
@@ -77,7 +77,7 @@ isDirectory :: Files :> es => FilePath -> Eff es Bool
 isDirectory filepath = send $ IsDirectory filepath
 
 fileExists :: Files :> es => FilePath -> Eff es Bool
-fileExists filepath = send $ FileExists  filepath
+fileExists filepath = send $ FileExists filepath
 
 writeFile :: Files :> es => FilePath -> String -> Eff es ()
 writeFile filepath contents = send $ WriteFile filepath contents
@@ -88,9 +88,10 @@ readFile filepath = send $ ReadFile filepath
 readStdIn :: Files :> es => Eff es String
 readStdIn = send ReadStdIn
 
-getCurrentDirectory ::
-  forall (es_a9miX :: [Effect]). (HasCallStack, Files :> es_a9miX) =>
-                                 Eff es_a9miX FilePath
+getCurrentDirectory
+  :: forall (es_a9miX :: [Effect])
+   . (HasCallStack, Files :> es_a9miX)
+  => Eff es_a9miX FilePath
 getCurrentDirectory = send (GetCurrentDirectory @(Eff es_a9miX))
 
 runFilesIO :: forall es a. (IOE :> es) => Eff (Files : es) a -> Eff es a
@@ -112,17 +113,19 @@ runFilesIO = interpret $ \_ -> \case
   SearchUpwardsForFile (Directory directory) (FileNames filename) ->
     let
       go !subdir = do
-        let filepaths = fmap (subdir </>) filename
+        let
+          filepaths = fmap (subdir </>) filename
         mbFoundFile <- runFilesIO $ firstExists filepaths
         case mbFoundFile of
           Just file -> pure $ Just file
           Nothing -> do
-            let up = takeDirectory subdir
+            let
+              up = takeDirectory subdir
             dirExists <- runFilesIO $ isDirectory up
             if up == subdir || not dirExists
               then pure Nothing
               else go up
-     in
+    in
       go directory
   FirstExists filepath -> case filepath of
     (file : files) -> do
@@ -149,7 +152,7 @@ runFilesIO = interpret $ \_ -> \case
         , path ++ "/"
         , path
         ]
-     in
+    in
       liftIO $ find always (fileName ~~? "*.lua" &&? ignoredGlobs) path
   GetHomeDirectory -> liftIO Dir.getHomeDirectory
   MakeAbsolute filepath -> liftIO $ Dir.makeAbsolute filepath
@@ -168,7 +171,7 @@ traceFiles = interpose $ \_ -> \case
     send $ ReadFile filepath
   WriteFile filepath contents -> do
     putStrLnStdError $ "WriteFile " <> filepath
-    send $ WriteFile  filepath contents
+    send $ WriteFile filepath contents
   FileExists filepath -> do
     putStrLnStdError "FileExists"
     send $ FileExists filepath

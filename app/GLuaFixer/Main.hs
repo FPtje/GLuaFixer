@@ -5,13 +5,13 @@ import GLua.ASTInstances ()
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
 
 import Effectful (runEff)
-import GLuaFixer.Effects.Run (run)
 import qualified Effectful.Environment as Env
-import System.Exit (exitWith)
 import GLuaFixer.Effects.Cli (runCliIO)
 import GLuaFixer.Effects.Files (runFilesIO)
 import GLuaFixer.Effects.Interruptible (runInterruptible)
 import GLuaFixer.Effects.Logging (runLoggingIO)
+import GLuaFixer.Effects.Run (run)
+import System.Exit (exitWith)
 
 main :: IO ()
 main = do
@@ -23,10 +23,10 @@ main = do
   exitCode <-
     runEff $
       runCliIO $
-      runFilesIO $
-      runInterruptible $
-      Env.runEnvironment $
-      runLoggingIO
-      run
+        runFilesIO $
+          runInterruptible $
+            Env.runEnvironment $
+              runLoggingIO
+                run
 
   exitWith exitCode

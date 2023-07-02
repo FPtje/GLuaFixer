@@ -26,9 +26,8 @@ data instance StaticRep Cli = Cli
 runCliIO :: IOE :> es => Eff (Cli : es) a -> Eff es a
 runCliIO = evalStaticRep Cli
 
-{- | The result of parsing the CLI arguments. Either successful, with Options describing the running
-parameters of glualint, or alternatively, show the help text and exit with the exit code
--}
+-- | The result of parsing the CLI arguments. Either successful, with Options describing the running
+-- parameters of glualint, or alternatively, show the help text and exit with the exit code
 data CliParseResult
   = ParseSuccessful Options
   | PrintHelpText ExitCode String
@@ -49,7 +48,8 @@ parseCliOptions = do
       let
         (parserHelp, exitCode, terminalColumns) = Opt.execFailure parserFailure progName
 
-      let printHelpText = PrintHelpText exitCode $ Opt.renderHelp terminalColumns parserHelp
+      let
+        printHelpText = PrintHelpText exitCode $ Opt.renderHelp terminalColumns parserHelp
       case exitCode of
         -- This means the help was activated. Print the help
         ExitSuccess ->

@@ -46,29 +46,28 @@ analyseFile lintSettings filepath ast = do
   State.modify $ \analysisState ->
     AnalysisState $ Map.unionWith (++) analysisState.state variableLocations
 
-{- | Print the analysis state to the terminal.
-TODO: make the rendering a pure function
--}
+-- | Print the analysis state to the terminal.
+-- TODO: make the rendering a pure function
 reportAnalysis :: forall es. (Logging :> es) => AnalysisState -> Eff es ()
 reportAnalysis analysis =
   mapM_ reportGlobal globals
- where
-  globals :: [(String, [VariableLocation])]
-  globals = sortWith (map toLower . fst) $ Map.toList $ Map.map (sortWith file) analysis.state
+  where
+    globals :: [(String, [VariableLocation])]
+    globals = sortWith (map toLower . fst) $ Map.toList $ Map.map (sortWith file) analysis.state
 
-  reportRegions :: [Region] -> Eff es ()
-  reportRegions rgs =
-    mapM_ (\r -> putStrLnStdOut $ "    " ++ renderRegion r) $ reverse rgs
+    reportRegions :: [Region] -> Eff es ()
+    reportRegions rgs =
+      mapM_ (\r -> putStrLnStdOut $ "    " ++ renderRegion r) $ reverse rgs
 
-  reportVariableLocation :: VariableLocation -> Eff es ()
-  reportVariableLocation location =
-    do
-      putStrLnStdOut $ "  " ++ file location ++ ":"
-      reportRegions $ regions location
-      putStrLnStdOut ""
+    reportVariableLocation :: VariableLocation -> Eff es ()
+    reportVariableLocation location =
+      do
+        putStrLnStdOut $ "  " ++ file location ++ ":"
+        reportRegions $ regions location
+        putStrLnStdOut ""
 
-  reportGlobal :: (String, [VariableLocation]) -> Eff es ()
-  reportGlobal (global, analyses) =
-    do
-      putStrLnStdOut $ "- " ++ global
-      mapM_ reportVariableLocation analyses
+    reportGlobal :: (String, [VariableLocation]) -> Eff es ()
+    reportGlobal (global, analyses) =
+      do
+        putStrLnStdOut $ "- " ++ global
+        mapM_ reportVariableLocation analyses

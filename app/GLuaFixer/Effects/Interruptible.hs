@@ -44,18 +44,18 @@ hasBeenInterrupted = do
   unsafeEff_ $ readIORef aborted
 
 -- | Strict interruptible fold
-interruptibleFoldMStrict ::
-  Interruptible :> es =>
-  (a -> b -> Eff es a) ->
-  a ->
-  [b] ->
-  Eff es a
+interruptibleFoldMStrict
+  :: Interruptible :> es
+  => (a -> b -> Eff es a)
+  -> a
+  -> [b]
+  -> Eff es a
 interruptibleFoldMStrict f a = \case
   [] -> pure a
   (x : xs) -> do
     weDone <- hasBeenInterrupted
-    if weDone then
-      pure a
-    else do
-      !res <- f a x
-      interruptibleFoldMStrict f res xs
+    if weDone
+      then pure a
+      else do
+        !res <- f a x
+        interruptibleFoldMStrict f res xs
