@@ -136,7 +136,11 @@ runFilesIO = interpret $ \_ -> \case
     [] -> pure Nothing
   FindLuaFiles (IgnoreFiles ignoreFiles) path ->
     let
-      ignoredGlobs = foldl' (&&?) always $ map (relativeFilePath /~?) ignoreFiles
+      ignoredGlobs = foldl' (&&?) always $ map excludeFiles ignoreFiles
+
+      -- Exclude a path when either its relative path or its full path match the ignore globs.
+      excludeFiles :: GlobPattern -> FindClause Bool
+      excludeFiles glob = relativeFilePath /~? glob &&? filePath /~? glob
 
       relativeFilePath :: FindClause FilePath
       relativeFilePath = fmap stripFromPath filePath
