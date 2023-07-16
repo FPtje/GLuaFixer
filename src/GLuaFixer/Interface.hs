@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedRecordDot #-}
-
 module GLuaFixer.Interface where
 
 import GLua.AG.AST (AST)
@@ -28,7 +26,7 @@ lex :: LintSettings -> FilePath -> String -> Either [LintMessage] [MToken]
 lex lintSettings filepath contents =
   case PSL.execParseTokens contents of
     Left lexErr ->
-      Left [LintMessage LintError (PSL.sp2Rg $ errorPos lexErr) (IssueParseError lexErr) filepath | lintSettings.lint_syntaxErrors]
+      Left [LintMessage LintError (PSL.sp2Rg $ errorPos lexErr) (IssueParseError lexErr) filepath | lint_syntaxErrors lintSettings]
     Right tokens -> Right $ fixedLexPositions tokens
 
 -- | Use the (slower, but error-correcting) UU-parsinglib lexer to generate the lexicon
@@ -36,7 +34,7 @@ lexUU :: LintSettings -> String -> ([MToken], [Error LineColPos])
 lexUU lintSettings contents = case UUL.execParseTokens contents of
   (tokens, errors) ->
     ( fixedLexPositions tokens
-    , [err | lintSettings.lint_syntaxErrors, err <- errors]
+    , [err | lint_syntaxErrors lintSettings, err <- errors]
     )
 
 -- | Run the linting functions that inspect the lexicon
