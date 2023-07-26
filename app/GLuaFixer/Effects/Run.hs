@@ -171,17 +171,15 @@ runOptions options =
                 pure exitCode
         (Test, UseStdIn) -> do
           (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
-          test lintSettings "stdin" contents
-          pure ExitSuccess
+          test ExitSuccess lintSettings "stdin" contents
         (Test, UseFiles files) -> do
           foldLuaFiles
             options.optsConfigFile
             options.optsOverridden
-            ()
+            ExitSuccess
             files
-            $ \() lintSettings filepath contents ->
-              test lintSettings filepath contents
-          pure ExitSuccess
+            $ \exitCode lintSettings filepath contents ->
+              test exitCode lintSettings filepath contents
         (PrintVersion, _) -> do
           putStrLnStdOut version
           pure ExitSuccess
@@ -272,11 +270,12 @@ prettyprint lintSettings contents = do
 -- | Test glualint itself against a file. TODO: Refactor this into a nicer command
 test
   :: (Logging :> es, Eff.Environment :> es)
-  => LintSettings
+  => ExitCode
+  -> LintSettings
   -> FilePath
   -> String
-  -> Eff es ()
-test lintSettings filepath contents = do
+  -> Eff es ExitCode
+test exitCode lintSettings filepath contents = do
   putStrLnStdOut $ "Testing " <> filepath
   let
     (uu_lex, uu_lex_errors) = Interface.lexUU lintSettings contents
@@ -299,14 +298,16 @@ test lintSettings filepath contents = do
   logFormat <- getLogFormat lintSettings.log_format
 
   case Interface.lex lintSettings filepath contents of
-    Left msgs ->
+    Left msgs -> do
       mapM_ (emitLintMessage logFormat) msgs
+      pure $ ExitFailure 1
     Right tokens ->
       case Interface.parse lintSettings filepath tokens of
         Left msgs -> do
           putStrLnStdOut $
             "Errors when trying to parse '" ++ filepath ++ "' with parsec parser!"
           mapM_ (emitLintMessage logFormat) msgs
+          pure $ ExitFailure 1
         Right ast -> do
           let
             prettyprinted = Interface.prettyprint lintSettings ast
@@ -325,7 +326,8 @@ test lintSettings filepath contents = do
                 "Errors when trying to parse '" ++ filepath ++ "' with parsec parser after pretty print!"
 
               putStrLnStdOut $ show err
-            Right _ast -> pure ()
+              pure $ ExitFailure 1
+            Right _ast -> pure exitCode
 
 -- | Function to easily parse a file's contents into an AST. This will log any parse failures and
 -- give an AST if it can.

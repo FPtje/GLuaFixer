@@ -1,3 +1,1 @@
-r = function(...)
-    (...)[...] = nil
-end
+r = function(...) (...)[...] = nil end

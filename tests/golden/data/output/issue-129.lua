@@ -1,1 +1,5 @@
-local table = {function() return nil end} -- comment
+local table = {
+    function()
+        return nil -- comment
+    end
+}

@@ -13,8 +13,24 @@ TEAM_CITIZEN = DarkRP.createJob(
     "Citizen",
     {
         color = Color(20, 150, 20, 255),
-        model = {"models/player/Group01/Female_01.mdl", "models/player/Group01/Female_02.mdl", "models/player/Group01/Female_03.mdl", "models/player/Group01/Female_04.mdl", "models/player/Group01/Female_06.mdl", "models/player/group01/male_01.mdl", "models/player/Group01/Male_02.mdl", "models/player/Group01/male_03.mdl", "models/player/Group01/Male_04.mdl", "models/player/Group01/Male_05.mdl", "models/player/Group01/Male_06.mdl", "models/player/Group01/Male_07.mdl", "models/player/Group01/Male_08.mdl", "models/player/Group01/Male_09.mdl"},
-        -- test comment -- another comment -- look at this comment
+        model = {
+            "models/player/Group01/Female_01.mdl",
+            "models/player/Group01/Female_02.mdl",
+            "models/player/Group01/Female_03.mdl", -- test comment
+            "models/player/Group01/Female_04.mdl",
+            "models/player/Group01/Female_06.mdl",
+            "models/player/group01/male_01.mdl",
+            "models/player/Group01/Male_02.mdl",
+            "models/player/Group01/male_03.mdl",
+            "models/player/Group01/Male_04.mdl",
+            "models/player/Group01/Male_05.mdl",
+            "models/player/Group01/Male_06.mdl",
+            "models/player/Group01/Male_07.mdl",
+            "models/player/Group01/Male_08.mdl",
+            "models/player/Group01/Male_09.mdl"
+        },
+        -- another comment
+        -- look at this comment
         description = [[The Citizen is the most basic level of society you can hold besides being a hobo. You have no specific role in city life.]],
         weapons = {},
         command = "citizen",
