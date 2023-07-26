@@ -22,10 +22,10 @@ tok :: MToken -> Doc
 tok (MToken _ t) = zeroWidthText . show $ t
 
 printList :: (a -> Doc) -> String -> [a] -> Doc
-printList _ _ []       = empty
+printList _ _ [] = empty
 printList f sep' (e : es) = (f e) <> g es
     where
-        g []       = empty
+        g [] = empty
         g (e' : es') = zeroWidthText sep' <> (f e') <> g es'
 
 data IsEmpty = IsEmpty | NonEmpty
@@ -74,10 +74,13 @@ defaultPPConfig = PPConfig {
 
 metaDoc :: Maybe MToken -> Doc
 metaDoc (Just m) = zchr ':' <> tok m
-metaDoc Nothing  = empty
+metaDoc Nothing = empty
 
 printVarList :: [(PrefixExp, Maybe MExpr)] -> Doc
-printVarList vars = printList pp_prefixexp ", " (map fst vars) <-> zchr '=' <-> printList pp_mexpr ", " (catMaybes . map snd $ vars)
+printVarList vars =
+    printList pp_prefixexp ", " (map fst vars)
+    <-> zchr '='
+    <-> printList pp_mexpr ", " (catMaybes . map snd $ vars)
 
 printStats :: [MStat] -> Int -> Doc
 printStats [] _ = empty
@@ -85,7 +88,12 @@ printStats (x : xs) i = nest (i * 4) (pp_mstat x i) $+$ printStats xs i
 
 printElIfs :: [(MExpr, Block)] -> Int -> Doc
 printElIfs [] _ = empty
-printElIfs ((e, b) : es) i = zeroWidthText "elseif" <-> pp_mexpr e <-> zeroWidthText "then" $+$ pp_block b i $+$ printElIfs es i
+printElIfs ((e, b) : es) i =
+    zeroWidthText "elseif"
+    <-> pp_mexpr e
+    <-> zeroWidthText "then"
+    $+$ pp_block b i
+    $+$ printElIfs es i
 
 printEls :: Maybe Block -> Int -> Doc
 printEls Nothing _ = empty
@@ -99,7 +107,11 @@ renderRegion :: Region -> String
 renderRegion (Region l r) = renderPos l ++ " - " ++ renderPos r
 
 renderSourcePos :: SourcePos -> String
-renderSourcePos sp = "line " ++ (show . succ . sourceLine $ sp) ++ ", column " ++ (show . succ . sourceColumn $ sp)
+renderSourcePos sp =
+    "line "
+    ++ (show . succ . sourceLine $ sp)
+    ++ ", column "
+    ++ (show . succ . sourceColumn $ sp)
 
 getMStatPos :: MStat -> String
 getMStatPos (MStat p _) = renderRegion p
@@ -112,26 +124,56 @@ getMExprPos :: MExpr -> String
 getMExprPos (MExpr p _) = renderRegion p
 
 renderError :: Error LineColPos -> String
-renderError (Inserted str pos strs)       = renderPos pos ++ ": Inserted '" ++ str ++ "'." ++ render_expecting strs
-renderError (Deleted str pos strs)        = renderPos pos ++ ": Removed '" ++ str ++ "'. " ++render_expecting strs
-renderError (Replaced str1 str2 pos strs) = renderPos pos ++ ": Replaced '" ++ str1 ++ "' with '" ++ str2 ++ "' at " ++ renderPos pos ++ render_expecting strs
-renderError (DeletedAtEnd str)            = "Deleted '"  ++ str ++ "' at the end of the Lua file because the parser doesn't know what to do with it."
+renderError (Inserted str pos strs) =
+    renderPos pos
+    ++ ": Inserted '"
+    ++ str
+    ++ "'."
+    ++ render_expecting strs
+renderError (Deleted str pos strs) =
+    renderPos pos
+    ++ ": Removed '"
+    ++ str
+    ++ "'. "
+    ++render_expecting strs
+renderError (Replaced str1 str2 pos strs) =
+    renderPos pos
+    ++ ": Replaced '"
+    ++ str1
+    ++ "' with '"
+    ++ str2
+    ++ "' at "
+    ++ renderPos pos
+    ++ render_expecting strs
+renderError (DeletedAtEnd str) =
+    "Deleted '"
+    ++ str
+    ++ "' at the end of the Lua file because the parser doesn't know what to do with it."
 
 render_expecting :: [String] -> String
-render_expecting [a]    = "Parser expected a " ++ a
+render_expecting [a] = "Parser expected a " ++ a
 render_expecting (a:as) = "Parser expected one of [" ++ a ++ concat (map (", " ++) as) ++ "]"
-render_expecting []     = "Parser expected nothing"
-
+render_expecting [] = "Parser expected nothing"
 
 renderPSError :: ParseError -> String
-renderPSError ps = map replNL . showErrorMessages "or" "unknown parse error" "expecting" "unexpected" "end of input" . errorMessages $ ps
+renderPSError ps =
+        map replNL
+        . showErrorMessages
+            "or"
+            "unknown parse error"
+            "expecting"
+            "unexpected"
+            "end of input"
+        . errorMessages
+        $ ps
     where
         replNL '\n' = ' '
         replNL c = c
 
 -- | Render comments on multiple lines
 renderMLComments :: PrettyPrintConfig -> Int -> [MToken] -> Doc
-renderMLComments conf ind toks = foldl' ($+$) empty . map (indent conf ind . tok . convertComment conf) $ toks
+renderMLComments conf ind toks =
+    foldl' ($+$) empty . map (indent conf ind . tok . convertComment conf) $ toks
 
 -- | Render comments, and prefer having them on a single line. It may not print comments on the same
 -- line if that would cause a syntax error (e.g. a multiline comment after a single line comment)
@@ -186,7 +228,10 @@ parens :: PrettyPrintConfig -> IsEmpty -> Doc -> Doc
 parens conf ie doc = zchr '(' `sep'` doc `sep'` zchr ')'
     where
         sep' :: Doc -> Doc -> Doc
-        sep' = if spaceAfterParens conf && (not (fromEmpty ie) || spaceEmptyParens conf) then (<->) else (<>)
+        sep' =
+            if spaceAfterParens conf && (not (fromEmpty ie) || spaceEmptyParens conf)
+            then (<->)
+            else (<>)
 
 brackets :: PrettyPrintConfig -> Doc -> Doc
 brackets conf doc = zchr '[' `sep'` doc `sep'` zchr ']'
@@ -198,7 +243,10 @@ braces :: PrettyPrintConfig -> IsEmpty -> Doc -> Doc
 braces conf ie doc = zchr '{' `sep'` doc `sep'` zchr '}'
     where
         sep' :: Doc -> Doc -> Doc
-        sep' = if spaceAfterBraces conf && (not (fromEmpty ie) || spaceEmptyBraces conf) then (<->) else (<>)
+        sep' =
+            if spaceAfterBraces conf && (not (fromEmpty ie) || spaceEmptyBraces conf)
+            then (<->)
+            else (<>)
 
 -- Zero width char
 zchr :: Char -> Doc
@@ -209,7 +257,7 @@ infixl 6 <->
 (<->) :: Doc -> Doc -> Doc
 a <-> b | a == empty = b
         | b == empty = a
-        | otherwise  = a <> zchr ' ' <> b
+        | otherwise = a <> zchr ' ' <> b
 
 -- Operator levels, where level 1 is the lowest level, and level 8 is the highest one
 -- See http://www.lua.org/manual/5.2/manual.html#3.4.7
@@ -268,8 +316,8 @@ attr ExprStuff BinOp
     syn isAssociative use {&&} {False} :: Bool
 
 attr Declaration VarsList
-    syn varPretty  use {<>} {empty}  :: Doc
-    syn exprPretty use {<>} {empty}  :: Doc
+    syn varPretty  use {<>} {empty} :: Doc
+    syn exprPretty use {<>} {empty} :: Doc
 
 attr MaybeMExpr Declaration VarsList
     syn isDefined use {||} {False} :: Bool
@@ -293,7 +341,9 @@ attr MStat Stat
 attr MStat MExprList MExpr Field MElseIf ElseIfList MElse Else FuncName
     syn pos :: Region
 
-attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList ElseIf MElseIf ElseIfList Else MElse Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args Field BinOp UnOp
+attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList ElseIf MElseIf
+    ElseIfList Else MElse Block MStat Stat AReturn FuncName PrefixExp PFExprSuffix MExpr Expr Args
+    Field BinOp UnOp
     chn comments :: {[MToken]}
 
 attr FieldList
@@ -337,7 +387,8 @@ attr MStat Stat
     -- See startsWithPrefixExpression
     inh wouldBeAmbiguousWithoutSemicolon :: Bool
 
-attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList MElseIf ElseIf ElseIfList MElse Else Block MStat Stat AReturn PrefixExp PFExprSuffix MExpr Expr Args Field
+attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList MElseIf ElseIf
+    ElseIfList MElse Else Block MStat Stat AReturn PrefixExp PFExprSuffix MExpr Expr Args Field
     -- A comment may indicate `format: multiline`. This will be passed to the next statement all the
     -- way downwards. Then at any point where a decision is made whether to render something single
     -- line or multiline, this variable jumps in to force the decision to multiline.
@@ -345,690 +396,841 @@ attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixLis
 
 sem MStatList
     | Cons
-                 loc.isMultiline =
-                    @hd.isMultiline
-                    || @tl.isMultiline
-                    || not (null $ fst @loc.commentsBeforeLine)
-                    || not (null $ fst @loc.commentsAfter)
+        lhs.pretty =
+           renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBeforeLine)
+           $+$ indent @lhs.ppconf @lhs.indent @hd.pretty
+           <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
+           <> @loc.addNewline
+           $+$ @tl.pretty
+        lhs.startsWithExprPrefixExpression = @hd.startsWithExprPrefixExpression
+        lhs.isLast = False
 
-                 loc.addNewline = if not @tl.isLast && @hd.isMultiline then zchr '\n' else empty
-                 lhs.pretty =
-                    renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBeforeLine)
-                    $+$ indent @lhs.ppconf @lhs.indent @hd.pretty
-                    <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
-                    <> @loc.addNewline
-                    $+$ @tl.pretty
-                 lhs.startsWithExprPrefixExpression = @hd.startsWithExprPrefixExpression
+        loc.isMultiline =
+           @hd.isMultiline
+           || @tl.isMultiline
+           || not (null $ fst @loc.commentsBeforeLine)
+           || not (null $ fst @loc.commentsAfter)
+        loc.addNewline = if not @tl.isLast && @hd.isMultiline then zchr '\n' else empty
 
-                 loc.commentsBeforeLine = span (\(MToken pos' _) -> pos' `before` @hd.pos) @lhs.comments
-                 hd.comments = snd @loc.commentsBeforeLine
-                 loc.commentsAfter = span (\(MToken pos' _) -> pos' `beforeOrOnLine` @hd.pos) @hd.comments
-                 tl.comments = snd @loc.commentsAfter
-                 lhs.comments = @tl.comments
 
-                 hd.isLastStatement = @tl.isLast
-                 -- A pair of statements are ambiguous without a semicolon if the first ends with a
-                 -- prefix expression, and the second starts specifically with an expression prefix
-                 -- expression.
-                 -- Pass that info to the head, because that one places semicolons.
-                 hd.wouldBeAmbiguousWithoutSemicolon = @hd.endsWithPrefixExpression && @tl.startsWithExprPrefixExpression
+        loc.commentsBeforeLine = span (\(MToken pos' _) -> pos' `before` @hd.pos) @lhs.comments
+        hd.comments = snd @loc.commentsBeforeLine
+        loc.commentsAfter = span (\(MToken pos' _) -> pos' `beforeOrOnLine` @hd.pos) @hd.comments
+        tl.comments = snd @loc.commentsAfter
+        lhs.comments = @tl.comments
 
-                 hd.forceMultiline = commentsForceMultiline $ fst @loc.commentsBeforeLine
-                 lhs.isLast = False
-    | Nil        lhs.pretty = empty
-                 lhs.statementCount = 0
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.isMultiline = False
-                 lhs.isLast = True
+        hd.isLastStatement = @tl.isLast
+
+        -- A pair of statements are ambiguous without a semicolon if the first ends with a
+        -- prefix expression, and the second starts specifically with an expression prefix
+        -- expression.
+        -- Pass that info to the head, because that one places semicolons.
+        hd.wouldBeAmbiguousWithoutSemicolon =
+            @hd.endsWithPrefixExpression && @tl.startsWithExprPrefixExpression
+        hd.forceMultiline = commentsForceMultiline $ fst @loc.commentsBeforeLine
+    | Nil
+        lhs.pretty = empty
+        lhs.statementCount = 0
+        lhs.startsWithExprPrefixExpression = False
+        lhs.isMultiline = False
+        lhs.isLast = True
 
 sem MStat
-    | MStat      lhs.pos    = @pos
-                 lhs.startsWithExprPrefixExpression = @stat.startsWithExprPrefixExpression
-                 lhs.endsWithPrefixExpression = @stat.endsWithPrefixExpression
-                 lhs.isMultiline = @stat.isMultiline
-                 stat.statRegion = @pos
-                 stat.wouldBeAmbiguousWithoutSemicolon = @lhs.wouldBeAmbiguousWithoutSemicolon
+    | MStat
+        lhs.pos = @pos
+        lhs.startsWithExprPrefixExpression = @stat.startsWithExprPrefixExpression
+        lhs.endsWithPrefixExpression = @stat.endsWithPrefixExpression
+        lhs.isMultiline = @stat.isMultiline
+        stat.statRegion = @pos
+        stat.wouldBeAmbiguousWithoutSemicolon = @lhs.wouldBeAmbiguousWithoutSemicolon
 
 sem MExprList
-    | Cons       lhs.pretty = if @loc.isMultiline then @loc.prettyMultiLine else @loc.prettySingleLine
-                 loc.prettySingleLine =
-                    @hd.pretty
-                    <> @loc.comma
-                    <> @tl.pretty
-                 loc.prettyMultiLine =
-                    renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBeforeLine)
-                    $+$ indent @lhs.ppconf @lhs.indent @hd.pretty
-                    <> @loc.comma
-                    <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
-                    $+$ @tl.pretty
-                 loc.comma =
-                    if @tl.isLast then
-                        empty
-                    else
-                        (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty)
-                        <> zchr ','
-                        <> (if not @loc.isMultiline && spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
+    | Cons
+        lhs.pretty = if @loc.isMultiline then @loc.prettyMultiLine else @loc.prettySingleLine
+        loc.prettySingleLine =
+           @hd.pretty
+           <> @loc.comma
+           <> @tl.pretty
+        loc.prettyMultiLine =
+           renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBeforeLine)
+           $+$ indent @lhs.ppconf @lhs.indent @hd.pretty
+           <> @loc.comma
+           <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
+           $+$ @tl.pretty
+        loc.comma =
+           if @tl.isLast then
+               empty
+           else
+               (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty)
+               <> zchr ','
+               <> (if not @loc.isMultiline && spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
 
-                 loc.commentsBeforeLine = span (\(MToken pos' _) -> pos' `before` @hd.pos) @lhs.comments
-                 hd.comments = snd @loc.commentsBeforeLine
-                 loc.commentsAfter = span (\(MToken pos' _) -> pos' `before` @tl.pos) @hd.comments
-                 tl.comments = snd @loc.commentsAfter
-                 lhs.comments = @tl.comments
+        loc.commentsBeforeLine = span (\(MToken pos' _) -> pos' `before` @hd.pos) @lhs.comments
+        hd.comments = snd @loc.commentsBeforeLine
+        loc.commentsAfter = span (\(MToken pos' _) -> pos' `before` @tl.pos) @hd.comments
+        tl.comments = snd @loc.commentsAfter
+        lhs.comments = @tl.comments
 
-                 lhs.pos    = @hd.pos
-                 lhs.isLast = False
-                 hd.parentOperatorPrecedence = TopLevelExpression
-                 hd.parentOperatorAssociative = True
-                 loc.isMultiline =
-                    @lhs.forceMultiline
-                    || not (null $ fst @loc.commentsBeforeLine)
-                    || not (null $ fst @loc.commentsAfter)
-                    || @lhs.someElementsInListAreMultiline
-                    || @hd.isMultiline
-                    || @tl.isMultiline
+        lhs.pos = @hd.pos
+        lhs.isLast = False
+        hd.parentOperatorPrecedence = TopLevelExpression
+        hd.parentOperatorAssociative = True
+        loc.isMultiline =
+           @lhs.forceMultiline
+           || not (null $ fst @loc.commentsBeforeLine)
+           || not (null $ fst @loc.commentsAfter)
+           || @lhs.someElementsInListAreMultiline
+           || @hd.isMultiline
+           || @tl.isMultiline
 
-                 tl.someElementsInListAreMultiline =
-                    @lhs.someElementsInListAreMultiline
-                    || @hd.isMultiline
-                    || not (null $ fst @loc.commentsBeforeLine)
-                    || not (null $ fst @loc.commentsAfter)
+        tl.someElementsInListAreMultiline =
+           @lhs.someElementsInListAreMultiline
+           || @hd.isMultiline
+           || not (null $ fst @loc.commentsBeforeLine)
+           || not (null $ fst @loc.commentsAfter)
 
-    | Nil        lhs.pretty = empty
-                 lhs.pos    = emptyRg
-                 lhs.isMultiline = False
-                 lhs.isLast = True
+    | Nil
+        lhs.pretty = empty
+        lhs.pos = emptyRg
+        lhs.isMultiline = False
+        lhs.isLast = True
 
 sem FieldList
-    | Cons       lhs.pretty =
-                    if @loc.isMultiline
-                    then renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
-                        $+$ indent @lhs.ppconf @lhs.indent @hd.pretty
-                        <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
-                        $+$ @tl.pretty
-                    else @hd.pretty
-                        `@loc.optionalSpaceAfterSep` @tl.pretty
-                 lhs.isNil  = False
+    | Cons
+        lhs.pretty =
+            if @loc.isMultiline
+            then renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
+                $+$ indent @lhs.ppconf @lhs.indent @hd.pretty
+                <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
+                $+$ @tl.pretty
+            else @hd.pretty
+                `@loc.optionalSpaceAfterSep` @tl.pretty
+        lhs.isNil = False
 
-                 loc.optionalSpaceAfterSep = if spaceAfterComma @lhs.ppconf then (<->) else (<>)
+        loc.optionalSpaceAfterSep = if spaceAfterComma @lhs.ppconf then (<->) else (<>)
 
-                 loc.isMultiline =
-                    @lhs.forceMultiline
-                    || @hd.isMultiline
-                    || @tl.isMultiline
-                    || @lhs.someElementsInListAreMultiline
-                    || not (null $ fst @loc.commentsBefore)
-                    || not (null $ fst @loc.commentsAfter)
+        loc.isMultiline =
+           @lhs.forceMultiline
+           || @hd.isMultiline
+           || @tl.isMultiline
+           || @lhs.someElementsInListAreMultiline
+           || not (null $ fst @loc.commentsBefore)
+           || not (null $ fst @loc.commentsAfter)
 
-                 tl.someElementsInListAreMultiline =
-                    @lhs.someElementsInListAreMultiline
-                    || @hd.isMultiline
-                    || not (null $ fst @loc.commentsBefore)
-                    || not (null $ fst @loc.commentsAfter)
+        tl.someElementsInListAreMultiline =
+           @lhs.someElementsInListAreMultiline
+           || @hd.isMultiline
+           || not (null $ fst @loc.commentsBefore)
+           || not (null $ fst @loc.commentsAfter)
 
-                 loc.commentsBefore = span (\(MToken pos _) -> pos `before` @hd.pos) @lhs.comments
-                 hd.comments = snd @loc.commentsBefore
-                 loc.commentsAfter =
-                    span (\(MToken pos _) -> pos `beforeOrOnLine` @hd.pos) @hd.comments
-                 tl.comments = snd @loc.commentsAfter
-                 lhs.comments = @tl.comments
+        loc.commentsBefore = span (\(MToken pos _) -> pos `before` @hd.pos) @lhs.comments
+        hd.comments = snd @loc.commentsBefore
+        loc.commentsAfter =
+           span (\(MToken pos _) -> pos `beforeOrOnLine` @hd.pos) @hd.comments
+        tl.comments = snd @loc.commentsAfter
+        lhs.comments = @tl.comments
 
-    | Nil        lhs.pretty = empty
-                 lhs.isNil  = True
-                 lhs.isMultiline = False
+    | Nil
+        lhs.pretty = empty
+        lhs.isNil = True
+        lhs.isMultiline = False
 
 sem MaybeMExpr
     | Just
-                lhs.pretty = @just.pretty
-                lhs.isDefined = True
-                lhs.endsWithPrefixExpression = @just.endsWithPrefixExpression
-                lhs.isMultiline = @just.isMultiline
-                just.parentOperatorPrecedence = TopLevelExpression
-                just.parentOperatorAssociative = True
+        lhs.pretty = @just.pretty
+        lhs.isDefined = True
+        lhs.endsWithPrefixExpression = @just.endsWithPrefixExpression
+        lhs.isMultiline = @just.isMultiline
+        just.parentOperatorPrecedence = TopLevelExpression
+        just.parentOperatorAssociative = True
     | Nothing
-                lhs.pretty = empty
-                lhs.isDefined = False
-                lhs.endsWithPrefixExpression = False
-                lhs.isMultiline = False
+        lhs.pretty = empty
+        lhs.isDefined = False
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
 
 sem Declaration
-    | Tuple     lhs.varPretty = @x1.pretty
-                lhs.exprPretty = @x2.pretty
-                lhs.startsWithExprPrefixExpression = @x1.startsWithExprPrefixExpression
-                lhs.endsWithPrefixExpression = @x2.endsWithPrefixExpression
-                lhs.isMultiline = @x1.isMultiline || @x2.isMultiline
-                x1.parentOperatorPrecedence = TopLevelExpression
-                x1.parentOperatorAssociative = True
+    | Tuple
+        lhs.varPretty = @x1.pretty
+        lhs.exprPretty = @x2.pretty
+        lhs.startsWithExprPrefixExpression = @x1.startsWithExprPrefixExpression
+        lhs.endsWithPrefixExpression = @x2.endsWithPrefixExpression
+        lhs.isMultiline = @x1.isMultiline || @x2.isMultiline
+        x1.parentOperatorPrecedence = TopLevelExpression
+        x1.parentOperatorAssociative = True
 
 sem VarsList
-    | Cons      lhs.pretty = @loc.varPretty <-> if @loc.isDefined then zchr '=' <-> @loc.exprPretty else empty
-                lhs.startsWithExprPrefixExpression = @hd.startsWithExprPrefixExpression
-                lhs.endsWithPrefixExpression =
-                    -- A list of vars ends with a prefix expression if the last defined variable
-                    -- ends with a prefix expression
-                    -- e.g.
-                    -- `a, b, c = 1, foo()`
-                    -- `c` is not defined, but `b` is.
-                    if @tl.isDefined then @tl.endsWithPrefixExpression else @hd.endsWithPrefixExpression
-                lhs.isMultiline = @hd.isMultiline || @tl.isMultiline
-                loc.isDefined = @hd.isDefined || @tl.isDefined
-                loc.varPretty =
-                    @hd.varPretty
-                    <> (if @tl.isLast then empty else @loc.comma)
-                    <> @tl.varPretty
-                loc.exprPretty =
-                    @hd.exprPretty
-                    <> (if not @tl.isLast && @tl.isDefined then @loc.comma else empty)
-                    <> @tl.exprPretty
-                loc.comma  =
-                    (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty)
-                    <> zchr ','
-                    <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
-                lhs.isLast = False
-    | Nil       lhs.pretty = empty
-                lhs.startsWithExprPrefixExpression = False
-                lhs.endsWithPrefixExpression = False
-                lhs.isMultiline = False
-                lhs.isLast = True
+    | Cons
+        lhs.pretty =
+            @loc.varPretty
+            <-> if @loc.isDefined then zchr '=' <-> @loc.exprPretty else empty
+        lhs.startsWithExprPrefixExpression = @hd.startsWithExprPrefixExpression
+        lhs.endsWithPrefixExpression =
+            -- A list of vars ends with a prefix expression if the last defined variable
+            -- ends with a prefix expression
+            -- e.g.
+            -- `a, b, c = 1, foo()`
+            -- `c` is not defined, but `b` is.
+            if @tl.isDefined then @tl.endsWithPrefixExpression else @hd.endsWithPrefixExpression
+        lhs.isMultiline = @hd.isMultiline || @tl.isMultiline
+        loc.isDefined = @hd.isDefined || @tl.isDefined
+        loc.varPretty =
+            @hd.varPretty
+            <> (if @tl.isLast then empty else @loc.comma)
+            <> @tl.varPretty
+        loc.exprPretty =
+            @hd.exprPretty
+            <> (if not @tl.isLast && @tl.isDefined then @loc.comma else empty)
+            <> @tl.exprPretty
+        loc.comma =
+            (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty)
+            <> zchr ','
+            <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
+        lhs.isLast = False
+    | Nil
+        lhs.pretty = empty
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+        lhs.isLast = True
 
 sem ElseIf
-    | Tuple     lhs.pretty = zeroWidthText "elseif" <-> @x1.pretty <-> zeroWidthText "then" $+$ @x2.pretty
-                lhs.isMultiline = @x1.isMultiline || @x2.isMultiline
-                x2.indent = @lhs.indent + 1
-                x2.statRegion = emptyRg
-                x1.parentOperatorPrecedence = TopLevelExpression
-                x1.parentOperatorAssociative = True
+    | Tuple
+        lhs.pretty = zeroWidthText "elseif" <-> @x1.pretty <-> zeroWidthText "then" $+$ @x2.pretty
+        lhs.isMultiline = @x1.isMultiline || @x2.isMultiline
+        x2.indent = @lhs.indent + 1
+        x2.statRegion = emptyRg
+        x1.parentOperatorPrecedence = TopLevelExpression
+        x1.parentOperatorAssociative = True
 
 sem MElseIf
-    | MElseIf   lhs.pos = @pos
-                lhs.isMultiline = @elif.isMultiline
+    | MElseIf
+        lhs.pos = @pos
+        lhs.isMultiline = @elif.isMultiline
 
 sem ElseIfList
-    | Cons      lhs.pretty = indent @lhs.ppconf @lhs.indent @hd.pretty $+$ @tl.pretty
-                lhs.elsesExist = True
-                lhs.pos = @hd.pos
-                lhs.isMultiline = @hd.isMultiline || @tl.isMultiline
-    | Nil       lhs.pretty = empty
-                lhs.pos = emptyRg
-                lhs.isMultiline = False
+    | Cons
+        lhs.pretty = indent @lhs.ppconf @lhs.indent @hd.pretty $+$ @tl.pretty
+        lhs.elsesExist = True
+        lhs.pos = @hd.pos
+        lhs.isMultiline = @hd.isMultiline || @tl.isMultiline
+    | Nil
+        lhs.pretty = empty
+        lhs.pos = emptyRg
+        lhs.isMultiline = False
 
 sem Else
-    | Just      lhs.elsesExist = True
-                lhs.isMultiline = @just.isMultiline
-    | Nothing   lhs.pretty = empty
-                lhs.pos = emptyRg
-                lhs.isMultiline = False
+    | Just
+        lhs.elsesExist = True
+        lhs.isMultiline = @just.isMultiline
+    | Nothing
+        lhs.pretty = empty
+        lhs.pos = emptyRg
+        lhs.isMultiline = False
 
 sem MElse
-    | MElse     lhs.pretty = indent @lhs.ppconf @lhs.indent (zeroWidthText "else") <-> @loc.prettyCommentsAfter $+$ @body.pretty
-                lhs.isMultiline = @body.isMultiline
-                body.indent = @lhs.indent + 1
-                loc.prettyCommentsAfter = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
-                loc.commentsAfter = span (\(MToken pos _) -> pos `beforeOrOnLine` @pos) @lhs.comments
-                lhs.pos = @pos
-                body.comments = snd @loc.commentsAfter
+    | MElse
+        lhs.pretty =
+            indent @lhs.ppconf @lhs.indent (zeroWidthText "else")
+            <-> @loc.prettyCommentsAfter
+            $+$ @body.pretty
+        lhs.isMultiline = @body.isMultiline
+        body.indent = @lhs.indent + 1
+        loc.prettyCommentsAfter = renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
+        loc.commentsAfter = span (\(MToken pos _) -> pos `beforeOrOnLine` @pos) @lhs.comments
+        lhs.pos = @pos
+        body.comments = snd @loc.commentsAfter
 
 sem ExprSuffixList
-    | Cons       lhs.pretty = @hd.pretty <> @tl.pretty
-                 lhs.isMultiline = @hd.isMultiline || @tl.isMultiline
-    | Nil        lhs.pretty = empty
-                 lhs.isMultiline = False
+    | Cons
+        lhs.pretty = @hd.pretty <> @tl.pretty
+        lhs.isMultiline = @hd.isMultiline || @tl.isMultiline
+    | Nil
+        lhs.pretty = empty
+        lhs.isMultiline = False
 sem AST
-    | AST       lhs.pretty = @chunk.pretty $+$ @loc.prettyComments
-                lhs.isMultiline = @chunk.isMultiline
-                loc.prettyComments = renderMLComments @lhs.ppconf @lhs.indent @chunk.comments
-                chunk.comments = @comments
-                chunk.statRegion = emptyRg
-                chunk.forceMultiline = False
+    | AST
+        lhs.pretty = @chunk.pretty $+$ @loc.prettyComments
+        lhs.isMultiline = @chunk.isMultiline
+        loc.prettyComments = renderMLComments @lhs.ppconf @lhs.indent @chunk.comments
+        chunk.comments = @comments
+        chunk.statRegion = emptyRg
+        chunk.forceMultiline = False
 
 sem Block
-    | Block      lhs.pretty =
-                    if @loc.isMultiline
-                    then @stats.pretty $+$ @ret.pretty
-                    else @stats.pretty <-> @ret.pretty
-                 loc.statementCount = @stats.statementCount + @ret.statementCount
-                 loc.isMultiline = @stats.isMultiline || @ret.isMultiline || @loc.statementCount > 1
+    | Block
+        lhs.pretty =
+           if @loc.isMultiline
+           then @stats.pretty $+$ @ret.pretty
+           else @stats.pretty <-> @ret.pretty
+        loc.statementCount = @stats.statementCount + @ret.statementCount
+        loc.isMultiline = @stats.isMultiline || @ret.isMultiline || @loc.statementCount > 1
 
 sem Stat
-    | Def        lhs.pretty = @vars.pretty <> @loc.semicolon
-                 lhs.startsWithExprPrefixExpression = @vars.startsWithExprPrefixExpression
-                 lhs.endsWithPrefixExpression = @vars.endsWithPrefixExpression
-                 lhs.isMultiline = @vars.isMultiline
-                 loc.semicolon = if semicolons @lhs.ppconf || @lhs.wouldBeAmbiguousWithoutSemicolon then zchr ';' else empty
-    | LocDef     lhs.pretty = zeroWidthText "local" <-> @vars.pretty <> @loc.semicolon
-                 lhs.startsWithExprPrefixExpression = @vars.startsWithExprPrefixExpression
-                 lhs.endsWithPrefixExpression = @vars.endsWithPrefixExpression
-                 lhs.isMultiline = @vars.isMultiline
-                 loc.semicolon = if semicolons @lhs.ppconf || @lhs.wouldBeAmbiguousWithoutSemicolon then zchr ';' else empty
-    | AFuncCall  lhs.pretty = @fn.pretty <> @loc.semicolon
-                 lhs.isMultiline = @fn.isMultiline
-                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
-                 lhs.startsWithExprPrefixExpression = @fn.startsWithExprPrefixExpression
-                 lhs.endsWithPrefixExpression = True
-                 fn.parentOperatorPrecedence = TopLevelExpression
-                 fn.parentOperatorAssociative = True
-    | ALabel     lhs.pretty = zeroWidthText "::" <> @loc.whitespace <> tok @lbl <> @loc.whitespace <> zeroWidthText "::"
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 lhs.isMultiline = False
-                 loc.whitespace = if spaceAfterLabel @lhs.ppconf then zeroWidthText " " else empty
-    | ABreak     lhs.pretty = zeroWidthText "break" <> @loc.semicolon
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 lhs.isMultiline = False
-                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
-    | AContinue  lhs.pretty = zeroWidthText "continue" <> @loc.semicolon
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 lhs.isMultiline = False
-                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
-    | AGoto      lhs.pretty = zeroWidthText "goto" <-> tok @lbl <> @loc.semicolon
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 lhs.isMultiline = False
-                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
+    | Def
+        lhs.pretty = @vars.pretty <> @loc.semicolon
+        lhs.startsWithExprPrefixExpression = @vars.startsWithExprPrefixExpression
+        lhs.endsWithPrefixExpression = @vars.endsWithPrefixExpression
+        lhs.isMultiline = @vars.isMultiline
+        loc.semicolon =
+            if semicolons @lhs.ppconf || @lhs.wouldBeAmbiguousWithoutSemicolon
+            then zchr ';'
+            else empty
+    | LocDef
+        lhs.pretty = zeroWidthText "local" <-> @vars.pretty <> @loc.semicolon
+        lhs.startsWithExprPrefixExpression = @vars.startsWithExprPrefixExpression
+        lhs.endsWithPrefixExpression = @vars.endsWithPrefixExpression
+        lhs.isMultiline = @vars.isMultiline
+        loc.semicolon =
+            if semicolons @lhs.ppconf || @lhs.wouldBeAmbiguousWithoutSemicolon
+            then zchr ';'
+            else empty
+    | AFuncCall
+        lhs.pretty = @fn.pretty <> @loc.semicolon
+        lhs.isMultiline = @fn.isMultiline
+        loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
+        lhs.startsWithExprPrefixExpression = @fn.startsWithExprPrefixExpression
+        lhs.endsWithPrefixExpression = True
+        fn.parentOperatorPrecedence = TopLevelExpression
+        fn.parentOperatorAssociative = True
+    | ALabel
+        lhs.pretty =
+            zeroWidthText "::"
+            <> @loc.whitespace
+            <> tok @lbl
+            <> @loc.whitespace
+            <> zeroWidthText "::"
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+        loc.whitespace = if spaceAfterLabel @lhs.ppconf then zeroWidthText " " else empty
+    | ABreak
+        lhs.pretty = zeroWidthText "break" <> @loc.semicolon
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+        loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
+    | AContinue
+        lhs.pretty = zeroWidthText "continue" <> @loc.semicolon
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+        loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
+    | AGoto
+        lhs.pretty = zeroWidthText "goto" <-> tok @lbl <> @loc.semicolon
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+        loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
     | ADo
-                 lhs.isMultiline = True
-                 lhs.pretty = zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 body.indent = @lhs.indent + 1
-    | AWhile     lhs.isMultiline = True
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 cond.parentOperatorPrecedence = TopLevelExpression
-                 cond.parentOperatorAssociative = True
-                 lhs.pretty = zeroWidthText "while" <-> @cond.pretty <-> zeroWidthText "do" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
-                 body.indent = @lhs.indent + 1
-    | ARepeat    lhs.pretty = zeroWidthText "repeat" $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "until" <-> @cond.pretty)
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 lhs.isMultiline = True
-                 body.indent = @lhs.indent + 1
-                 cond.parentOperatorPrecedence = TopLevelExpression
-                 cond.parentOperatorAssociative = True
-    | AIf        loc.isMultiline =
-                    @lhs.forceMultiline || @cond.isMultiline || @body.isMultiline || @elifs.elsesExist || @els.elsesExist
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 loc.singleLinePretty =
-                    zeroWidthText "if"
-                    <-> @cond.pretty
-                    <-> zeroWidthText "then"
-                    <-> @body.pretty
-                    <-> zeroWidthText "end"
-                    <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterThen)
-                 loc.multilinePretty =
-                    zeroWidthText "if"
-                    <-> @cond.pretty
-                    <-> zeroWidthText "then"
-                    <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterThen)
-                    $+$ @body.pretty
-                    $+$ @elifs.pretty
-                    $+$ @els.pretty
-                    $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+        lhs.isMultiline = True
+        lhs.pretty =
+            zeroWidthText "do"
+            $+$ @body.pretty
+            $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        body.indent = @lhs.indent + 1
+    | AWhile
+        lhs.isMultiline = True
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        cond.parentOperatorPrecedence = TopLevelExpression
+        cond.parentOperatorAssociative = True
+        lhs.pretty =
+            zeroWidthText "while"
+            <-> @cond.pretty
+            <-> zeroWidthText "do"
+            $+$ @body.pretty
+            $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+        body.indent = @lhs.indent + 1
+    | ARepeat
+        lhs.pretty =
+            zeroWidthText "repeat"
+            $+$ @body.pretty
+            $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "until" <-> @cond.pretty)
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = True
+        body.indent = @lhs.indent + 1
+        cond.parentOperatorPrecedence = TopLevelExpression
+        cond.parentOperatorAssociative = True
+    | AIf
+        loc.isMultiline =
+           @lhs.forceMultiline
+           || @cond.isMultiline
+           || @body.isMultiline
+           || @elifs.elsesExist
+           || @els.elsesExist
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        loc.singleLinePretty =
+           zeroWidthText "if"
+           <-> @cond.pretty
+           <-> zeroWidthText "then"
+           <-> @body.pretty
+           <-> zeroWidthText "end"
+           <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterThen)
+        loc.multilinePretty =
+           zeroWidthText "if"
+           <-> @cond.pretty
+           <-> zeroWidthText "then"
+           <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterThen)
+           $+$ @body.pretty
+           $+$ @elifs.pretty
+           $+$ @els.pretty
+           $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
 
-                 loc.commentsAfterThen = span (\(MToken pos _) -> pos `beforeOrOnLine` @cond.pos) @lhs.comments
-                 cond.comments = snd @loc.commentsAfterThen
+        loc.commentsAfterThen =
+            span (\(MToken pos _) -> pos `beforeOrOnLine` @cond.pos) @lhs.comments
+        cond.comments = snd @loc.commentsAfterThen
 
-                 cond.parentOperatorPrecedence = TopLevelExpression
-                 cond.parentOperatorAssociative = True
-                 body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
-                 body.statRegion = @lhs.statRegion `upto` @elifs.pos `upto` @els.pos
-                 lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
-    | ANFor      lhs.isMultiline = True
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 loc.step = case @step.copy of
-                                MExpr _ (ANumber "1") -> empty
-                                _ -> @loc.comma <> @step.pretty
-                 lhs.pretty =
-                    zeroWidthText "for"
-                    <-> tok @var
-                    <-> zchr '='
-                    <-> @val.pretty
-                    <> @loc.comma
-                    <> @to.pretty
-                    <> @loc.step
-                    <-> zeroWidthText "do"
-                    <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterFor)
-                    $+$ @body.pretty
-                    $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
-                 loc.comma = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
-                 loc.commentsAfterFor = span (\(MToken pos _) -> pos `beforeOrOnLine` mpos @var) @lhs.comments
-                 val.comments = snd @commentsAfterFor
-                 val.parentOperatorPrecedence = TopLevelExpression
-                 val.parentOperatorAssociative = True
-                 to.parentOperatorPrecedence = TopLevelExpression
-                 to.parentOperatorAssociative = True
-                 step.parentOperatorPrecedence = TopLevelExpression
-                 step.parentOperatorAssociative = True
-                 body.indent = @lhs.indent + 1
-    | AGFor      lhs.isMultiline = True
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 lhs.pretty =
-                    zeroWidthText "for"
-                    <-> printList tok (render @loc.comma) @vars
-                    <-> zeroWidthText "in"
-                    <-> @vals.pretty
-                    <-> zeroWidthText "do"
-                    <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterFor)
-                    $+$ @body.pretty
-                    $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
-                 body.indent = @lhs.indent + 1
-                 loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
-                 loc.commentsAfterFor = span (\(MToken pos _) -> pos `beforeOrOnLine` mpos (head @vars)) @lhs.comments
-                 vals.comments = snd @commentsAfterFor
-                 --  Force no multiline here as it looks odd.
-                 vals.forceMultiline = False
-                 vals.someElementsInListAreMultiline = False
-    | AFunc      lhs.isMultiline = True
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 lhs.pretty =
-                    zeroWidthText "function"
-                    <-> @name.pretty
-                    <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @args)
-                    <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterFunc)
-                    $+$ @body.pretty
-                    $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
-                 loc.commentsAfterFunc = span (\(MToken pos _) -> pos `beforeOrOnLine` @name.pos) @lhs.comments
-                 name.comments = snd @commentsAfterFunc
-                 loc.emptyParams = toEmpty $ null @args
-                 loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
-                 body.indent = @lhs.indent + 1
-    | ALocFunc   lhs.isMultiline = True
-                 lhs.pretty =
-                    zeroWidthText "local function"
-                    <-> @name.pretty
-                    <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @args)
-                    <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterFunc)
-                    $+$ @body.pretty
-                    $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.endsWithPrefixExpression = False
-                 loc.commentsAfterFunc = span (\(MToken pos _) -> pos `beforeOrOnLine` @name.pos) @lhs.comments
-                 name.comments = snd @commentsAfterFunc
-                 loc.emptyParams = toEmpty $ null @args
-                 loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
-                 body.indent = @lhs.indent + 1
+        cond.parentOperatorPrecedence = TopLevelExpression
+        cond.parentOperatorAssociative = True
+        body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
+        body.statRegion = @lhs.statRegion `upto` @elifs.pos `upto` @els.pos
+        lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
+    | ANFor
+        lhs.isMultiline = True
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        loc.step = case @step.copy of
+                       MExpr _ (ANumber "1") -> empty
+                       _ -> @loc.comma <> @step.pretty
+        lhs.pretty =
+           zeroWidthText "for"
+           <-> tok @var
+           <-> zchr '='
+           <-> @val.pretty
+           <> @loc.comma
+           <> @to.pretty
+           <> @loc.step
+           <-> zeroWidthText "do"
+           <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterFor)
+           $+$ @body.pretty
+           $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+        loc.comma =
+            (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty)
+            <> zchr ','
+            <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
+        loc.commentsAfterFor =
+            span (\(MToken pos _) -> pos `beforeOrOnLine` mpos @var) @lhs.comments
+        val.comments = snd @commentsAfterFor
+        val.parentOperatorPrecedence = TopLevelExpression
+        val.parentOperatorAssociative = True
+        to.parentOperatorPrecedence = TopLevelExpression
+        to.parentOperatorAssociative = True
+        step.parentOperatorPrecedence = TopLevelExpression
+        step.parentOperatorAssociative = True
+        body.indent = @lhs.indent + 1
+    | AGFor
+        lhs.isMultiline = True
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        lhs.pretty =
+           zeroWidthText "for"
+           <-> printList tok (render @loc.comma) @vars
+           <-> zeroWidthText "in"
+           <-> @vals.pretty
+           <-> zeroWidthText "do"
+           <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterFor)
+           $+$ @body.pretty
+           $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+        body.indent = @lhs.indent + 1
+        loc.comma =
+            (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty)
+            <> zchr ','
+            <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
+        loc.commentsAfterFor =
+            span (\(MToken pos _) -> pos `beforeOrOnLine` mpos (head @vars)) @lhs.comments
+        vals.comments = snd @commentsAfterFor
+        --  Force no multiline here as it looks odd.
+        vals.forceMultiline = False
+        vals.someElementsInListAreMultiline = False
+    | AFunc
+        lhs.isMultiline = True
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        lhs.pretty =
+           zeroWidthText "function"
+           <-> @name.pretty
+           <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @args)
+           <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterFunc)
+           $+$ @body.pretty
+           $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+        loc.commentsAfterFunc =
+            span (\(MToken pos _) -> pos `beforeOrOnLine` @name.pos) @lhs.comments
+        name.comments = snd @commentsAfterFunc
+        loc.emptyParams = toEmpty $ null @args
+        loc.comma =
+            (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty)
+            <> zchr ','
+            <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
+        body.indent = @lhs.indent + 1
+    | ALocFunc
+        lhs.isMultiline = True
+        lhs.pretty =
+           zeroWidthText "local function"
+           <-> @name.pretty
+           <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @args)
+           <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfterFunc)
+           $+$ @body.pretty
+           $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+        lhs.startsWithExprPrefixExpression = False
+        lhs.endsWithPrefixExpression = False
+        loc.commentsAfterFunc =
+            span (\(MToken pos _) -> pos `beforeOrOnLine` @name.pos) @lhs.comments
+        name.comments = snd @commentsAfterFunc
+        loc.emptyParams = toEmpty $ null @args
+        loc.comma =
+            (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty)
+            <> zchr ','
+            <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
+        body.indent = @lhs.indent + 1
 
 sem AReturn
-    | AReturn    lhs.pretty =
-                    renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
-                    $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "return")
-                    <-> @values.pretty
-                    <> @loc.semicolon
-                    <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
-                 lhs.isMultiline =
-                    @values.isMultiline
-                    || not (null $ fst @loc.commentsBefore)
-                    || not (null $ fst @loc.commentsAfter)
-                 loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
-                 loc.commentsBefore = span (\(MToken pos _) -> pos `before` @pos) @lhs.comments
-                 values.comments = snd @loc.commentsBefore
-                 loc.commentsAfter  = span (\(MToken pos _) -> pos `beforeOrOnLine` (rgOr @values.pos @pos)) @values.comments
-                 lhs.comments = snd @loc.commentsAfter
-                 -- Disable forcing of multilines for returns, as that looks odd. Possible todo:
-                 -- render multiline nicely, and allow a "force: multiline" comment right before a
-                 -- return.
-                 values.forceMultiline = False
-                 values.someElementsInListAreMultiline = False
-                 lhs.statementCount = 1
-    | NoReturn   lhs.pretty = empty
-                 lhs.statementCount = 0
-                 lhs.isMultiline = False
+    | AReturn
+        lhs.pretty =
+           renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
+           $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "return")
+           <-> @values.pretty
+           <> @loc.semicolon
+           <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
+        lhs.isMultiline =
+           @values.isMultiline
+           || not (null $ fst @loc.commentsBefore)
+           || not (null $ fst @loc.commentsAfter)
+        loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
+        loc.commentsBefore = span (\(MToken pos _) -> pos `before` @pos) @lhs.comments
+        values.comments = snd @loc.commentsBefore
+        loc.commentsAfter =
+            span (\(MToken pos _) -> pos `beforeOrOnLine` (rgOr @values.pos @pos)) @values.comments
+        lhs.comments = snd @loc.commentsAfter
+        -- Disable forcing of multilines for returns, as that looks odd. Possible todo:
+        -- render multiline nicely, and allow a "force: multiline" comment right before a
+        -- return.
+        values.forceMultiline = False
+        values.someElementsInListAreMultiline = False
+        lhs.statementCount = 1
+    | NoReturn
+        lhs.pretty = empty
+        lhs.statementCount = 0
+        lhs.isMultiline = False
 
 sem FuncName
-    | FuncName   lhs.pretty = printList tok "." @names <> metaDoc @meta
-                 lhs.isMultiline = False
-                 lhs.pos =
-                    case @meta of
-                        Nothing -> @loc.namesPos
-                        Just name -> rgOr @loc.namesPos (mpos name)
-                 loc.namesPos = foldl1 rgOr $ map mpos @names
+    | FuncName
+        lhs.pretty = printList tok "." @names <> metaDoc @meta
+        lhs.isMultiline = False
+        lhs.pos =
+           case @meta of
+               Nothing -> @loc.namesPos
+               Just name -> rgOr @loc.namesPos (mpos name)
+        loc.namesPos = foldl1 rgOr $ map mpos @names
 
 sem PrefixExp
-    | PFVar      lhs.pretty = tok @name <> @suffixes.pretty
-                 lhs.isLiteral = False
-                 lhs.startsWithExprPrefixExpression = False
-                 lhs.isMultiline = @suffixes.isMultiline
-    | ExprVar    lhs.pretty = (if @loc.noparens then @expr.pretty else parens @lhs.ppconf NonEmpty @expr.pretty) <> @suffixes.pretty
-                 lhs.precedence = if @loc.noparens then @expr.precedence else OperatorLevel8
-                 lhs.isLiteral = False
-                 lhs.startsWithExprPrefixExpression = True
-                 lhs.isMultiline = @expr.isMultiline || @suffixes.isMultiline
+    | PFVar
+        lhs.pretty = tok @name <> @suffixes.pretty
+        lhs.isLiteral = False
+        lhs.startsWithExprPrefixExpression = False
+        lhs.isMultiline = @suffixes.isMultiline
+    | ExprVar
+        lhs.pretty =
+            (if @loc.noparens then @expr.pretty else parens @lhs.ppconf NonEmpty @expr.pretty)
+            <> @suffixes.pretty
+        lhs.precedence = if @loc.noparens then @expr.precedence else OperatorLevel8
+        lhs.isLiteral = False
+        lhs.startsWithExprPrefixExpression = True
+        lhs.isMultiline = @expr.isMultiline || @suffixes.isMultiline
 
-                 -- Whether this ExprVar contains another PrefixExp. In this case the parentheses
-                 -- can be removed.
-                 loc.containsParenthesizedExpr = case @expr.copy of
-                                                    -- Except when that expression is a VarArg
-                                                    MExpr _ (APrefixExpr (ExprVar (MExpr _ AVarArg) _)) -> False
-                                                    MExpr _ (APrefixExpr _) -> True
-                                                    _ -> False
-                 loc.noparens =
-                    -- Parameters are redundant when the first expression below them is also
-                    -- parenthesized, when it's a top level expression or when the contents of the
-                    -- parentheses are a literal.
-                    (removeRedundantParens @lhs.ppconf || minimizeParens @lhs.ppconf) && (@loc.containsParenthesizedExpr || (@lhs.parentOperatorPrecedence == TopLevelExpression || @expr.isLiteral) && length @suffixes.copy == 0) ||
-                    -- Parentheses can be minimized when there's no suffix (function call/index) and
-                    -- the parent operator's precedence is lower than the child expression's
-                    -- precedence OR they are equal and the parent operator is associative. There is
-                    -- no check for the child operator being associative (@expr.isAssociative),
-                    -- because evaluation order of the child itself does not change when the
-                    -- parentheses are removed. Only the order of evaluation between the parent
-                    -- operator and the child changes.
-                    (minimizeParens @lhs.ppconf && length @suffixes.copy == 0 &&
-                        -- Operator has a lower precedence or it has the same precedence and the
-                        -- assumeOperatorAssociativity option is set. The assumption of operator
-                        -- associativity is that e.g. `a + (b + c)` is equal to `(a + b) + c`. With
-                        -- floating point numbers, this does not necessarily hold. See
-                        -- https://stackoverflow.com/a/10371890
-                        ( @lhs.parentOperatorPrecedence < @expr.precedence
-                        || assumeOperatorAssociativity @lhs.ppconf
-                        && @lhs.parentOperatorPrecedence == @expr.precedence
-                        && @lhs.parentOperatorAssociative
-                        )
-                    )
+        -- Whether this ExprVar contains another PrefixExp. In this case the parentheses
+        -- can be removed.
+        loc.containsParenthesizedExpr =
+            case @expr.copy of
+                -- Except when that expression is a VarArg
+                MExpr _ (APrefixExpr (ExprVar (MExpr _ AVarArg) _)) -> False
+                MExpr _ (APrefixExpr _) -> True
+                _ -> False
+        loc.noparens =
+           -- Parameters are redundant when the first expression below them is also
+           -- parenthesized, when it's a top level expression or when the contents of the
+           -- parentheses are a literal.
+           (removeRedundantParens @lhs.ppconf || minimizeParens @lhs.ppconf)
+           && (@loc.containsParenthesizedExpr
+                || (@lhs.parentOperatorPrecedence == TopLevelExpression || @expr.isLiteral)
+                && length @suffixes.copy == 0
+            )
+
+           -- Parentheses can be minimized when there's no suffix (function call/index) and
+           -- the parent operator's precedence is lower than the child expression's
+           -- precedence OR they are equal and the parent operator is associative. There is
+           -- no check for the child operator being associative (@expr.isAssociative),
+           -- because evaluation order of the child itself does not change when the
+           -- parentheses are removed. Only the order of evaluation between the parent
+           -- operator and the child changes.
+           || (minimizeParens @lhs.ppconf && length @suffixes.copy == 0
+               -- Operator has a lower precedence or it has the same precedence and the
+               -- assumeOperatorAssociativity option is set. The assumption of operator
+               -- associativity is that e.g. `a + (b + c)` is equal to `(a + b) + c`. With
+               -- floating point numbers, this does not necessarily hold. See
+               -- https://stackoverflow.com/a/10371890
+               && ( @lhs.parentOperatorPrecedence < @expr.precedence
+                || assumeOperatorAssociativity @lhs.ppconf
+                && @lhs.parentOperatorPrecedence == @expr.precedence
+                && @lhs.parentOperatorAssociative
+               )
+           )
 
 sem PFExprSuffix
-    | Call       lhs.pretty = @args.pretty
-                 lhs.isMultiline = @args.isMultiline
-    | MetaCall   lhs.pretty = zchr ':' <> tok @fn <> @args.pretty
-                 lhs.isMultiline = @args.isMultiline
-    | ExprIndex  lhs.pretty = brackets @lhs.ppconf @index.pretty
-                 lhs.isMultiline = @index.isMultiline
-                 index.parentOperatorPrecedence = TopLevelExpression
-                 index.parentOperatorAssociative = True
-    | DotIndex   lhs.pretty = zchr '.' <> tok @index
-                 lhs.isMultiline = False
+    | Call
+        lhs.pretty = @args.pretty
+        lhs.isMultiline = @args.isMultiline
+    | MetaCall
+        lhs.pretty = zchr ':' <> tok @fn <> @args.pretty
+        lhs.isMultiline = @args.isMultiline
+    | ExprIndex
+        lhs.pretty = brackets @lhs.ppconf @index.pretty
+        lhs.isMultiline = @index.isMultiline
+        index.parentOperatorPrecedence = TopLevelExpression
+        index.parentOperatorAssociative = True
+    | DotIndex
+        lhs.pretty = zchr '.' <> tok @index
+        lhs.isMultiline = False
 
 sem MExpr
-    | MExpr             lhs.pos    = @pos
-                        lhs.endsWithPrefixExpression = @expr.endsWithPrefixExpression
-                        lhs.isMultiline = @expr.isMultiline
-                        expr.statRegion = @pos
+    | MExpr
+        lhs.pos = @pos
+        lhs.endsWithPrefixExpression = @expr.endsWithPrefixExpression
+        lhs.isMultiline = @expr.isMultiline
+        expr.statRegion = @pos
 
 sem Expr
-    | ANil              lhs.pretty = zeroWidthText "nil"
-                        lhs.isLiteral = True
-                        lhs.endsWithPrefixExpression = False
-                        lhs.isMultiline = False
-    | AFalse            lhs.pretty = zeroWidthText "false"
-                        lhs.isLiteral = True
-                        lhs.endsWithPrefixExpression = False
-                        lhs.isMultiline = False
-    | ATrue             lhs.pretty = zeroWidthText "true"
-                        lhs.isLiteral = True
-                        lhs.endsWithPrefixExpression = False
-                        lhs.isMultiline = False
-    | ANumber           lhs.pretty = zeroWidthText @num
-                        lhs.isLiteral = True
-                        lhs.endsWithPrefixExpression = False
-                        lhs.isMultiline = False
-    | AString           lhs.pretty = tok @str
-                        lhs.isLiteral = True
-                        lhs.endsWithPrefixExpression = False
-                        lhs.isMultiline = False
-    | AVarArg           lhs.pretty = zeroWidthText "..."
-                        lhs.isLiteral = True
-                        lhs.endsWithPrefixExpression = False
-                        lhs.isMultiline = False
-    | AnonymousFunc     loc.isMultiline = @lhs.forceMultiline || @body.isMultiline
-                        lhs.endsWithPrefixExpression = False
-                        loc.singleLinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) <-> @body.pretty <-> zeroWidthText "end"
-                        loc.multilinePretty = zeroWidthText "function" <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars) $+$ @body.pretty $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
-                        loc.comma  = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ',' <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
-                        loc.emptyParams = toEmpty $ null @pars
-                        body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
-                        lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
-    | APrefixExpr       lhs.pretty = @pexpr.pretty
-                        lhs.endsWithPrefixExpression = True
-                        lhs.isMultiline = @pexpr.isMultiline
+    | ANil
+        lhs.pretty = zeroWidthText "nil"
+        lhs.isLiteral = True
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+    | AFalse
+        lhs.pretty = zeroWidthText "false"
+        lhs.isLiteral = True
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+    | ATrue
+        lhs.pretty = zeroWidthText "true"
+        lhs.isLiteral = True
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+    | ANumber
+        lhs.pretty = zeroWidthText @num
+        lhs.isLiteral = True
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+    | AString
+        lhs.pretty = tok @str
+        lhs.isLiteral = True
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+    | AVarArg
+        lhs.pretty = zeroWidthText "..."
+        lhs.isLiteral = True
+        lhs.endsWithPrefixExpression = False
+        lhs.isMultiline = False
+    | AnonymousFunc
+        loc.isMultiline = @lhs.forceMultiline || @body.isMultiline
+        lhs.endsWithPrefixExpression = False
+        loc.singleLinePretty =
+            zeroWidthText "function"
+            <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars)
+            <-> @body.pretty
+            <-> zeroWidthText "end"
+        loc.multilinePretty =
+            zeroWidthText "function"
+            <> parens @lhs.ppconf @loc.emptyParams (printList tok (render @loc.comma) @pars)
+            $+$ @body.pretty
+            $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
+        loc.comma =
+            (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty)
+            <> zchr ','
+            <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
+        loc.emptyParams = toEmpty $ null @pars
+        body.indent = if @loc.isMultiline then @lhs.indent + 1 else 0
+        lhs.pretty = if @loc.isMultiline then @loc.multilinePretty else @loc.singleLinePretty
+    | APrefixExpr
+        lhs.pretty = @pexpr.pretty
+        lhs.endsWithPrefixExpression = True
+        lhs.isMultiline = @pexpr.isMultiline
     | ATableConstructor
-                        lhs.pretty = if @loc.isMultiline then @loc.prettyMulti else @loc.prettySingle
-                        loc.isMultiline = @lhs.forceMultiline || @fields.isMultiline
-                        lhs.isLiteral = True
-                        lhs.endsWithPrefixExpression = False
-                        loc.prettyMulti = zchr '{' $+$ @fields.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
-                        loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @fields.pretty
-                        loc.emptyContents = toEmpty $ null @fields.copy
-                        fields.indent = @lhs.indent + (if @fields.isMultiline then 1 else 0)
-                        fields.someElementsInListAreMultiline = False
-    | BinOpExpr         lhs.pretty = @left.pretty <-> @op.pretty <-> @right.pretty
-                        lhs.endsWithPrefixExpression = @right.endsWithPrefixExpression
-                        -- Note: the AST doesn't always represent precedence correctly in
-                        -- unparenthesized unary/binary expressions
-                        lhs.precedence = min @op.precedence $ min @left.precedence @right.precedence
-                        lhs.isMultiline = @left.isMultiline || @right.isMultiline
-                        left.parentOperatorPrecedence = @op.precedence
-                        right.parentOperatorPrecedence = @op.precedence
-                        left.parentOperatorAssociative = @op.isAssociative
-                        right.parentOperatorAssociative = @op.isAssociative
-    | UnOpExpr          lhs.pretty = @op.pretty <> @right.pretty
-                        lhs.precedence = min @right.precedence OperatorLevel7
-                        lhs.endsWithPrefixExpression = @right.endsWithPrefixExpression
-                        lhs.isMultiline = @op.isMultiline || @right.isMultiline
-                        right.parentOperatorPrecedence = OperatorLevel7
+        lhs.pretty = if @loc.isMultiline then @loc.prettyMulti else @loc.prettySingle
+        loc.isMultiline = @lhs.forceMultiline || @fields.isMultiline
+        lhs.isLiteral = True
+        lhs.endsWithPrefixExpression = False
+        loc.prettyMulti = zchr '{' $+$ @fields.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
+        loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @fields.pretty
+        loc.emptyContents = toEmpty $ null @fields.copy
+        fields.indent = @lhs.indent + (if @fields.isMultiline then 1 else 0)
+        fields.someElementsInListAreMultiline = False
+    | BinOpExpr
+        lhs.pretty = @left.pretty <-> @op.pretty <-> @right.pretty
+        lhs.endsWithPrefixExpression = @right.endsWithPrefixExpression
+        -- Note: the AST doesn't always represent precedence correctly in
+        -- unparenthesized unary/binary expressions
+        lhs.precedence = min @op.precedence $ min @left.precedence @right.precedence
+        lhs.isMultiline = @left.isMultiline || @right.isMultiline
+        left.parentOperatorPrecedence = @op.precedence
+        right.parentOperatorPrecedence = @op.precedence
+        left.parentOperatorAssociative = @op.isAssociative
+        right.parentOperatorAssociative = @op.isAssociative
+    | UnOpExpr
+        lhs.pretty = @op.pretty <> @right.pretty
+        lhs.precedence = min @right.precedence OperatorLevel7
+        lhs.endsWithPrefixExpression = @right.endsWithPrefixExpression
+        lhs.isMultiline = @op.isMultiline || @right.isMultiline
+        right.parentOperatorPrecedence = OperatorLevel7
 
 sem Args
-    | ListArgs  lhs.pretty =
-                    if @args.isMultiline then
-                        zchr '(' $+$
-                        @args.pretty $+$
-                        indent @lhs.ppconf @lhs.indent (zchr ')')
-                    else
-                        parens @lhs.ppconf @loc.emptyParams @args.pretty
-                lhs.isMultiline = @args.isMultiline
-                loc.emptyParams = toEmpty $ null @args.copy
-                args.indent = if @args.isMultiline then @lhs.indent + 1 else 0
-                args.someElementsInListAreMultiline = False
-    | TableArg  lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
-                lhs.isMultiline = @arg.isMultiline
-                loc.prettyMulti = zchr '{' $+$ @arg.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
-                loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @arg.pretty
-                loc.emptyContents = toEmpty $ null @arg.copy
-                arg.indent = @lhs.indent + (if @arg.isMultiline then 1 else 0)
-                arg.someElementsInListAreMultiline = False
-    | StringArg lhs.pretty = tok @arg
-                lhs.isMultiline = False
+    | ListArgs
+        lhs.pretty =
+            if @args.isMultiline then
+                zchr '(' $+$
+                @args.pretty $+$
+                indent @lhs.ppconf @lhs.indent (zchr ')')
+            else
+                parens @lhs.ppconf @loc.emptyParams @args.pretty
+        lhs.isMultiline = @args.isMultiline
+        loc.emptyParams = toEmpty $ null @args.copy
+        args.indent = if @args.isMultiline then @lhs.indent + 1 else 0
+        args.someElementsInListAreMultiline = False
+    | TableArg
+        lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
+        lhs.isMultiline = @arg.isMultiline
+        loc.prettyMulti = zchr '{' $+$ @arg.pretty $+$ indent @lhs.ppconf @lhs.indent (zchr '}')
+        loc.prettySingle = braces @lhs.ppconf @loc.emptyContents @arg.pretty
+        loc.emptyContents = toEmpty $ null @arg.copy
+        arg.indent = @lhs.indent + (if @arg.isMultiline then 1 else 0)
+        arg.someElementsInListAreMultiline = False
+    | StringArg
+        lhs.pretty = tok @arg
+        lhs.isMultiline = False
 
 sem Field
-    | ExprField     lhs.pretty = brackets @lhs.ppconf @key.pretty <-> zchr '=' <-> @value.pretty <> @sep.pretty
-                    lhs.isMultiline = True
-                    key.parentOperatorPrecedence = TopLevelExpression
-                    key.parentOperatorAssociative = True
-                    value.parentOperatorPrecedence = TopLevelExpression
-                    value.parentOperatorAssociative = True
-    | NamedField    lhs.pretty = tok @key <-> zchr '=' <-> @value.pretty <> @sep.pretty
-                    lhs.isMultiline = True
-                    value.parentOperatorPrecedence = TopLevelExpression
-                    value.parentOperatorAssociative = True
-    | UnnamedField  lhs.pretty = @value.pretty <> @sep.pretty
-                    lhs.isMultiline = @value.isMultiline || @sep.isMultiline
-                    value.parentOperatorPrecedence = TopLevelExpression
-                    value.parentOperatorAssociative = True
+    | ExprField
+        lhs.pretty = brackets @lhs.ppconf @key.pretty <-> zchr '=' <-> @value.pretty <> @sep.pretty
+        lhs.isMultiline = True
+        key.parentOperatorPrecedence = TopLevelExpression
+        key.parentOperatorAssociative = True
+        value.parentOperatorPrecedence = TopLevelExpression
+        value.parentOperatorAssociative = True
+    | NamedField
+        lhs.pretty = tok @key <-> zchr '=' <-> @value.pretty <> @sep.pretty
+        lhs.isMultiline = True
+        value.parentOperatorPrecedence = TopLevelExpression
+        value.parentOperatorAssociative = True
+    | UnnamedField
+        lhs.pretty = @value.pretty <> @sep.pretty
+        lhs.isMultiline = @value.isMultiline || @sep.isMultiline
+        value.parentOperatorPrecedence = TopLevelExpression
+        value.parentOperatorAssociative = True
 
 sem FieldSep
-    | CommaSep      lhs.pretty = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ','
-                    lhs.isMultiline = False
-    | SemicolonSep  lhs.pretty = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ';'
-                    lhs.isSemiColon = True
-                    -- Separate fields with a semicolon on newline
-                    -- See https://github.com/FPtje/GLuaFixer/issues/82
-                    lhs.isMultiline = True
-    | NoSep         lhs.pretty = empty
-                    lhs.isMultiline = False
+    | CommaSep
+        lhs.pretty = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ','
+        lhs.isMultiline = False
+    | SemicolonSep
+        lhs.pretty = (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty) <> zchr ';'
+        lhs.isSemiColon = True
+        -- Separate fields with a semicolon on newline
+        -- See https://github.com/FPtje/GLuaFixer/issues/82
+        lhs.isMultiline = True
+    | NoSep
+        lhs.pretty = empty
+        lhs.isMultiline = False
 
 sem BinOp
-    | APlus         lhs.pretty = zeroWidthText "+"
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel5
-                    lhs.isAssociative = True
-    | BinMinus      lhs.pretty = zeroWidthText "-"
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel5
-                    lhs.isAssociative = False
-    | AMultiply     lhs.pretty = zeroWidthText "*"
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel6
-                    lhs.isAssociative = True
-    | ADivide       lhs.pretty = zeroWidthText "/"
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel6
-                    lhs.isAssociative = False
-    | AModulus      lhs.pretty = zeroWidthText "%"
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel6
-                    lhs.isAssociative = False
-    | APower        lhs.pretty = zeroWidthText "^"
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel8
-                    lhs.isAssociative = False
-    | AConcatenate  lhs.pretty = zeroWidthText ".."
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel4
-                    lhs.isAssociative = True
-    | ALT           lhs.pretty = zeroWidthText "<"
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel3
-                    lhs.isAssociative = True
-    | ALEQ          lhs.pretty = zeroWidthText "<="
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel3
-                    lhs.isAssociative = True
-    | AGT           lhs.pretty = zeroWidthText ">"
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel3
-                    lhs.isAssociative = True
-    | AGEQ          lhs.pretty = zeroWidthText ">="
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel3
-                    lhs.isAssociative = True
-    | AEq           lhs.pretty = zeroWidthText "=="
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel3
-                    lhs.isAssociative = True
-    | ANEq          lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "!=" else "~=")
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel3
-                    lhs.isAssociative = True
-    | AAnd          lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "&&" else "and")
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel2
-                    lhs.isAssociative = True
-    | AOr           lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "||" else "or")
-                    lhs.isMultiline = False
-                    lhs.precedence = OperatorLevel1
-                    lhs.isAssociative = True
+    | APlus
+        lhs.pretty = zeroWidthText "+"
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel5
+        lhs.isAssociative = True
+    | BinMinus
+        lhs.pretty = zeroWidthText "-"
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel5
+        lhs.isAssociative = False
+    | AMultiply
+        lhs.pretty = zeroWidthText "*"
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel6
+        lhs.isAssociative = True
+    | ADivide
+        lhs.pretty = zeroWidthText "/"
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel6
+        lhs.isAssociative = False
+    | AModulus
+        lhs.pretty = zeroWidthText "%"
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel6
+        lhs.isAssociative = False
+    | APower
+        lhs.pretty = zeroWidthText "^"
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel8
+        lhs.isAssociative = False
+    | AConcatenate
+        lhs.pretty = zeroWidthText ".."
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel4
+        lhs.isAssociative = True
+    | ALT
+        lhs.pretty = zeroWidthText "<"
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel3
+        lhs.isAssociative = True
+    | ALEQ
+        lhs.pretty = zeroWidthText "<="
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel3
+        lhs.isAssociative = True
+    | AGT
+        lhs.pretty = zeroWidthText ">"
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel3
+        lhs.isAssociative = True
+    | AGEQ
+        lhs.pretty = zeroWidthText ">="
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel3
+        lhs.isAssociative = True
+    | AEq
+        lhs.pretty = zeroWidthText "=="
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel3
+        lhs.isAssociative = True
+    | ANEq
+        lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "!=" else "~=")
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel3
+        lhs.isAssociative = True
+    | AAnd
+        lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "&&" else "and")
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel2
+        lhs.isAssociative = True
+    | AOr
+        lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "||" else "or")
+        lhs.isMultiline = False
+        lhs.precedence = OperatorLevel1
+        lhs.isAssociative = True
 
 sem UnOp
-    | UnMinus  lhs.pretty = zeroWidthText "-"
-               lhs.isMultiline = False
-    | ANot     lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "!" else "not ")
-               lhs.isMultiline = False
-    | AHash    lhs.pretty = zeroWidthText "#"
-               lhs.isMultiline = False
+    | UnMinus
+        lhs.pretty = zeroWidthText "-"
+        lhs.isMultiline = False
+    | ANot
+        lhs.pretty = zeroWidthText (if cStyle @lhs.ppconf then "!" else "not ")
+        lhs.isMultiline = False
+    | AHash
+        lhs.pretty = zeroWidthText "#"
+        lhs.isMultiline = False
 
 {
 
@@ -1042,7 +1244,8 @@ pp_prefixexp :: PrefixExp -> Doc
 pp_prefixexp p = pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) emptyInh_PrefixExp)
 
 pp_pfexprsuffix :: PFExprSuffix -> Doc
-pp_pfexprsuffix p = pretty_Syn_PFExprSuffix (wrap_PFExprSuffix (sem_PFExprSuffix p) emptyInh_PFExprSuffix)
+pp_pfexprsuffix p =
+    pretty_Syn_PFExprSuffix (wrap_PFExprSuffix (sem_PFExprSuffix p) emptyInh_PFExprSuffix)
 
 pp_field :: Field -> Doc
 pp_field p = pretty_Syn_Field (wrap_Field (sem_Field p) emptyInh_Field)
@@ -1054,37 +1257,39 @@ prettyprint :: AST -> String
 prettyprint p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) emptyInh_AST)
 
 prettyprintConf :: PrettyPrintConfig -> AST -> String
-prettyprintConf conf p = render $ pretty_Syn_AST (wrap_AST (sem_AST p) emptyInh_AST {ppconf_Inh_AST = conf})
+prettyprintConf conf p =
+    render $ pretty_Syn_AST (wrap_AST (sem_AST p) emptyInh_AST {ppconf_Inh_AST = conf})
 
-renderBlock        :: Block -> String
-renderBlock p      = render $ pretty_Syn_Block (wrap_Block (sem_Block p) emptyInh_Block)
+renderBlock :: Block -> String
+renderBlock p = render $ pretty_Syn_Block (wrap_Block (sem_Block p) emptyInh_Block)
 
-renderStat         :: Stat -> String
-renderStat p       = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) emptyInh_Stat)
+renderStat :: Stat -> String
+renderStat p = render $ pretty_Syn_Stat (wrap_Stat (sem_Stat p) emptyInh_Stat)
 
-renderMStat         :: MStat -> String
-renderMStat p       = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) emptyInh_MStat)
+renderMStat :: MStat -> String
+renderMStat p = render $ pretty_Syn_MStat (wrap_MStat (sem_MStat p) emptyInh_MStat)
 
-renderAReturn      :: AReturn -> String
-renderAReturn p    = render $ pretty_Syn_AReturn (wrap_AReturn (sem_AReturn p) emptyInh_AReturn)
+renderAReturn :: AReturn -> String
+renderAReturn p = render $ pretty_Syn_AReturn (wrap_AReturn (sem_AReturn p) emptyInh_AReturn)
 
-renderFuncName     :: FuncName -> String
-renderFuncName p   = render $ pretty_Syn_FuncName (wrap_FuncName (sem_FuncName p) emptyInh_FuncName)
+renderFuncName :: FuncName -> String
+renderFuncName p = render $ pretty_Syn_FuncName (wrap_FuncName (sem_FuncName p) emptyInh_FuncName)
 
-renderPrefixExp    :: PrefixExp -> String
-renderPrefixExp p  = render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) emptyInh_PrefixExp)
+renderPrefixExp :: PrefixExp -> String
+renderPrefixExp p =
+    render $ pretty_Syn_PrefixExp (wrap_PrefixExp (sem_PrefixExp p) emptyInh_PrefixExp)
 
-renderExpr         :: Expr -> String
-renderExpr p       = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) emptyInh_Expr)
+renderExpr :: Expr -> String
+renderExpr p = render $ pretty_Syn_Expr (wrap_Expr (sem_Expr p) emptyInh_Expr)
 
-renderMExpr         :: MExpr -> String
-renderMExpr p       = render $ pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) emptyInh_MExpr)
+renderMExpr :: MExpr -> String
+renderMExpr p = render $ pretty_Syn_MExpr (wrap_MExpr (sem_MExpr p) emptyInh_MExpr)
 
-renderArgs         :: Args -> String
-renderArgs p       = render $ pretty_Syn_Args (wrap_Args (sem_Args p) emptyInh_Args)
+renderArgs :: Args -> String
+renderArgs p = render $ pretty_Syn_Args (wrap_Args (sem_Args p) emptyInh_Args)
 
-renderField        :: Field -> String
-renderField p      = render $ pretty_Syn_Field (wrap_Field (sem_Field p) emptyInh_Field)
+renderField :: Field -> String
+renderField p = render $ pretty_Syn_Field (wrap_Field (sem_Field p) emptyInh_Field)
 
 emptyInh_Field :: Inh_Field
 emptyInh_Field =
