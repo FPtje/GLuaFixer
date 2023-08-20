@@ -14,7 +14,10 @@ maintainer:         fpeijnenburg@gmail.com
 copyright:          Falco Peijnenburg
 category:           Language
 build-type:         Simple
-extra-source-files: README.md
+extra-source-files:
+  README.md
+  tests/golden/data/input/*.lua
+  tests/golden/data/output/*.lua
 
 source-repository head
   type:     git
