@@ -353,7 +353,7 @@ withParsed lintSettings filepath contents defaultValue f = do
 
 -- | Function to parse a file's contents into MTokens. This will log any parse failures and give
 -- MTokens if it can.
-getLexicon :: (Logging :> es) => LintSettings -> FilePath -> String -> Eff es (Maybe [MToken])
+getLexicon :: Logging :> es => LintSettings -> FilePath -> String -> Eff es (Maybe [MToken])
 getLexicon lintSettings filepath contents = do
   logFormat <- getLogFormat lintSettings.log_format
   case Interface.lex lintSettings filepath contents of

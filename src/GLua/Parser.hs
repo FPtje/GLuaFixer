@@ -113,8 +113,10 @@ parseParList :: AParser [MToken]
 parseParList =
   (pMTok VarArg <<|> pName)
     <**> ( pMTok Comma
-            <**> ( (\a _ c -> [c, a]) <$> pMTok VarArg
-                    <<|> (\a _ c -> c : a) <$> parseParList
+            <**> ( (\a _ c -> [c, a])
+                    <$> pMTok VarArg
+                      <<|> (\a _ c -> c : a)
+                    <$> parseParList
                  )
             `opt` (: [])
          )
@@ -153,23 +155,28 @@ pInterleaved sep q = pMany sep *> pMany (q <* pMany sep)
 parseCallDef :: AParser Stat
 parseCallDef =
   parseGoto
-    <<|> ( PFVar <$> pName
-            <<|> ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound -- Statemens begin with either a simple name or parenthesised expression
+    <<|> ( PFVar
+            <$> pName
+              <<|> ExprVar
+            <$ pMTok LRound
+            <*> parseExpression
+            <* pMTok RRound -- Statemens begin with either a simple name or parenthesised expression
          )
-      <**> (
-             -- Either there are more suffixes yet to be found (contSearch)
-             -- or there aren't and we will find either a comma or =-sign (varDecl namedVarDecl)
-             contSearch
-              <<|> varDecl namedVarDecl
-           )
+    <**> (
+           -- Either there are more suffixes yet to be found (contSearch)
+           -- or there aren't and we will find either a comma or =-sign (varDecl namedVarDecl)
+           contSearch
+            <<|> varDecl namedVarDecl
+         )
   where
     -- Try to parse a goto statement
     parseGoto :: AParser Stat
     parseGoto =
       (PFVar <$> pMTok (Identifier "goto"))
-        <**> ( (\n _ -> AGoto n) <$> pName
-                <<|> contSearch
-                <<|> varDecl namedVarDecl
+        <**> ( (\n _ -> AGoto n)
+                <$> pName
+                  <<|> contSearch
+                  <<|> varDecl namedVarDecl
              )
 
     -- Simple direct declaration: varName, ... = 1, ...
@@ -211,25 +218,40 @@ parseCallDef =
 parseStat :: AParser Stat
 parseStat =
   parseCallDef
-    <<|> ALabel <$> parseLabel
-    <<|> ABreak <$ pMTok Break
-    <<|> AContinue <$ pMTok Continue
-    <<|>
-    -- AGoto <$ pMTok (Identifier "goto") <*> pName <|>
-    ADo <$ pMTok Do <*> parseBlock <* pMTok End
-    <<|> AWhile <$ pMTok While <*> parseExpression <* pMTok Do <*> parseBlock <* pMTok End
-    <<|> ARepeat <$ pMTok Repeat <*> parseBlock <* pMTok Until <*> parseExpression
-    <<|> parseIf
-    <<|> parseFor
-    <<|> AFunc
-      <$ pMTok Function
-      <*> parseFuncName
-      <*> pPacked (pMTok LRound) (pMTok RRound) parseParList
-      <*> parseBlock
-      <* pMTok End
-    <<|>
-    -- local function and local vars both begin with "local"
-    pMTok Local
+    <<|> ALabel
+    <$> parseLabel
+      <<|> ABreak
+    <$ pMTok Break
+      <<|> AContinue
+    <$ pMTok Continue
+      <<|>
+      -- AGoto <$ pMTok (Identifier "goto") <*> pName <|>
+      ADo
+    <$ pMTok Do
+    <*> parseBlock
+    <* pMTok End
+      <<|> AWhile
+    <$ pMTok While
+    <*> parseExpression
+    <* pMTok Do
+    <*> parseBlock
+    <* pMTok End
+      <<|> ARepeat
+    <$ pMTok Repeat
+    <*> parseBlock
+    <* pMTok Until
+    <*> parseExpression
+      <<|> parseIf
+      <<|> parseFor
+      <<|> AFunc
+    <$ pMTok Function
+    <*> parseFuncName
+    <*> pPacked (pMTok LRound) (pMTok RRound) parseParList
+    <*> parseBlock
+    <* pMTok End
+      <<|>
+      -- local function and local vars both begin with "local"
+      pMTok Local
       <**> (
              -- local function
              (\n p b _l -> ALocFunc n p b)
@@ -238,9 +260,11 @@ parseStat =
               <*> pPacked (pMTok LRound) (pMTok RRound) parseParList
               <*> parseBlock
               <* pMTok End
-              <<|>
-              -- local variables
-              (\v (_p, e) _l -> LocDef (zip v $ map Just e ++ repeat Nothing)) <$> parseLocalVarList <*> ((,) <$ pMTok Equals <*> pPos' <*> parseExpressionList <<|> (,) <$> pPos' <*> pReturn [])
+                <<|>
+                -- local variables
+                (\v (_p, e) _l -> LocDef (zip v $ map Just e ++ repeat Nothing))
+              <$> parseLocalVarList
+              <*> ((,) <$ pMTok Equals <*> pPos' <*> parseExpressionList <<|> (,) <$> pPos' <*> pReturn [])
            )
 
 -- | Parse if then elseif then else end expressions
@@ -357,15 +381,22 @@ parseExpressionList = pList1Sep (pMTok Comma) parseExpression
 -- | Subexpressions, i.e. without operators
 parseSubExpression :: AParser Expr
 parseSubExpression =
-  ANil <$ pMTok Nil
-    <<|> AFalse <$ pMTok TFalse
-    <<|> ATrue <$ pMTok TTrue
-    <<|> parseNumber
-    <<|> AString <$> parseString
-    <<|> AVarArg <$ pMTok VarArg
-    <<|> parseAnonymFunc
-    <<|> APrefixExpr <$> parsePrefixExp
-    <<|> ATableConstructor <$> parseTableConstructor
+  ANil
+    <$ pMTok Nil
+      <<|> AFalse
+    <$ pMTok TFalse
+      <<|> ATrue
+    <$ pMTok TTrue
+      <<|> parseNumber
+      <<|> AString
+    <$> parseString
+      <<|> AVarArg
+    <$ pMTok VarArg
+      <<|> parseAnonymFunc
+      <<|> APrefixExpr
+    <$> parsePrefixExp
+      <<|> ATableConstructor
+    <$> parseTableConstructor
 
 -- | Separate parser for anonymous function subexpression
 parseAnonymFunc :: AParser Expr
@@ -394,10 +425,14 @@ samePrioR ops pr = pChainr (choice (map f ops)) pr
 -- | Parse unary operator (-, not, #)
 parseUnOp :: AParser UnOp
 parseUnOp =
-  UnMinus <$ pMTok Minus
-    <<|> ANot <$ pMTok Not
-    <<|> ANot <$ pMTok CNot
-    <<|> AHash <$ pMTok Hash
+  UnMinus
+    <$ pMTok Minus
+      <<|> ANot
+    <$ pMTok Not
+      <<|> ANot
+    <$ pMTok CNot
+      <<|> AHash
+    <$ pMTok Hash
 
 -- | Operators, sorted by priority
 -- Priority from: http://www.lua.org/manual/5.2/manual.html#3.4.7
@@ -420,30 +455,50 @@ parseExpression =
         samePrioR lvl4 $
           samePrioL lvl5 $
             samePrioL lvl6 $
-              MExpr <$> pPos' <*> (UnOpExpr <$> parseUnOp <*> parseExpression)
-                <<|> samePrioR lvl8 (MExpr <$> pPos' <*> (parseSubExpression <|> UnOpExpr <$> parseUnOp <*> parseExpression)) -- lvl7
+              MExpr
+                <$> pPos'
+                <*> (UnOpExpr <$> parseUnOp <*> parseExpression)
+                  <<|> samePrioR lvl8 (MExpr <$> pPos' <*> (parseSubExpression <|> UnOpExpr <$> parseUnOp <*> parseExpression)) -- lvl7
 
 -- | Parses a binary operator
 parseBinOp :: AParser BinOp
 parseBinOp =
-  const AOr <$> pMTok Or
-    <<|> const AOr <$> pMTok COr
-    <<|> const AAnd <$> pMTok And
-    <<|> const AAnd <$> pMTok CAnd
-    <<|> const ALT <$> pMTok TLT
-    <<|> const AGT <$> pMTok TGT
-    <<|> const ALEQ <$> pMTok TLEQ
-    <<|> const AGEQ <$> pMTok TGEQ
-    <<|> const ANEq <$> pMTok TNEq
-    <<|> const ANEq <$> pMTok TCNEq
-    <<|> const AEq <$> pMTok TEq
-    <<|> const AConcatenate <$> pMTok Concatenate
-    <<|> const APlus <$> pMTok Plus
-    <<|> const BinMinus <$> pMTok Minus
-    <<|> const AMultiply <$> pMTok Multiply
-    <<|> const ADivide <$> pMTok Divide
-    <<|> const AModulus <$> pMTok Modulus
-    <<|> const APower <$> pMTok Power
+  const AOr
+    <$> pMTok Or
+      <<|> const AOr
+    <$> pMTok COr
+      <<|> const AAnd
+    <$> pMTok And
+      <<|> const AAnd
+    <$> pMTok CAnd
+      <<|> const ALT
+    <$> pMTok TLT
+      <<|> const AGT
+    <$> pMTok TGT
+      <<|> const ALEQ
+    <$> pMTok TLEQ
+      <<|> const AGEQ
+    <$> pMTok TGEQ
+      <<|> const ANEq
+    <$> pMTok TNEq
+      <<|> const ANEq
+    <$> pMTok TCNEq
+      <<|> const AEq
+    <$> pMTok TEq
+      <<|> const AConcatenate
+    <$> pMTok Concatenate
+      <<|> const APlus
+    <$> pMTok Plus
+      <<|> const BinMinus
+    <$> pMTok Minus
+      <<|> const AMultiply
+    <$> pMTok Multiply
+      <<|> const ADivide
+    <$> pMTok Divide
+      <<|> const AModulus
+    <$> pMTok Modulus
+      <<|> const APower
+    <$> pMTok Power
 
 -- | Prefix expressions
 -- can have any arbitrary list of expression suffixes
@@ -454,8 +509,14 @@ parsePrefixExp = pPrefixExp (pMany pPFExprSuffix)
 -- The suffixes define rules on the allowed suffixes
 pPrefixExp :: AParser [PFExprSuffix] -> AParser PrefixExp
 pPrefixExp suffixes =
-  PFVar <$> pName <*> suffixes
-    <<|> ExprVar <$ pMTok LRound <*> parseExpression <* pMTok RRound <*> suffixes
+  PFVar
+    <$> pName
+    <*> suffixes
+      <<|> ExprVar
+    <$ pMTok LRound
+    <*> parseExpression
+    <* pMTok RRound
+    <*> suffixes
 
 -- | Parse any expression suffix
 pPFExprSuffix :: AParser PFExprSuffix
@@ -464,14 +525,23 @@ pPFExprSuffix = pPFExprCallSuffix <<|> pPFExprIndexSuffix
 -- | Parse an indexing expression suffix
 pPFExprCallSuffix :: AParser PFExprSuffix
 pPFExprCallSuffix =
-  Call <$> parseArgs
-    <<|> MetaCall <$ pMTok Colon <*> pName <*> parseArgs
+  Call
+    <$> parseArgs
+      <<|> MetaCall
+    <$ pMTok Colon
+    <*> pName
+    <*> parseArgs
 
 -- | Parse an indexing expression suffix
 pPFExprIndexSuffix :: AParser PFExprSuffix
 pPFExprIndexSuffix =
-  ExprIndex <$ pMTok LSquare <*> parseExpression <* pMTok RSquare
-    <<|> DotIndex <$ pMTok Dot <*> pName
+  ExprIndex
+    <$ pMTok LSquare
+    <*> parseExpression
+    <* pMTok RSquare
+      <<|> DotIndex
+    <$ pMTok Dot
+    <*> pName
 
 -- | Function calls are prefix expressions, but the last suffix MUST be either a function call or a metafunction call
 pFunctionCall :: AParser PrefixExp
@@ -480,8 +550,11 @@ pFunctionCall = pPrefixExp suffixes
     suffixes =
       concat
         <$> pSome
-          ( (\ix c -> ix ++ [c]) <$> pSome pPFExprIndexSuffix <*> pPFExprCallSuffix
-              <<|> (: []) <$> pPFExprCallSuffix
+          ( (\ix c -> ix ++ [c])
+              <$> pSome pPFExprIndexSuffix
+              <*> pPFExprCallSuffix
+                <<|> (: [])
+              <$> pPFExprCallSuffix
           )
 
 -- | single variable. Note: definition differs from reference to circumvent the left recursion
@@ -493,16 +566,24 @@ parseVar = pPrefixExp suffixes
     suffixes =
       concat
         <$> pMany
-          ( (\c ix -> c ++ [ix]) <$> pSome pPFExprCallSuffix <*> pPFExprIndexSuffix
-              <<|> (: []) <$> pPFExprIndexSuffix
+          ( (\c ix -> c ++ [ix])
+              <$> pSome pPFExprCallSuffix
+              <*> pPFExprIndexSuffix
+                <<|> (: [])
+              <$> pPFExprIndexSuffix
           )
 
 -- | Arguments of a function call (including brackets)
 parseArgs :: AParser Args
 parseArgs =
-  ListArgs <$ pMTok LRound <*> opt parseExpressionList [] <* pMTok RRound
-    <<|> TableArg <$> parseTableConstructor
-    <<|> StringArg <$> parseString
+  ListArgs
+    <$ pMTok LRound
+    <*> opt parseExpressionList []
+    <* pMTok RRound
+      <<|> TableArg
+    <$> parseTableConstructor
+      <<|> StringArg
+    <$> parseString
 
 -- | Table constructor
 parseTableConstructor :: AParser [Field]
@@ -538,32 +619,42 @@ makeUnNamedField (Just (op, mexpr)) sfs (p, nm) = UnnamedField $ MExpr p $ (merg
 -- | A field in a table
 parseField :: AParser (FieldSep -> Field)
 parseField =
-  ExprField <$ pMTok LSquare <*> parseExpression <* pMTok RSquare <* pMTok Equals <*> parseExpression
-    <<|> ( (,)
-            <$> pPos'
-            <*> pName
-            <**>
-            -- Named field has equals sign immediately after the name
-            ( ((\e (_, n) -> NamedField n e) <$ pMTok Equals <*> parseExpression)
-                <<|>
-                -- The lack of equals sign means it's an unnamed field.
-                -- The expression of the unnamed field must be starting with a PFVar Prefix expression
-                pMany pPFExprSuffix
-                  <**> ( makeUnNamedField
-                          <$> (
-                                -- There are operators, so the expression goes on beyond the prefixExpression
-                                curry Just <$> parseBinOp <*> parseExpression
-                                  <<|>
-                                  -- There are no operators after the prefix expression
-                                  pReturn Nothing
-                              )
-                       )
-            )
-         )
-    <<|> UnnamedField <$> parseExpression
+  ExprField
+    <$ pMTok LSquare
+    <*> parseExpression
+    <* pMTok RSquare
+    <* pMTok Equals
+    <*> parseExpression
+      <<|> ( (,)
+              <$> pPos'
+              <*> pName
+                <**>
+                -- Named field has equals sign immediately after the name
+                ( ((\e (_, n) -> NamedField n e) <$ pMTok Equals <*> parseExpression)
+                    <<|>
+                    -- The lack of equals sign means it's an unnamed field.
+                    -- The expression of the unnamed field must be starting with a PFVar Prefix expression
+                    pMany pPFExprSuffix
+                    <**> ( makeUnNamedField
+                            <$> (
+                                  -- There are operators, so the expression goes on beyond the prefixExpression
+                                  curry Just
+                                    <$> parseBinOp
+                                    <*> parseExpression
+                                      <<|>
+                                      -- There are no operators after the prefix expression
+                                      pReturn Nothing
+                                )
+                         )
+                )
+           )
+      <<|> UnnamedField
+    <$> parseExpression
 
 -- | Field separator
 parseFieldSep :: AParser FieldSep
 parseFieldSep =
-  CommaSep <$ pMTok Comma
-    <<|> SemicolonSep <$ pMTok Semicolon
+  CommaSep
+    <$ pMTok Comma
+      <<|> SemicolonSep
+    <$ pMTok Semicolon

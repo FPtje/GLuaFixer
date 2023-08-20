@@ -36,7 +36,7 @@ execAnalysis :: Eff (State.State AnalysisState : es) () -> Eff es AnalysisState
 execAnalysis = State.execState emptyState
 
 -- | Analyse a single file
-analyseFile :: (State.State AnalysisState :> es) => LintSettings -> FilePath -> AST -> Eff es ()
+analyseFile :: State.State AnalysisState :> es => LintSettings -> FilePath -> AST -> Eff es ()
 analyseFile lintSettings filepath ast = do
   let
     definitionsInFile :: Map String [Region] = globalDefinitions lintSettings ast
@@ -48,7 +48,7 @@ analyseFile lintSettings filepath ast = do
 
 -- | Print the analysis state to the terminal.
 -- TODO: make the rendering a pure function
-reportAnalysis :: forall es. (Logging :> es) => AnalysisState -> Eff es ()
+reportAnalysis :: forall es. Logging :> es => AnalysisState -> Eff es ()
 reportAnalysis analysis =
   mapM_ reportGlobal globals
   where

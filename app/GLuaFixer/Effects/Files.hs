@@ -57,7 +57,7 @@ data Files :: Effect where
 
 type instance DispatchOf Files = Dynamic
 
-makeAbsolute :: (Files :> es) => FilePath -> Eff es FilePath
+makeAbsolute :: Files :> es => FilePath -> Eff es FilePath
 makeAbsolute filepath = send $ MakeAbsolute filepath
 
 getHomeDirectory :: Files :> es => Eff es FilePath
@@ -94,7 +94,7 @@ getCurrentDirectory
   => Eff es_a9miX FilePath
 getCurrentDirectory = send (GetCurrentDirectory @(Eff es_a9miX))
 
-runFilesIO :: forall es a. (IOE :> es) => Eff (Files : es) a -> Eff es a
+runFilesIO :: forall es a. IOE :> es => Eff (Files : es) a -> Eff es a
 runFilesIO = interpret $ \_ -> \case
   GetCurrentDirectory -> liftIO Dir.getCurrentDirectory
   ReadStdIn -> liftIO getContents

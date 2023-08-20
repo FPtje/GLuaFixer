@@ -81,8 +81,11 @@ between c left right = c >= left && c <= right
 -- | Parses a C-style block comment.
 parseCBlockComment :: LParser String
 parseCBlockComment =
-  const "" <$> pToken "*/"
-    <<|> (:) <$> parseAnyChar <*> parseCBlockComment
+  const ""
+    <$> pToken "*/"
+      <<|> (:)
+    <$> parseAnyChar
+    <*> parseCBlockComment
 
 -- | Try to parse a block comment.
 -- Might actually return a single line Dash comment, because for example
@@ -94,9 +97,13 @@ parseBlockComment = pToken "[" *> nested 0
     -- The amount of =-signs in the string delimiter is n
     nested :: Int -> LParser Token
     nested n =
-      pToken "=" *> nested (n + 1)
-        <<|> DashBlockComment n <$ pToken "[" <*> restString n
-        <<|> lineComment n <$> pUntilEnd
+      pToken "="
+        *> nested (n + 1)
+          <<|> DashBlockComment n
+        <$ pToken "["
+        <*> restString n
+          <<|> lineComment n
+        <$> pUntilEnd
 
     -- Turns out we were describing a line comment all along, cheeky bastard!
     -- (the last [ of the block comment start token is missing)
@@ -106,8 +113,11 @@ parseBlockComment = pToken "[" *> nested 0
     -- Right-recursive grammar. This part searches for the rest of the string until it finds the ]=^n] token
     restString :: Int -> LParser String
     restString n =
-      const "" <$> pToken ("]" ++ replicate n '=' ++ "]")
-        <<|> (:) <$> parseAnyChar <*> restString n
+      const ""
+        <$> pToken ("]" ++ replicate n '=' ++ "]")
+          <<|> (:)
+        <$> parseAnyChar
+        <*> restString n
 
 -- | Parse the string until the end. Used in parseLineComment among others.
 pUntilEnd :: LParser String
@@ -125,14 +135,20 @@ nestedString = nested 0
     -- The amount of =-signs in the string delimiter is n
     nested :: Int -> LParser String
     nested n =
-      (\str -> "=" ++ str) <$ pToken "=" <*> nested (n + 1)
-        <<|> ('[' :) <$ pToken "[" <*> restString n
+      (\str -> "=" ++ str)
+        <$ pToken "="
+        <*> nested (n + 1)
+          <<|> ('[' :)
+        <$ pToken "["
+        <*> restString n
 
     -- Right-recursive grammar. This part searches for the rest of the string until it finds the ]=^n] token
     restString :: Int -> LParser String
     restString n =
       pToken ("]" ++ replicate n '=' ++ "]")
-        <<|> (:) <$> parseAnyChar <*> restString n
+        <<|> (:)
+        <$> parseAnyChar
+        <*> restString n
 
 -- | Parse any kind of comment.
 parseComment :: LParser Token
@@ -140,12 +156,15 @@ parseComment =
   pToken "--"
     <**> (const <$> (parseBlockComment <<|> DashComment <$> pUntilEnd)) -- Dash block comment and dash comment both start with "--"
     <<|> pToken "/"
-      <**> ( const
-              <$> ( SlashBlockComment <$ pToken "*" <*> parseCBlockComment
-                      <<|> SlashComment <$> parseLineComment "/"
+    <**> ( const
+            <$> ( SlashBlockComment
+                    <$ pToken "*"
+                    <*> parseCBlockComment
+                      <<|> SlashComment
+                    <$> parseLineComment "/"
                       <<|> pReturn Divide -- The /-sign is here because it also starts with '/'
-                  )
-           )
+                )
+         )
 
 -- | Parse single line strings e.g. "sdf", 'werf'.
 parseLineString :: Char -> LParser String
@@ -155,8 +174,11 @@ parseLineString c = pSym c *> innerString
     innerString =
       pSym '\\'
         <**> ((\c' str esc -> esc : c' ++ str) <$> escapeSequence <*> innerString) -- Escaped character in string always starts with backslash
-        <<|> const "" <$> pSym c
-        <<|> (:) <$> pNoNewline <*> innerString -- the end of the string
+        <<|> const ""
+        <$> pSym c
+          <<|> (:)
+        <$> pNoNewline
+        <*> innerString -- the end of the string
         -- the next character in the string
     escapeSequence :: LParser String
     escapeSequence = (:) <$> pSym 'z' <*> parseOptionalWhitespace <<|> (: []) <$> parseAnyChar
@@ -167,12 +189,14 @@ parseLineString c = pSym c *> innerString
 -- | Single and multiline strings.
 parseString :: LParser Token
 parseString =
-  DQString <$> parseLineString '"'
-    <<|> SQString <$> parseLineString '\''
-    <<|>
-    -- Parse either a multiline string or just a bracket.
-    -- Placed here because they have the first token '[' in common
-    pSym '['
+  DQString
+    <$> parseLineString '"'
+      <<|> SQString
+    <$> parseLineString '\''
+      <<|>
+      -- Parse either a multiline string or just a bracket.
+      -- Placed here because they have the first token '[' in common
+      pSym '['
       <**> ( (\_ -> MLString . (:) '[')
               <$$> nestedString
               <<|> const
@@ -187,10 +211,13 @@ parseNumber = TNumber <$> ((++) <$> (pZeroPrefixedNumber <<|> pNumber) <*> (pLLU
     pZeroPrefixedNumber :: LParser String
     pZeroPrefixedNumber =
       pSym '0'
-        <**> ( (\hex _0 -> _0 : hex) <$> pHexadecimal
-                <<|> (\bin _0 -> _0 : bin) <$> pBinary
-                <<|> (\digits _0 -> _0 : digits) <$> (pDecimal <<|> pNumber)
-                <<|> pure (: [])
+        <**> ( (\hex _0 -> _0 : hex)
+                <$> pHexadecimal
+                  <<|> (\bin _0 -> _0 : bin)
+                <$> pBinary
+                  <<|> (\digits _0 -> _0 : digits)
+                <$> (pDecimal <<|> pNumber)
+                  <<|> pure (: [])
              )
 
     pNumber :: LParser String
@@ -278,12 +305,17 @@ parseDots =
     <**> ( -- A dot means it's either a VarArg (...), concatenation (..) or just a dot (.)
            const
             <$> ( pToken "."
-                    <**> ( const VarArg <$ pToken "."
-                            <<|> const <$> pReturn Concatenate
+                    <**> ( const VarArg
+                            <$ pToken "."
+                              <<|> const
+                            <$> pReturn Concatenate
                          )
                 )
-            <<|> (\ds sfx dot -> TNumber $ dot ++ ds ++ sfx) <$> pSome pDigit <*> opt parseNumberSuffix ""
-            <<|> const <$> pReturn Dot
+              <<|> (\ds sfx dot -> TNumber $ dot ++ ds ++ sfx)
+            <$> pSome pDigit
+            <*> opt parseNumberSuffix ""
+              <<|> const
+            <$> pReturn Dot
          )
 
 -- | Parse any kind of token.
@@ -318,64 +350,64 @@ parseToken =
     <<|> parseKeyword End "end"
     <<|> Identifier
     <$> parseIdentifier
-    <<|> Semicolon
+      <<|> Semicolon
     <$ pToken ";"
-    <<|> parseDots
-    <<|>
-    -- Operators
-    Plus
+      <<|> parseDots
+      <<|>
+      -- Operators
+      Plus
     <$ pToken "+"
-    <<|> Minus
+      <<|> Minus
     <$ pToken "-"
-    <<|> Multiply
+      <<|> Multiply
     <$ pToken "*"
-    <<|> Modulus
+      <<|> Modulus
     <$ pToken "%"
-    <<|> Power
+      <<|> Power
     <$ pToken "^"
-    <<|> TEq
+      <<|> TEq
     <$ pToken "=="
-    <<|> Equals
+      <<|> Equals
     <$ pToken "="
-    <<|> TNEq
+      <<|> TNEq
     <$ pToken "~="
-    <<|> TCNEq
+      <<|> TCNEq
     <$ pToken "!="
-    <<|> CNot
+      <<|> CNot
     <$ pToken "!"
-    <<|> TLEQ
+      <<|> TLEQ
     <$ pToken "<="
-    <<|> TLT
+      <<|> TLT
     <$ pToken "<"
-    <<|> TGEQ
+      <<|> TGEQ
     <$ pToken ">="
-    <<|> TGT
+      <<|> TGT
     <$ pToken ">"
-    <<|> parseLabel
-    <<|> Colon
+      <<|> parseLabel
+      <<|> Colon
     <$ pToken ":"
-    <<|> Comma
+      <<|> Comma
     <$ pToken ","
-    <<|> Hash
+      <<|> Hash
     <$ pToken "#"
-    `micro` 10
-    <<|> CAnd -- Add micro cost to prevent conflict with parseHashBang
+      `micro` 10
+      <<|> CAnd -- Add micro cost to prevent conflict with parseHashBang
     <$ pToken "&&"
-    <<|> COr
+      <<|> COr
     <$ pToken "||"
-    <<|> LRound
+      <<|> LRound
     <$ pToken "("
-    <<|> RRound
+      <<|> RRound
     <$ pToken ")"
-    <<|> LCurly
+      <<|> LCurly
     <$ pToken "{"
-    <<|> RCurly
+      <<|> RCurly
     <$ pToken "}"
-    <<|>
-    -- Other square bracket is parsed in parseString
-    RSquare
+      <<|>
+      -- Other square bracket is parsed in parseString
+      RSquare
     <$ pToken "]"
-    <<|> Whitespace
+      <<|> Whitespace
     <$> parseWhitespace
 
 -- | A thing of which the region is to be parsed
