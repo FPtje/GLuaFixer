@@ -44,7 +44,7 @@
           pkgs.cachix
           cabal-fmt
           haskell-language-server
-          fourmolu_0_13_0_0
+          fourmolu
         ]);
 
         # The CI shell is similar to the dev shell, but requires fewer packages. Leaving them out
@@ -52,7 +52,7 @@
         ci = mkDevShell (haskellPackages: with haskellPackages; [
           cabal-install
           cabal-fmt
-          fourmolu_0_13_0_0
+          fourmolu
         ]);
       };
     }

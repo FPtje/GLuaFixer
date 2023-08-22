@@ -2,13 +2,13 @@
 final: previous:
 let
   # UUAGC overrides can likely be removed when UUAGC is updated. See
-  # https://github.com/UU-ComputerScience/uuagc/pull/12
+  # https://github.com/UU-ComputerScience/uuagc/pull/11
   uuagc-source = fetchFromGitHub
     {
-      owner = "UU-ComputerScience";
+      owner = "FPtje";
       repo = "uuagc";
-      rev = "47c09cd1e281e4e224b30bf6e183778e54cdf91c";
-      sha256 = "sha256-Ie8oPZtpqW0UikRFBeGsTcEFQ53Z9pPipVC6pv2awYk=";
+      rev = "93783365b8e0771b092b9d99264227ca7c5d0823";
+      sha256 = "sha256-hvJ/GShwR1AvSofPmmR4FJMPUwUaCMiL1l1CKcKvQw0=";
     };
 in
 {
