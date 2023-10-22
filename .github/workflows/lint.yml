@@ -31,7 +31,7 @@ jobs:
       # files. Those files are generated with no regard to fourmolu's style, so
       # fourmolu would throw errors for them.
       # TODO: Find a way to properly exclude them.
-      - run: fourmolu --mode check app src
+      - run: fourmolu --mode check app src tests
 
       - name: Generate .hs files from .ag
         run: ./AGGenerator.sh
