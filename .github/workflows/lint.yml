@@ -36,5 +36,6 @@ jobs:
       - name: Generate .hs files from .ag
         run: ./AGGenerator.sh
 
+      - run: cabal run linttest
       - run: cabal run glualint -- test testcase.lua tests
       - run: cabal run golden
