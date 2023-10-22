@@ -169,14 +169,16 @@ sem Token
     | DQString
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . cUsed $ @lhs.strSyntax)
         loc.strSyntax = SyntaxUsed @loc.consistent False
-        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @str
+        -- Apply custom advancement of the string, but also have the advancement take the quotes into account
+        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos $ "\"" <> @str <> "\""
         +tokenWarnings = if @loc.consistent then id else
                             (:) $ SyntaxInconsistency "double quoted strings" "single quoted strings"
 
     | SQString
         loc.consistent = (not . lint_syntaxInconsistencies $ @lhs.config) || (not . luaUsed $ @lhs.strSyntax) || isSingleChar @str -- Allow single character ' ' strings
         loc.strSyntax = SyntaxUsed False (@loc.consistent && not (isSingleChar @str))
-        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos @str
+        -- Apply custom advancement of the string, but also have the advancement take the quotes into account
+        lhs.nextTokenPos = customAdvanceStr @lhs.nextTokenPos $ "'" <> @str <> "'"
         +tokenWarnings = if @loc.consistent then id else
                             (:) $ SyntaxInconsistency "single quoted strings" "double quoted strings"
 
