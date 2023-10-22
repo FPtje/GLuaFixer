@@ -1,7 +1,7 @@
 { mkDerivation, aeson, base, bytestring, containers
 , directory, deepseq, effectful, filemanip, filepath
 , optparse-applicative, parsec, pretty, signal, lib, uu-parsinglib
-, uuagc, uuagc-cabal, tasty, tasty-golden
+, uuagc, uuagc-cabal, tasty, tasty-golden, tasty-hunit
 }:
 let
 # Clean up the source of the derivation to prevent rebuilds
@@ -51,6 +51,7 @@ in mkDerivation {
     uuagc-cabal
     tasty
     tasty-golden
+    tasty-hunit
   ];
   executableHaskellDepends = [
     aeson

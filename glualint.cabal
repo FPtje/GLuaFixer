@@ -79,6 +79,20 @@ test-suite golden
 
   default-language: Haskell2010
 
+test-suite linttest
+  type:             exitcode-stdio-1.0
+  main-is:          Spec.hs
+  hs-source-dirs:   tests/linttest
+  build-depends:
+    , base
+    , bytestring
+    , glualint
+    , tasty          >=1.4  && <2
+    , tasty-hunit    >=0.10 && <0.12
+    , uu-parsinglib
+
+  default-language: Haskell2010
+
 executable glualint
   -- Disable the executable for ghcjs and older versions of ghc. The executable
   -- uses functions only available in ghc 8+
