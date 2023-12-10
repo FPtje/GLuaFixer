@@ -16,10 +16,12 @@ main :: IO ()
 main = defaultMain tests
 
 tests :: TestTree
-tests = testGroup "Unit tests" [
-  testQuotedStringWarningPosition,
-  testEmptyIfWarningPosition
-  ]
+tests =
+  testGroup
+    "Unit tests"
+    [ testQuotedStringWarningPosition
+    , testEmptyIfWarningPosition
+    ]
 
 -- | Regression test for https://github.com/FPtje/GLuaFixer/issues/169
 testQuotedStringWarningPosition :: TestTree
@@ -45,10 +47,10 @@ testEmptyIfWarningPosition = do
       warning = EmptyIf
       msgEmptyIf = LintMessage LintWarning expectedRegionEmptyIf warning testFilePath
       msgWithElse = LintMessage LintWarning expectedRegionWithElse warning testFilePath
-    in do
-      lintString inputEmptyIf @=? [msgEmptyIf]
-      lintString inputWithElse @=? [msgWithElse]
-
+    in
+      do
+        lintString inputEmptyIf @=? [msgEmptyIf]
+        lintString inputWithElse @=? [msgWithElse]
 
 -- | Helper to lint a string
 lintString :: String -> [LintMessage]
