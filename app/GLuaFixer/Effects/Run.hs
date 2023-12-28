@@ -19,7 +19,7 @@ import Effectful.Error.Static (runErrorNoCallStack)
 import GLua.AG.AST (AST)
 import GLua.AG.Token (MToken)
 import GLua.ASTInstances ()
-import qualified GLua.PSParser as PSP
+import qualified GLua.Parser as Parser
 import GLuaFixer.Cli (Command (..), Options (..), OverriddenSettings, SettingsPath)
 import GLuaFixer.Effects.AnalyseGlobals (analyseFile, execAnalysis, reportAnalysis)
 import GLuaFixer.Effects.Cli (Cli, CliParseResult (..), parseCliOptions)
@@ -293,7 +293,7 @@ test exitCode lintSettings filepath contents = do
           let
             prettyprinted = Interface.prettyprint lintSettings ast
 
-          case PSP.parseGLuaFromString prettyprinted of
+          case Parser.parseGLuaFromString prettyprinted of
             Left err -> do
               putStrLnStdOut $
                 "Errors when trying to parse '" ++ filepath ++ "' after pretty print!"

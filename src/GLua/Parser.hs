@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 
-module GLua.PSParser where
+module GLua.Parser where
 
 import GLua.AG.AST (
   AReturn (..),
@@ -30,7 +30,7 @@ import GLua.AG.Token (
   Region (..),
   Token (..),
  )
-import qualified GLua.PSLexer as Lex
+import qualified GLua.Lexer as Lex
 import GLua.TokenTypes (
   isWhitespace,
   mpos,

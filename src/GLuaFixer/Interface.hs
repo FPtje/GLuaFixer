@@ -3,9 +3,9 @@ module GLuaFixer.Interface where
 import GLua.AG.AST (AST)
 import GLua.AG.PrettyPrint (prettyprintConf)
 import GLua.AG.Token (MToken)
+import qualified GLua.Lexer as Lexer
 import GLua.LineLimitParser (LineLimit (..), execParseLineLimits)
-import qualified GLua.PSLexer as PSL
-import qualified GLua.PSParser as PSP
+import qualified GLua.Parser as Parser
 import GLuaFixer.AG.ASTLint (astWarnings)
 import GLuaFixer.AG.LexLint (fixedLexPositions, lintWarnings)
 import GLuaFixer.BadSequenceFinder (sequenceWarnings)
@@ -21,9 +21,9 @@ sourceLint lintSettings filepath contents =
 -- | Generate the lexicon of a source file, used as input for the parser
 lex :: LintSettings -> FilePath -> String -> Either [LintMessage] [MToken]
 lex lintSettings filepath contents =
-  case PSL.execParseTokens contents of
+  case Lexer.execParseTokens contents of
     Left lexErr ->
-      Left [LintMessage LintError (PSL.sp2Rg $ errorPos lexErr) (IssueParseError lexErr) filepath | lint_syntaxErrors lintSettings]
+      Left [LintMessage LintError (Lexer.sp2Rg $ errorPos lexErr) (IssueParseError lexErr) filepath | lint_syntaxErrors lintSettings]
     Right tokens -> Right $ fixedLexPositions tokens
 
 -- | Run the linting functions that inspect the lexicon
@@ -35,10 +35,10 @@ lexiconLint filepath lintSettings tokens =
 -- | Parse a lexicon into an Abstract Syntax Tree
 parse :: LintSettings -> FilePath -> [MToken] -> Either [LintMessage] AST
 parse lintSettings filepath tokens =
-  case PSP.parseGLua tokens of
+  case Parser.parseGLua tokens of
     Left err ->
       -- Return syntax errors
-      Left [LintMessage LintError (PSL.sp2Rg $ errorPos err) (IssueParseError err) filepath | lint_syntaxErrors lintSettings]
+      Left [LintMessage LintError (Lexer.sp2Rg $ errorPos err) (IssueParseError err) filepath | lint_syntaxErrors lintSettings]
     Right ast -> Right ast
 
 -- | Run the linters that inspect the AST

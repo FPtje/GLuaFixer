@@ -3,8 +3,8 @@
 module GLuaFixer.BadSequenceFinder (sequenceWarnings, checkFromString) where
 
 import GLua.AG.Token
-import qualified GLua.PSLexer as PSL
-import GLua.PSParser
+import qualified GLua.Lexer as Lexer
+import GLua.Parser
 import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 import Text.Parsec
@@ -483,5 +483,5 @@ sequenceWarnings opts mts = case execAParser "source.lua" (badSequenceParser opt
 -- | Helper function: check from string
 checkFromString :: AParser a -> String -> Either ParseError a
 checkFromString p inp = do
-  lexed <- PSL.execParseTokens inp
+  lexed <- Lexer.execParseTokens inp
   execAParser "source.lua" p lexed

@@ -43,8 +43,8 @@ library
     GLua.AG.Token
     GLua.ASTInstances
     GLua.LineLimitParser
-    GLua.PSLexer
-    GLua.PSParser
+    GLua.Lexer
+    GLua.Parser
     GLua.TokenTypes
     GLuaFixer.AG.ASTLint
     GLuaFixer.AG.LexLint

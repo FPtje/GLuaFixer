@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-module GLua.PSLexer where
+module GLua.Lexer where
 
 import GLua.AG.Token (MToken (..), Region (..), Token (..))
 
