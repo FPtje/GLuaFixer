@@ -42,8 +42,8 @@ library
     GLua.AG.PrettyPrint
     GLua.AG.Token
     GLua.ASTInstances
-    GLua.LineLimitParser
     GLua.Lexer
+    GLua.LineLimitParser
     GLua.Parser
     GLua.TokenTypes
     GLuaFixer.AG.ASTLint
