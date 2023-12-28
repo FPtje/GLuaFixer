@@ -30,7 +30,7 @@ import GLua.AG.Token (
   Region (..),
   Token (..),
  )
-import qualified GLua.Lexer as Lex
+import qualified GLua.PSLexer as Lex
 import GLua.TokenTypes (
   isWhitespace,
   mpos,
@@ -77,10 +77,6 @@ type AParser = Parsec [MToken] LineColPos
 execAParser :: SourceName -> AParser a -> [MToken] -> Either ParseError a
 execAParser name p = runParser p (LineColPos 0 0 0) name
 
--- | Parse a string directly
-parseFromString :: AParser a -> String -> Either ParseError a
-parseFromString p = execAParser "source.lua" p . filter (not . isWhitespace) . fst . Lex.execParseTokens
-
 -- | Parse Garry's mod Lua tokens to an abstract syntax tree.
 -- Also returns parse errors
 parseGLua :: [MToken] -> Either ParseError AST
@@ -92,7 +88,9 @@ parseGLua mts =
 
 parseGLuaFromString :: String -> Either ParseError AST
 parseGLuaFromString contents =
-  parseGLua $ filter (not . isWhitespace) $ fst $ Lex.execParseTokens contents
+  case Lex.execParseTokens contents of
+    Left parseErrors -> Left parseErrors
+    Right lexicon -> parseGLua $ filter (not . isWhitespace) lexicon
 
 -- | Region start to SourcePos
 rgStart2sp :: Region -> SourcePos

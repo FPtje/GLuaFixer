@@ -78,7 +78,6 @@ data LintSettings = LintSettings
   , prettyprint_removeRedundantParens :: !Bool
   , prettyprint_minimizeParens :: !Bool
   , prettyprint_assumeOperatorAssociativity :: !Bool
-  , prettyprint_rejectInvalidCode :: !Bool
   , prettyprint_indentation :: !String
   , log_format :: !LogFormatChoice
   }
@@ -127,7 +126,6 @@ defaultLintSettings =
     , prettyprint_removeRedundantParens = True
     , prettyprint_minimizeParens = False
     , prettyprint_assumeOperatorAssociativity = True
-    , prettyprint_rejectInvalidCode = False
     , prettyprint_indentation = "    "
     , log_format = AutoLogFormatChoice
     }
@@ -190,7 +188,6 @@ instance FromJSON LintSettings where
       <*> v .:? "prettyprint_removeRedundantParens" .!= prettyprint_removeRedundantParens defaultLintSettings
       <*> v .:? "prettyprint_minimizeParens" .!= prettyprint_minimizeParens defaultLintSettings
       <*> v .:? "prettyprint_assumeOperatorAssociativity" .!= prettyprint_assumeOperatorAssociativity defaultLintSettings
-      <*> v .:? "prettyprint_rejectInvalidCode" .!= prettyprint_rejectInvalidCode defaultLintSettings
       <*> v .:? "prettyprint_indentation" .!= prettyprint_indentation defaultLintSettings
       <*> v .:? "log_format" .!= log_format defaultLintSettings
   parseJSON _ = mzero
@@ -255,7 +252,6 @@ instance ToJSON LintSettings where
       , "prettyprint_removeRedundantParens" .= prettyprint_removeRedundantParens ls
       , "prettyprint_minimizeParens" .= prettyprint_minimizeParens ls
       , "prettyprint_assumeOperatorAssociativity" .= prettyprint_assumeOperatorAssociativity ls
-      , "prettyprint_rejectInvalidCode" .= prettyprint_rejectInvalidCode ls
       , "prettyprint_indentation" .= prettyprint_indentation ls
       , "log_format" .= log_format ls
       ]

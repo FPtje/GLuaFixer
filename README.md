@@ -79,7 +79,6 @@ Example `glualint.json` with the default options:
     "prettyprint_removeRedundantParens": true,
     "prettyprint_minimizeParens": false,
     "prettyprint_assumeOperatorAssociativity": true,
-    "prettyprint_rejectInvalidCode": false,
     "prettyprint_indentation": "    ",
 
     "log_format": "auto"
@@ -140,7 +139,6 @@ Option | Description
 `prettyprint_removeRedundantParens` | Whether to remove unnecessary parentheses (e.g. `x = (1 + 2)`, `if ((1) + (2) == 3) then`)
 `prettyprint_minimizeParens` | Removes parentheses which are unnecessary due to operator precedence (e.g. `(1 * 2) + 3`). This option also removes redundant parameters, regardless of whether `prettyprint_removeRedundantParens` is enabled.
 `prettyprint_assumeOperatorAssociativity` | Only takes effect when `prettyprint_minimizeParens` is `true`. It decides whether parameters can be removed when the involved operators are assumed associative. Examples: `a * (b * c)`, `a and (b and c)`. This assumption is generally true, except for floating point numbers, where removing parentheses can actually change the outcome of the calculation. See [Stack Overflow](https://stackoverflow.com/a/10371890). This option is set to `true` by default, because the expectation is that this will not be problematic even if it affects your code. In a very rare case, this might cause trouble, though. You might want to consider turning this off if you have floating point code that heavily relies on evaluation order. You may also choose to leave this option on and ensure evaluation order by explicitly setting variables.
-`prettyprint_rejectInvalidCode` | Whether not to pretty print when the code is syntactically invalid
 
 ### Other options
 

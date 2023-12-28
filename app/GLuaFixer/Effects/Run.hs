@@ -10,7 +10,7 @@
 
 module GLuaFixer.Effects.Run where
 
-import Control.Monad (unless, when)
+import Control.Monad (when)
 import qualified Data.Aeson as JSON
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import Effectful (Eff, (:>))
@@ -20,7 +20,6 @@ import GLua.AG.AST (AST)
 import GLua.AG.Token (MToken)
 import GLua.ASTInstances ()
 import qualified GLua.PSParser as PSP
-import qualified GLua.Parser as UUP
 import GLuaFixer.Cli (Command (..), Options (..), OverriddenSettings, SettingsPath)
 import GLuaFixer.Effects.AnalyseGlobals (analyseFile, execAnalysis, reportAnalysis)
 import GLuaFixer.Effects.Cli (Cli, CliParseResult (..), parseCliOptions)
@@ -97,7 +96,7 @@ runOptions options =
               worstExitCode exitCode <$> lint lintSettings filepath contents
         (PrettyPrint, UseStdIn) -> do
           (lintSettings, contents) <- getStdIn options.optsConfigFile options.optsOverridden
-          case prettyprint lintSettings contents of
+          case prettyprint lintSettings "stdin" contents of
             Nothing -> pure $ ExitFailure 1
             Just prettyprinted -> do
               putStrStdOut prettyprinted
@@ -110,7 +109,7 @@ runOptions options =
             files
             $ \exitCode lintSettings filepath contents -> do
               putStrLnStdOut $ "Pretty printing " <> filepath
-              case prettyprint lintSettings contents of
+              case prettyprint lintSettings filepath contents of
                 Nothing -> pure $ ExitFailure 1
                 Just prettyprinted -> do
                   writeFile filepath prettyprinted
@@ -256,16 +255,15 @@ lint lintSettings filepath contents = do
 -- | Pretty print a file
 prettyprint
   :: LintSettings
+  -> FilePath
   -> String
   -> Maybe String
-prettyprint lintSettings contents = do
-  if lintSettings.prettyprint_rejectInvalidCode && hasErrors
-    then Nothing
-    else Just $ Interface.prettyprint lintSettings ast
+prettyprint lintSettings filepath contents =
+  case eAst of
+    Left _errors -> Nothing
+    Right ast -> Just $ Interface.prettyprint lintSettings ast
   where
-    (tokens, lexErrors) = Interface.lexUU lintSettings contents
-    (ast, parseErrors) = Interface.parseUU tokens
-    hasErrors = not (null lexErrors) || not (null parseErrors)
+    eAst = Interface.lex lintSettings filepath contents >>= Interface.parse lintSettings filepath
 
 -- | Test glualint itself against a file. TODO: Refactor this into a nicer command
 test
@@ -277,23 +275,6 @@ test
   -> Eff es ExitCode
 test exitCode lintSettings filepath contents = do
   putStrLnStdOut $ "Testing " <> filepath
-  let
-    (uu_lex, uu_lex_errors) = Interface.lexUU lintSettings contents
-    (_uu_ast, uu_parseErrs) = Interface.parseUU uu_lex
-
-  unless (null uu_lex_errors) $ do
-    putStrLnStdOut $
-      "Errors when trying to lex '"
-        ++ filepath
-        ++ "' with uu-parsinglib lexer!"
-    mapM_ (putStrLnStdOut . show) uu_lex_errors
-
-  unless (null uu_parseErrs) $ do
-    putStrLnStdOut $
-      "Errors when trying to parse '"
-        ++ filepath
-        ++ "' with uu-parsinglib parser!"
-    mapM_ (putStrLnStdOut . show) uu_parseErrs
 
   logFormat <- getLogFormat lintSettings.log_format
 
@@ -305,25 +286,17 @@ test exitCode lintSettings filepath contents = do
       case Interface.parse lintSettings filepath tokens of
         Left msgs -> do
           putStrLnStdOut $
-            "Errors when trying to parse '" ++ filepath ++ "' with parsec parser!"
+            "Errors when trying to parse '" ++ filepath
           mapM_ (emitLintMessage logFormat) msgs
           pure $ ExitFailure 1
         Right ast -> do
           let
             prettyprinted = Interface.prettyprint lintSettings ast
-            (_uu_ast_pp, uu_parseErrs_pp) = UUP.parseGLuaFromString prettyprinted
-
-          unless (null uu_parseErrs_pp) $ do
-            putStrLnStdOut $
-              "Errors when trying to parse '"
-                ++ filepath
-                ++ "' with uu-parsinglib parser after pretty print!"
-            mapM_ (putStrLnStdOut . show) uu_parseErrs_pp
 
           case PSP.parseGLuaFromString prettyprinted of
             Left err -> do
               putStrLnStdOut $
-                "Errors when trying to parse '" ++ filepath ++ "' with parsec parser after pretty print!"
+                "Errors when trying to parse '" ++ filepath ++ "' after pretty print!"
 
               putStrLnStdOut $ show err
               pure $ ExitFailure 1
