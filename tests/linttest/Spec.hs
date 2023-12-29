@@ -28,11 +28,15 @@ testQuotedStringWarningPosition =
   testCase "The syntax inconsistency warning is thrown and in the right region" $
     let
       input = "bar = a or b\nfoo = \"\" and \"\" and \"dddd\" || \"[]\""
-      expectedRegion = Region (LineColPos 1 27 40) (LineColPos 1 29 42)
-      warning = SyntaxInconsistency "||" "or"
-      msg = LintMessage LintWarning expectedRegion warning testFilePath
+      expectedRegion1 = Region (LineColPos 0 8 8) (LineColPos 0 10 10)
+      warning1 = SyntaxInconsistency "||" "or"
+      msg1 = LintMessage LintWarning expectedRegion1 warning1 testFilePath
+
+      expectedRegion2 = Region (LineColPos 1 27 40) (LineColPos 1 29 42)
+      warning2 = SyntaxInconsistency "||" "or"
+      msg2 = LintMessage LintWarning expectedRegion2 warning2 testFilePath
     in
-      lintString input @=? [msg]
+      [msg1, msg2] @=? lintString input
 
 -- | Regression test for https://github.com/FPtje/GLuaFixer/issues/170
 testEmptyIfWarningPosition :: TestTree
