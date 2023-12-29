@@ -149,7 +149,7 @@ attr AllStuff MToken MTokenList
 attr Block
     inh isRepeat :: Bool -- Scopes should not be popped and certain errors are not to be thrown when this is the body of a repeat
 
-attr AllStuff MToken MTokenList Token TokenList
+attr AllStuff MToken MTokenList Token
     syn warnings use {++} {[]} :: {[String -> LintMessage]}
     syn copy :: self
     syn identifier use {const} {unknownIdentifier} :: String -- identifier of the first token
