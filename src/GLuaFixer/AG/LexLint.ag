@@ -73,7 +73,7 @@ endOfTrailingWhitespace (pos, []) = pos
 ----------------------------------------
 --  Attributes
 ----------------------------------------
-attr MTokenList MToken Token TokenList
+attr MTokenList MToken Token
     syn copy :: self
     inh config :: LintSettings
 
@@ -90,10 +90,8 @@ attr MTokenList MToken Token TokenList
 
     chn nextTokenPos :: LineColPos
 
-attr Token TokenList
-    syn tokenWarnings use {++} {[]} :: {[Issue]}
-
 attr Token
+    syn tokenWarnings use {++} {[]} :: {[Issue]}
     syn customWarnings use {++} {[]} :: {[FilePath -> LintMessage]} -- Warnings where the position is modified
 
 ---------------------------------------
@@ -101,7 +99,6 @@ attr Token
 ---------------------------------------
 sem MTokenList
     | Cons
-
     | Nil
 
 
