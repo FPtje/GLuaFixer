@@ -5,6 +5,7 @@ module GLuaFixer.BadSequenceFinder (sequenceWarnings, checkFromString) where
 import GLua.AG.Token
 import qualified GLua.Lexer as Lexer
 import GLua.Parser
+import GLua.Position (Region)
 import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 import Text.Parsec

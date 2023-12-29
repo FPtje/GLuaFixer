@@ -9,6 +9,7 @@ module {GLua.AG.AST}{}{}
 imports
 {
 import GLua.AG.Token
+import GLua.Position
 import GLua.TokenTypes ()
 import GHC.Generics
 import Data.Aeson

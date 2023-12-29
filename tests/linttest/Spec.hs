@@ -1,6 +1,6 @@
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBS8
-import GLua.AG.Token (Region (..))
+import GLua.Position (LineColPos (..), Region (..))
 import qualified GLuaFixer.Interface as GLua
 import GLuaFixer.LintMessage (
   Issue (..),
@@ -10,7 +10,6 @@ import GLuaFixer.LintMessage (
 import GLuaFixer.LintSettings (LintSettings, defaultLintSettings)
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@=?))
-import Text.ParserCombinators.UU.BasicInstances (LineColPos (..))
 
 main :: IO ()
 main = defaultMain tests

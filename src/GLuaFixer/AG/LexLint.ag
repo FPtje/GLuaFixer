@@ -16,6 +16,7 @@ imports
 import Data.List
 import GLua.TokenTypes
 import GLua.AG.Token
+import GLua.Position
 import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 }
@@ -72,7 +73,7 @@ endOfTrailingWhitespace (pos, []) = pos
 ----------------------------------------
 --  Attributes
 ----------------------------------------
-attr MTokenList MToken Token TokenList Region
+attr MTokenList MToken Token TokenList
     syn copy :: self
     inh config :: LintSettings
 
@@ -107,7 +108,9 @@ sem MTokenList
 sem MToken
     | MToken
         loc.mpos = Region @lhs.nextTokenPos (customAdvanceToken @lhs.nextTokenPos @mtok.copy)
-        loc.copy = MToken @loc.mpos @mtok.copy
+        -- Note: the const is here to avoid a "defined but not used" warning in the generated hs
+        -- file.
+        loc.copy = MToken (const @loc.mpos @mpos) @mtok.copy
 
         -- Warnings from tokens
         lhs.warnings = @mtok.customWarnings ++ map (mTokenWarning @loc.mpos) @mtok.tokenWarnings
@@ -257,8 +260,7 @@ inh_MTokenList conf =
 lintWarnings        :: LintSettings -> [MToken] -> [String -> LintMessage]
 lintWarnings conf p = warnings_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) (inh_MTokenList conf))
 
--- Necessary because uu-parsinglib's LineColPos walks over tabs as though they are 8 spaces. Note
--- that this also applies when the code is lexed by the Parsec lexer.
+-- Necessary because the parser walks over tabs as though they are 8 spaces.
 fixedLexPositions   :: [MToken] -> [MToken]
 fixedLexPositions p = copy_Syn_MTokenList (wrap_MTokenList (sem_MTokenList p) (inh_MTokenList defaultLintSettings))
 }

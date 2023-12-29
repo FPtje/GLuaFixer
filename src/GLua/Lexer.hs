@@ -3,9 +3,10 @@
 
 module GLua.Lexer where
 
-import GLua.AG.Token (MToken (..), Region (..), Token (..))
+import GLua.AG.Token (MToken (..), Token (..))
 
 import Data.Char (ord)
+import GLua.Position (LineColPos (..), Region (..))
 import Text.Parsec (
   ParseError,
   SourcePos,
@@ -35,7 +36,6 @@ import Text.Parsec (
  )
 import Text.Parsec.Pos (newPos)
 import Text.Parsec.String (Parser)
-import Text.ParserCombinators.UU.BasicInstances (LineColPos (..))
 
 -- | Region start to SourcePos
 rgStart2sp :: Region -> SourcePos

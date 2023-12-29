@@ -8,11 +8,11 @@
 -- | Contains class instances and functions related to tokens
 module GLua.TokenTypes where
 
-import Data.Aeson
-import Data.List
-import GHC.Generics
-import GLua.AG.Token
-import Text.ParserCombinators.UU.BasicInstances
+import Data.Aeson (FromJSON, ToJSON)
+import Data.List (foldl', partition)
+import GHC.Generics (Generic)
+import GLua.AG.Token (MToken (..), Token (..))
+import GLua.Position (LineColPos (..), Region (..))
 
 instance Show MToken where
   show (MToken _ tok) = show tok
@@ -30,41 +30,6 @@ deriving instance Generic MToken
 instance ToJSON MToken
 instance FromJSON MToken
 
-instance Eq LineColPos where
-  (LineColPos l c p) == (LineColPos l' c' p') = l == l' && c == c' && p == p'
-
-instance Ord LineColPos where
-  compare (LineColPos l c _) (LineColPos l' c' _) =
-    compare l l' `mappend` compare c c'
-
-instance ToJSON LineColPos where
-  -- this generates a Value
-  toJSON (LineColPos line col p) =
-    object ["line" .= line, "column" .= col, "pos" .= p]
-
-#if MIN_VERSION_aeson(0,10,0)
-  -- this encodes directly to a bytestring Builder
-  toEncoding (LineColPos line col p) =
-    pairs ("line" .= line <> "column" .= col <> "pos" .= p)
-#endif
-
-instance FromJSON LineColPos where
-  parseJSON = withObject "LineColPos" $ \v ->
-    LineColPos
-      <$> v .: "line"
-      <*> v .: "column"
-      <*> v .: "pos"
-
-instance Eq Region where
-  Region s e == Region s' e' = s == s' && e == e'
-
-instance Ord Region where
-  compare (Region s e) (Region s' e') =
-    compare s s' `mappend` compare e e'
-
-instance ToJSON Region
-instance FromJSON Region
-
 instance ToJSON Token
 instance FromJSON Token
 
@@ -76,14 +41,6 @@ mpos (MToken p _) = p
 
 mtok :: MToken -> Token
 mtok (MToken _ t) = t
-
-emptyRg :: Region
-emptyRg = Region (LineColPos 0 0 0) (LineColPos 0 0 0)
-
-rgOr :: Region -> Region -> Region
-rgOr l r
-  | l == emptyRg = r
-  | otherwise = l
 
 ----------------------------------------
 --  Correcting token positions
@@ -113,12 +70,6 @@ beforeEnd (Region _ (LineColPos _ _ p)) (Region _ (LineColPos _ _ p')) = p < p'
 -- | Whether the first region ends before or on the same line as the END of the second region
 beforeEndLine :: Region -> Region -> Bool
 beforeEndLine (Region _ (LineColPos l _ _)) (Region _ (LineColPos l' _ _)) = l <= l'
-
-rgStart :: Region -> LineColPos
-rgStart (Region s _) = s
-
-rgEnd :: Region -> LineColPos
-rgEnd (Region _ e) = e
 
 -- | Returns a region that starts at the start of the first region
 -- and ends BEFORE the start of the second region

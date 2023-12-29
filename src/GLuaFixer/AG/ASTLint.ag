@@ -16,6 +16,7 @@ import qualified Data.Set as S
 import qualified Data.Map.Strict as M
 import Data.Char (isLower, isUpper)
 import Data.Maybe
+import GLua.Position (LineColPos(..), Region(..))
 import GLuaFixer.LintMessage
 import GLuaFixer.LintSettings
 }
@@ -148,7 +149,7 @@ attr AllStuff MToken MTokenList
 attr Block
     inh isRepeat :: Bool -- Scopes should not be popped and certain errors are not to be thrown when this is the body of a repeat
 
-attr AllStuff MToken MTokenList Token TokenList Region
+attr AllStuff MToken MTokenList Token TokenList
     syn warnings use {++} {[]} :: {[String -> LintMessage]}
     syn copy :: self
     syn identifier use {const} {unknownIdentifier} :: String -- identifier of the first token
@@ -223,11 +224,11 @@ sem Token
 
 sem MToken
     | MToken
-        lhs.mtokenPos           = @mpos.copy
+        lhs.mtokenPos           = @mpos
         lhs.mtok                = @mtok.copy
         lhs.identifier          = @mtok.identifier
         +warnings               = if not (lint_goto_identifier @lhs.config) || @mtok.identifier /= "goto" then id else
-                                    (:) $ warn @mpos.copy GotoAsIdentifier
+                                    (:) $ warn @mpos GotoAsIdentifier
 
 sem MTokenList MStatList MExprList FieldList VarsList
     | Cons
@@ -305,8 +306,8 @@ sem Block
 
 sem MStat
     | MStat
-        lhs.mtokenPos           = @pos.copy
-        stat.mtokenPos          = @pos.copy
+        lhs.mtokenPos           = @pos
+        stat.mtokenPos          = @pos
 
 sem Stat
     | Def
@@ -472,8 +473,8 @@ sem ElseIfList
 
 sem MElseIf
     | MElseIf
-        elif.mtokenPos = @pos.copy
-        lhs.mtokenPos = @pos.copy
+        elif.mtokenPos = @pos
+        lhs.mtokenPos = @pos
 
 sem ElseIf
     | Tuple
@@ -489,7 +490,7 @@ sem ElseIf
 sem MElse
     | MElse
         body.isRepeat           = False
-        lhs.mtokenPos           = @pos.copy
+        lhs.mtokenPos           = @pos
 
 sem Else
     | Just
@@ -502,7 +503,7 @@ sem AReturn
     | AReturn
         values.inParentheses    = True
         values.topLevel         = True
-        lhs.mtokenPos           = @pos.copy
+        lhs.mtokenPos           = @pos
     | NoReturn
         lhs.statementCount      = 0
 
@@ -566,8 +567,8 @@ sem PFExprSuffix
 
 sem MExpr
     | MExpr
-        lhs.mtokenPos           = @pos.copy
-        expr.mtokenPos          = @pos.copy
+        lhs.mtokenPos           = @pos
+        expr.mtokenPos          = @pos
 
 sem Expr
     | ANil

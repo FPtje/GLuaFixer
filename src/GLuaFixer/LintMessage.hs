@@ -7,12 +7,11 @@ import Control.Monad
 import Data.Aeson
 import Data.List (sortOn)
 import Data.Maybe (isJust)
+import GLua.AG.PrettyPrint (renderPSError, renderPos, renderRegion)
+import GLua.AG.Token (Token)
+import GLua.Position (LineColPos (..), Region (..))
 import System.Environment (lookupEnv)
 import Text.Parsec (ParseError)
-import Text.ParserCombinators.UU.BasicInstances hiding (msgs)
-
-import GLua.AG.PrettyPrint
-import GLua.AG.Token
 
 -- | Output formats for logging
 data LogFormat = StandardLogFormat | GithubLogFormat

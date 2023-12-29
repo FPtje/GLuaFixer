@@ -16,7 +16,7 @@ import qualified Effectful.State.Static.Local as State
 import GHC.Exts (sortWith)
 import GLua.AG.AST (AST)
 import GLua.AG.PrettyPrint (renderRegion)
-import GLua.AG.Token (Region)
+import GLua.Position (Region)
 import GLuaFixer.AG.ASTLint (globalDefinitions)
 import GLuaFixer.Effects.Logging (Logging, putStrLnStdOut)
 import GLuaFixer.LintSettings (LintSettings)

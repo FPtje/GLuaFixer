@@ -5,12 +5,12 @@ imports
 import Prelude hiding ((<>))
 import Data.List (foldl', isInfixOf)
 import GLua.AG.AST
+import GLua.Position
 import Text.PrettyPrint hiding (parens, brackets, braces)
 import GLua.TokenTypes
 import Data.Maybe
 import Text.Parsec
 import Text.Parsec.Error
-import Text.ParserCombinators.UU.BasicInstances hiding (pos)
 import Debug.Trace
 }
 
@@ -122,38 +122,6 @@ getAReturnPos NoReturn = "<unknown>"
 
 getMExprPos :: MExpr -> String
 getMExprPos (MExpr p _) = renderRegion p
-
-renderError :: Error LineColPos -> String
-renderError (Inserted str pos strs) =
-    renderPos pos
-    ++ ": Inserted '"
-    ++ str
-    ++ "'."
-    ++ render_expecting strs
-renderError (Deleted str pos strs) =
-    renderPos pos
-    ++ ": Removed '"
-    ++ str
-    ++ "'. "
-    ++render_expecting strs
-renderError (Replaced str1 str2 pos strs) =
-    renderPos pos
-    ++ ": Replaced '"
-    ++ str1
-    ++ "' with '"
-    ++ str2
-    ++ "' at "
-    ++ renderPos pos
-    ++ render_expecting strs
-renderError (DeletedAtEnd str) =
-    "Deleted '"
-    ++ str
-    ++ "' at the end of the Lua file because the parser doesn't know what to do with it."
-
-render_expecting :: [String] -> String
-render_expecting [a] = "Parser expected a " ++ a
-render_expecting (a:as) = "Parser expected one of [" ++ a ++ concat (map (", " ++) as) ++ "]"
-render_expecting [] = "Parser expected nothing"
 
 renderPSError :: ParseError -> String
 renderPSError ps =

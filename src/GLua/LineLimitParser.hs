@@ -4,8 +4,8 @@ module GLua.LineLimitParser where
 
 import Control.Applicative ((<|>))
 import Control.Monad (void)
-import GLua.AG.Token (Region (Region))
 import GLua.Lexer (pPos)
+import GLua.Position (Region (..))
 import GLuaFixer.LintMessage (Issue (LineTooLong), LintMessage (..), Severity (LintWarning))
 import Text.Parsec (endOfLine, eof, parse, satisfy, skipMany1)
 import Text.Parsec.String (Parser)

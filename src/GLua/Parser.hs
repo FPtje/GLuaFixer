@@ -27,19 +27,17 @@ import GLua.AG.AST (
  )
 import GLua.AG.Token (
   MToken (..),
-  Region (..),
   Token (..),
  )
 import qualified GLua.Lexer as Lex
 import GLua.TokenTypes (
   isWhitespace,
   mpos,
-  rgEnd,
-  rgStart,
   splitComments,
   tokenSize,
  )
 
+import GLua.Position (LineColPos (..), Region (..))
 import Text.Parsec (
   ParseError,
   Parsec,
@@ -69,7 +67,6 @@ import Text.Parsec (
   (<|>),
  )
 import Text.Parsec.Pos (newPos)
-import Text.ParserCombinators.UU.BasicInstances (LineColPos (..))
 
 type AParser = Parsec [MToken] LineColPos
 
