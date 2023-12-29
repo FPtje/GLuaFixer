@@ -33,7 +33,7 @@ type Else      = maybe MElse
 data AST          | AST comments :: {[MToken]} chunk :: Block
 
 -- Block of code
-data Block        | Block  stats :: MStatList    ret :: AReturn
+data Block        | Block pos :: Region stats :: MStatList ret :: AReturn
 
 data MStat        | MStat    pos :: Region  stat :: Stat
 

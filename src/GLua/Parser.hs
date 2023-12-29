@@ -151,9 +151,9 @@ pMToken cond =
 
       pure res
 
--- | Get the source position
--- Simply gets the position of the next token
--- Falls back on the collected position when there is no token left
+-- | Get the source position.
+-- Simply gets the start position of the next token.
+-- Falls back on the collected position when there is no token left.
 pPos :: AParser LineColPos
 pPos = rgStart . mpos <$> lookAhead anyToken <|> sp2lcp <$> getPosition
 
@@ -174,7 +174,15 @@ parseChunk cms = AST cms <$> parseBlock <* eof
 
 -- | Parse a block with an optional return value
 parseBlock :: AParser Block
-parseBlock = Block <$> pInterleaved (pMTok Semicolon) parseMStat <*> (parseReturn <|> return NoReturn)
+parseBlock = do
+  -- using 'pEndPos' here, to make sure the region starts right at the end of the last token. This
+  -- is to make sure it captures the whitespace too.
+  start <- pEndPos
+  mStats <- pInterleaved (pMTok Semicolon) parseMStat
+  returnStatement <- parseReturn <|> return NoReturn
+  -- Using 'pPos' here, to make sure the region also includes the whitespace
+  end <- pPos
+  pure $ Block (Region start end) mStats returnStatement
 
 parseMStat :: AParser MStat
 parseMStat = annotated MStat parseStat
