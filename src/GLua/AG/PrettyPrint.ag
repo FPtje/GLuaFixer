@@ -629,10 +629,13 @@ sem Block
     | Block
         lhs.pretty =
            if @loc.isMultiline
-           then @stats.pretty $+$ @ret.pretty
+           then @stats.pretty $+$ @ret.pretty $+$ @loc.prettyCommentsAfter
            else @stats.pretty <-> @ret.pretty
         loc.statementCount = @stats.statementCount + @ret.statementCount
-        loc.isMultiline = @stats.isMultiline || @ret.isMultiline || @loc.statementCount > 1
+        loc.isMultiline = @stats.isMultiline || @ret.isMultiline || @loc.statementCount > 1 || not (null $ fst $ @loc.commentsAfter)
+        loc.commentsAfter = span (\(MToken pos _) -> pos `beforeEnd` @pos) @ret.comments
+        loc.prettyCommentsAfter = renderMLComments @lhs.ppconf @lhs.indent $ fst @loc.commentsAfter
+        lhs.comments = snd @loc.commentsAfter
 
 sem Stat
     | Def
