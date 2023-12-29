@@ -56,6 +56,8 @@ end
 local function foo() -- same-line-comment
 end
 
+-- Rendering of comments after return (or instead of return) reported here:
+-- https://github.com/FPtje/GLuaFixer/issues/170#issuecomment-1828253356
 function foo()
     -- Comment before return
     return 1, 2, 3 -- comment on same line as return

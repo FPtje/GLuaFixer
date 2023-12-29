@@ -1,5 +1,7 @@
 a(
     {b},
-    function() end, -- comment
+    function()
+        -- comment
+    end,
     function() end
 )
