@@ -55,31 +55,6 @@ customAdvanceStr = foldl' customAdvanceChr
 customAdvanceToken :: LineColPos -> Token -> LineColPos
 customAdvanceToken (LineColPos line pos' abs') t = let len = tokenSize t in LineColPos line (pos' + len) (abs' + len)
 
--- | Whether the first region ends strictly before the second region starts
-before :: Region -> Region -> Bool
-before (Region _ (LineColPos _ _ p)) (Region (LineColPos _ _ p') _) = p < p'
-
--- | Whether the first region ends before or on the same line as the second region
-beforeOrOnLine :: Region -> Region -> Bool
-beforeOrOnLine (Region _ (LineColPos l _ _)) (Region (LineColPos l' _ _) _) = l <= l'
-
--- | Whether the first region ends before the second region ends
-beforeEnd :: Region -> Region -> Bool
-beforeEnd (Region _ (LineColPos _ _ p)) (Region _ (LineColPos _ _ p')) = p < p'
-
--- | Whether the first region ends before or on the same line as the END of the second region
-beforeEndLine :: Region -> Region -> Bool
-beforeEndLine (Region _ (LineColPos l _ _)) (Region _ (LineColPos l' _ _)) = l <= l'
-
--- | Returns a region that starts at the start of the first region
--- and ends BEFORE the start of the second region
-upto :: Region -> Region -> Region
-upto lr rr = case (rgEnd lr, rgStart rr) of
-  (_, LineColPos 0 0 0) -> lr
-  (LineColPos l c _, LineColPos l' c' _)
-    | l' > l || (l' == l && c' > c) -> lr
-    | otherwise -> Region (rgStart lr) (rgStart rr)
-
 -- | Fold over metatoken
 foldMToken :: MTokenAlgebra t -> MToken -> t
 foldMToken alg (MToken p t) = alg p t
