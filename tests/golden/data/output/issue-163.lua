@@ -7,22 +7,12 @@ timer.Create("name", 30, 0)
 func(function() if true then return end end)
 func(function() anything() end)
 -- These, on the other hand, _should_ be marked as multiline
-timer.Create(
-    "name",
-    30,
-    0,
-    function()
-        -- comment here
-        if true then return end
-    end
-)
+timer.Create("name", 30, 0, function()
+    -- comment here
+    if true then return end
+end)
 
-timer.Create(
-    "name",
-    30,
-    0,
-    function()
-        a = 1
-        return
-    end
-)
+timer.Create("name", 30, 0, function()
+    a = 1
+    return
+end)

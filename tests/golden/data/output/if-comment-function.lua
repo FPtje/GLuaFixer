@@ -4,11 +4,8 @@ function foo()
     end
 end
 
-timer.Simple(
-    60,
-    function()
-        if IsValid(ply) then -- This comment should not eat the end
-            a = 1
-        end
+timer.Simple(60, function()
+    if IsValid(ply) then -- This comment should not eat the end
+        a = 1
     end
-)
+end)
