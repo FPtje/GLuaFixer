@@ -419,7 +419,8 @@ sem MStat
 
 sem MExprList
     | Cons
-        lhs.pretty =
+        lhs.pretty = if @lhs.forceMultiline then @loc.prettyForcedMultiline else @loc.prettyNotForcedMultiline
+        loc.prettyNotForcedMultiline =
             -- If there are comments before the line, render the this part as multiline
             (if @loc.startsWithNewline then
                 zchr '\n' <>
@@ -434,6 +435,12 @@ sem MExprList
                   indent @lhs.ppconf (@lhs.indent + 1) @tl.pretty
                 else
                   @tl.pretty)
+        loc.prettyForcedMultiline =
+            renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBeforeLine)
+            $+$ indent @lhs.ppconf (@lhs.indent) @hd.pretty
+            <> @loc.comma
+            <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
+            $+$ @tl.pretty
         loc.comma =
            if @tl.isLast then
                empty
@@ -1073,10 +1080,16 @@ sem Expr
 
 sem Args
     | ListArgs
-        lhs.pretty = parens @lhs.ppconf @loc.emptyParams @args.pretty
+        lhs.pretty =
+            if @lhs.forceMultiline then
+                zchr '(' $+$
+                @args.pretty $+$
+                indent @lhs.ppconf @lhs.indent (zchr ')')
+            else
+                parens @lhs.ppconf @loc.emptyParams @args.pretty
         lhs.isMultiline = @args.isMultiline
         loc.emptyParams = toEmpty $ null @args.copy
-        args.indent = @lhs.indent
+        args.indent = if @lhs.forceMultiline then @lhs.indent + 1 else @lhs.indent
         args.someElementsInListAreMultiline = False
     | TableArg
         lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
