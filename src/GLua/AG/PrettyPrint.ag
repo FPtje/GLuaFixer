@@ -293,6 +293,11 @@ attr MaybeMExpr Declaration VarsList
 attr MStatList MExprList VarsList
     syn isLast :: Bool
 
+attr MExprList
+    -- The presence of comments can cause an MExpr in an MExprList to be printed on a new line. This
+    -- can affect e.g. AReturn, which should then not print a space after the word `return`.
+    syn startsWithNewline :: Bool
+
 attr MExprList FieldList
     -- Normally, the decision on whether something is multiline is synthesized, i.e. it bubbles up.
     -- With lists, this decision can also flow downwards. This happens when one element in the list
@@ -414,25 +419,30 @@ sem MStat
 
 sem MExprList
     | Cons
-        lhs.pretty = if @loc.isMultiline then @loc.prettyMultiLine else @loc.prettySingleLine
-        loc.prettySingleLine =
-           @hd.pretty
-           <> @loc.comma
-           <> @tl.pretty
-        loc.prettyMultiLine =
-           renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBeforeLine)
-           $+$ indent @lhs.ppconf @lhs.indent @hd.pretty
-           <> @loc.comma
-           <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
-           $+$ @tl.pretty
+        lhs.pretty =
+            -- If there are comments before the line, render the this part as multiline
+            (if @loc.startsWithNewline then
+                zchr '\n' <>
+                renderMLComments @lhs.ppconf (@lhs.indent + 1) (fst @loc.commentsBeforeLine) $+$
+                indent @lhs.ppconf (@lhs.indent + 1) @hd.pretty
+            else
+                @hd.pretty)
+            <> @loc.comma
+            -- If there are comments after the expression, render as multiline
+            <> (if (not $ null $ fst @loc.commentsAfter) then
+                  renderSLComments @lhs.ppconf (@lhs.indent + 1) (fst @loc.commentsAfter) $+$
+                  indent @lhs.ppconf (@lhs.indent + 1) @tl.pretty
+                else
+                  @tl.pretty)
         loc.comma =
            if @tl.isLast then
                empty
            else
                (if spaceBeforeComma @lhs.ppconf then zchr ' ' else empty)
                <> zchr ','
-               <> (if not @loc.isMultiline && spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
+               <> (if spaceAfterComma @lhs.ppconf then zchr ' ' else empty)
 
+        loc.startsWithNewline = not $ null $ fst @loc.commentsBeforeLine
         loc.commentsBeforeLine = span (\(MToken pos' _) -> pos' `before` @hd.pos) @lhs.comments
         hd.comments = snd @loc.commentsBeforeLine
         loc.commentsAfter = span (\(MToken pos' _) -> pos' `before` @tl.pos) @hd.comments
@@ -462,6 +472,7 @@ sem MExprList
         lhs.pos = emptyRg
         lhs.isMultiline = False
         lhs.isLast = True
+        lhs.startsWithNewline = False
 
 sem FieldList
     | Cons
@@ -866,13 +877,14 @@ sem AReturn
         lhs.pretty =
            renderMLComments @lhs.ppconf @lhs.indent (fst @loc.commentsBefore)
            $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "return")
-           <-> @values.pretty
+           `@loc.sep` @values.pretty
            <> @loc.semicolon
            <-> renderSLComments @lhs.ppconf @lhs.indent (fst @loc.commentsAfter)
         lhs.isMultiline =
            @values.isMultiline
            || not (null $ fst @loc.commentsBefore)
            || not (null $ fst @loc.commentsAfter)
+        loc.sep = if @values.startsWithNewline then (<>) else (<->)
         loc.semicolon = if semicolons @lhs.ppconf then zchr ';' else empty
         loc.commentsBefore = span (\(MToken pos _) -> pos `before` @pos) @lhs.comments
         values.comments = snd @loc.commentsBefore
@@ -1061,16 +1073,10 @@ sem Expr
 
 sem Args
     | ListArgs
-        lhs.pretty =
-            if @args.isMultiline then
-                zchr '(' $+$
-                @args.pretty $+$
-                indent @lhs.ppconf @lhs.indent (zchr ')')
-            else
-                parens @lhs.ppconf @loc.emptyParams @args.pretty
+        lhs.pretty = parens @lhs.ppconf @loc.emptyParams @args.pretty
         lhs.isMultiline = @args.isMultiline
         loc.emptyParams = toEmpty $ null @args.copy
-        args.indent = if @args.isMultiline then @lhs.indent + 1 else 0
+        args.indent = @lhs.indent
         args.someElementsInListAreMultiline = False
     | TableArg
         lhs.pretty = if @arg.isMultiline then @loc.prettyMulti else @loc.prettySingle
