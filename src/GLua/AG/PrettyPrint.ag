@@ -306,7 +306,7 @@ attr MExprList FieldList
 attr MStat Stat
     inh isLastStatement :: Bool
 
-attr MStat MExprList MExpr Field MElseIf ElseIfList MElse Else FuncName
+attr MStat MExprList MExpr Field MElseIf ElseIfList MElse Else FuncName Block
     syn pos :: Region
 
 attr MStatList MExprList FieldList MaybeMExpr Declaration VarsList ExprSuffixList ElseIf MElseIf
@@ -631,6 +631,7 @@ sem Block
            if @loc.isMultiline
            then @stats.pretty $+$ @ret.pretty $+$ @loc.prettyCommentsAfter
            else @stats.pretty <-> @ret.pretty
+        lhs.pos = @pos
         loc.statementCount = @stats.statementCount + @ret.statementCount
         loc.isMultiline = @stats.isMultiline || @ret.isMultiline || @loc.statementCount > 1 || not (null $ fst $ @loc.commentsAfter)
         loc.commentsAfter = span (\(MToken pos _) -> pos `beforeEnd` @pos) @ret.comments
@@ -733,6 +734,7 @@ sem Stat
            || @body.isMultiline
            || @elifs.elsesExist
            || @els.elsesExist
+           || not (null $ fst @loc.commentsAfterThen)
         lhs.startsWithExprPrefixExpression = False
         lhs.endsWithPrefixExpression = False
         loc.singleLinePretty =
@@ -753,7 +755,7 @@ sem Stat
            $+$ indent @lhs.ppconf @lhs.indent (zeroWidthText "end")
 
         loc.commentsAfterThen =
-            span (\(MToken pos _) -> pos `beforeOrOnLine` @cond.pos) @lhs.comments
+            span (\(MToken pos _) -> pos `beforeOrOnLine` @body.pos) @lhs.comments
         cond.comments = snd @loc.commentsAfterThen
 
         cond.parentOperatorPrecedence = TopLevelExpression

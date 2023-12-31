@@ -15,7 +15,10 @@ if false then --same-line comment
 end
 
 -- Comment before if-statement
-if true then return end --[[ multiline comment on same line]]
+if true then --[[ multiline comment on same line]]
+    return
+end
+
 -- Comment before if-statement
 if true then
     --[[ multiline comment on next line]]
@@ -36,7 +39,10 @@ end
 -- Comment before if-statement
 if true then return end
 -- comment after end
-if true or false then return end --[[ comment in condition]] -- single line comment in condition
+if true or false then --[[ comment in condition]] -- single line comment in condition
+    return
+end
+
 for var = 1, 10 do -- same-line comment
     -- print("TODO")
 end
