@@ -116,40 +116,25 @@ updatePosMToken _ _ (MToken p _ : _) = rgStart2sp p
 
 -- | Match a token
 pMTok :: Token -> AParser MToken
-pMTok tok =
-  do
-    let
-      testMToken :: MToken -> Maybe MToken
-      testMToken mt@(MToken _ t) = if t == tok then Just mt else Nothing
-
-    mt@(MToken pos _) <- tokenPrim show updatePosMToken testMToken
-
-    putState (rgEnd pos)
-
-    return mt
+pMTok tok = pMToken $ \mt@(MToken _ t) -> if t == tok then Just mt else Nothing
 
 -- Tokens that satisfy a condition
 pMSatisfy :: (MToken -> Bool) -> AParser MToken
-pMSatisfy cond =
-  do
-    let
-      testMToken :: MToken -> Maybe MToken
-      testMToken mt = if cond mt then Just mt else Nothing
-
-    pMToken testMToken
+pMSatisfy cond = pMToken $ \mt -> if cond mt then Just mt else Nothing
 
 pMToken :: forall a. (MToken -> Maybe a) -> AParser a
-pMToken cond =
-  let
+pMToken cond = do
+  (MToken pos _, res) <- tokenPrim (quote . show) updatePosMToken testMToken
+
+  putState (rgEnd pos)
+
+  pure res
+  where
     testMToken :: MToken -> Maybe (MToken, a)
     testMToken mt = (mt,) <$> cond mt
-  in
-    do
-      (MToken pos _, res) <- tokenPrim show updatePosMToken testMToken
 
-      putState (rgEnd pos)
-
-      pure res
+    quote :: String -> String
+    quote str = "\"" ++ str ++ "\""
 
 -- | Get the source position.
 -- Simply gets the start position of the next token.
@@ -197,7 +182,7 @@ parseReturn = annotated AReturn (pMTok Return *> option [] parseExpressionList <
 
 -- | Label
 parseLabel :: AParser MToken
-parseLabel = pMSatisfy isLabel <?> "label"
+parseLabel = pMSatisfy isLabel <?> "'label'"
   where
     isLabel :: MToken -> Bool
     isLabel (MToken _ (Label{})) = True
@@ -368,7 +353,7 @@ parseLocalVarList = sepBy1 (PFVar <$> pName <*> pure []) (pMTok Comma)
 parseParList :: AParser [MToken]
 parseParList = option [] $ nameParam <|> vararg
   where
-    vararg = (: []) <$> pMTok VarArg <?> "..."
+    vararg = (: []) <$> pMTok VarArg <?> "'...'"
     nameParam = (:) <$> pName <*> moreParams <?> "parameter"
     moreParams = option [] $ pMTok Comma *> (nameParam <|> vararg)
 

@@ -7,8 +7,9 @@ import Control.Monad
 import Data.Aeson
 import Data.List (sortOn)
 import Data.Maybe (isJust)
-import GLua.AG.PrettyPrint (renderPSError, renderPos, renderRegion)
+import GLua.AG.PrettyPrint (renderPos, renderRegion)
 import GLua.AG.Token (Token)
+import GLua.ParseError (renderParseError)
 import GLua.Position (LineColPos (..), Region (..))
 import System.Environment (lookupEnv)
 import Text.Parsec (ParseError)
@@ -128,7 +129,7 @@ instance Show LintMessage where
 
 issueDescription :: Issue -> String
 issueDescription = \case
-  IssueParseError parseError -> renderPSError parseError
+  IssueParseError parseError -> renderParseError parseError
   Deprecated reason -> "Deprecated: " ++ reason
   Profanity -> "Watch your profanity"
   BeginnerMistake msg -> msg

@@ -43,6 +43,7 @@ library
     GLua.ASTInstances
     GLua.Lexer
     GLua.LineLimitParser
+    GLua.ParseError
     GLua.Parser
     GLua.Position
     GLua.TokenTypes

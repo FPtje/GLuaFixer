@@ -123,21 +123,6 @@ getAReturnPos NoReturn = "<unknown>"
 getMExprPos :: MExpr -> String
 getMExprPos (MExpr p _) = renderRegion p
 
-renderPSError :: ParseError -> String
-renderPSError ps =
-        map replNL
-        . showErrorMessages
-            "or"
-            "unknown parse error"
-            "expecting"
-            "unexpected"
-            "end of input"
-        . errorMessages
-        $ ps
-    where
-        replNL '\n' = ' '
-        replNL c = c
-
 -- | Render comments on multiple lines
 renderMLComments :: PrettyPrintConfig -> Int -> [MToken] -> Doc
 renderMLComments conf ind toks =
