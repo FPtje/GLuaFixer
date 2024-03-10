@@ -63,6 +63,7 @@ import Text.Parsec (
   sourceLine,
   tokenPrim,
   try,
+  unexpected,
   (<?>),
   (<|>),
  )
@@ -518,7 +519,14 @@ pFunctionCall = pPrefixExp suffixes <?> "function call"
 -- var ::= Name [{PFExprSuffix}* indexation] | '(' exp ')' {PFExprSuffix}* indexation
 -- where "{PFExprSuffix}* indexation" is any arbitrary sequence of prefix expression suffixes that end with an indexation
 parseVar :: AParser PrefixExp
-parseVar = pPrefixExp suffixes <?> "variable"
+parseVar = do
+  variable <- pPrefixExp suffixes <?> "variable"
+
+  -- Special case: A definition `(foo) = bar` is not allowed, but `(foo)[index] = bar` _is_ allowed.
+  -- If it's an ExprVar, it must have suffixes.
+  case variable of
+    ExprVar _someExpression [] -> unexpected "expression in parentheses"
+    _ -> pure variable
   where
     suffixes =
       concat
