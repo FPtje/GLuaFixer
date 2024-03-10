@@ -7,6 +7,7 @@
 module GLua.TokenTypes where
 
 import Data.Aeson (FromJSON, ToJSON)
+import qualified Data.Aeson as Aeson
 import Data.List (foldl', partition)
 import GHC.Generics (Generic)
 import GLua.AG.Token (MToken (..), Token (..))
@@ -25,11 +26,22 @@ instance Ord MToken where
 
 deriving instance Generic MToken
 
-instance ToJSON MToken
-instance FromJSON MToken
+encodingOptions :: Aeson.Options
+encodingOptions =
+  Aeson.defaultOptions
+    { Aeson.omitNothingFields = True
+    , Aeson.sumEncoding = Aeson.ObjectWithSingleField
+    }
 
-instance ToJSON Token
-instance FromJSON Token
+instance ToJSON MToken where
+  toEncoding = Aeson.genericToEncoding encodingOptions
+instance FromJSON MToken where
+  parseJSON = Aeson.genericParseJSON encodingOptions
+
+instance ToJSON Token where
+  toEncoding = Aeson.genericToEncoding encodingOptions
+instance FromJSON Token where
+  parseJSON = Aeson.genericParseJSON encodingOptions
 
 mpos :: MToken -> Region
 mpos (MToken p _) = p
