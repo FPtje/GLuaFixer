@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: project
 
       - name: Get GluaLint Download Link
         id: download-link
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           retries: 5
           script: |
