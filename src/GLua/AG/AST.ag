@@ -1,6 +1,5 @@
 optpragmas
 {
-{-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 }
 
@@ -11,7 +10,6 @@ imports
 import GLua.AG.Token
 import GLua.Position
 import GLua.TokenTypes ()
-import GHC.Generics
 import Data.Aeson
 }
 
@@ -143,23 +141,23 @@ data UnOp         | UnMinus
 
 
 
-deriving AST : Generic, Show
-deriving Block : Generic, Show
-deriving MStat : Generic, Show
-deriving MElse : Generic, Show
-deriving MElseIf : Generic, Show
-deriving Stat : Generic, Show
-deriving AReturn : Generic, Show
-deriving FuncName : Generic, Show
-deriving PrefixExp : Generic, Show
-deriving PFExprSuffix : Generic, Show
-deriving MExpr : Generic, Show
-deriving Expr : Generic, Show
-deriving Args : Generic, Show
-deriving Field : Generic, Show
-deriving FieldSep : Generic, Show, Eq
-deriving BinOp : Generic, Show, Eq, Ord
-deriving UnOp : Generic, Show
+deriving AST : Show
+deriving Block : Show
+deriving MStat : Show
+deriving MElse : Show
+deriving MElseIf : Show
+deriving Stat : Show
+deriving AReturn : Show
+deriving FuncName : Show
+deriving PrefixExp : Show
+deriving PFExprSuffix : Show
+deriving MExpr : Show
+deriving Expr : Show
+deriving Args : Show
+deriving Field : Show
+deriving FieldSep : Show, Eq
+deriving BinOp : Show, Eq, Ord
+deriving UnOp : Show
 
 set StatementStuff  = Block MStatList MStat Stat AReturn
 set IfStuff         = MElseIf ElseIf ElseIfList Else MElse

@@ -41,6 +41,7 @@ library
     GLua.AG.PrettyPrint
     GLua.AG.Token
     GLua.ASTInstances
+    GLua.EncodingOptions
     GLua.Lexer
     GLua.LineLimitParser
     GLua.ParseError

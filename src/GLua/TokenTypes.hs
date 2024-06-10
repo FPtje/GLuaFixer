@@ -1,16 +1,15 @@
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Contains class instances and functions related to tokens
 module GLua.TokenTypes where
 
-import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.Aeson as Aeson
+import Data.Aeson.TH (deriveJSON)
 import Data.List (foldl', partition)
-import GHC.Generics (Generic)
 import GLua.AG.Token (MToken (..), Token (..))
+import GLua.EncodingOptions (encodingOptions)
 import GLua.Position (LineColPos (..), Region (..))
 
 instance Show MToken where
@@ -23,25 +22,6 @@ instance Eq MToken where
 -- | Simple Ord instance. TODO: check for position Ord
 instance Ord MToken where
   compare (MToken _ t1) (MToken _ t2) = compare t1 t2
-
-deriving instance Generic MToken
-
-encodingOptions :: Aeson.Options
-encodingOptions =
-  Aeson.defaultOptions
-    { Aeson.omitNothingFields = True
-    , Aeson.sumEncoding = Aeson.ObjectWithSingleField
-    }
-
-instance ToJSON MToken where
-  toEncoding = Aeson.genericToEncoding encodingOptions
-instance FromJSON MToken where
-  parseJSON = Aeson.genericParseJSON encodingOptions
-
-instance ToJSON Token where
-  toEncoding = Aeson.genericToEncoding encodingOptions
-instance FromJSON Token where
-  parseJSON = Aeson.genericParseJSON encodingOptions
 
 mpos :: MToken -> Region
 mpos (MToken p _) = p
@@ -226,3 +206,6 @@ tokenSize = \case
   RSquare -> 1
   Label spaceBefore ident spaceAfter -> 2 + length spaceBefore + length ident + length spaceAfter + 2
   Identifier i -> length i
+
+$(deriveJSON encodingOptions ''Token)
+$(deriveJSON encodingOptions ''MToken)

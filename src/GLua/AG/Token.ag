@@ -1,13 +1,11 @@
 optpragmas
 {
-{-# LANGUAGE DeriveGeneric #-}
 {-# OPTIONS_GHC -fno-warn-unused-imports #-}
 }
 module {GLua.AG.Token}{}{}
 
 imports
 {
-import GHC.Generics
 import GLua.Position
 }
 
@@ -91,4 +89,4 @@ data Token
 data MToken
 	| MToken mpos :: Region mtok :: Token
 
-deriving Token : Generic, Eq, Ord
+deriving Token : Eq, Ord

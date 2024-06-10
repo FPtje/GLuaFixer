@@ -1,5 +1,4 @@
 {-# LANGUAGE CPP #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Reimplements the LineColPos from `uu-parsinglib`, and adds some more functions related to
@@ -8,7 +7,6 @@ module GLua.Position where
 
 import Data.Aeson
 import Data.Foldable (toList)
-import GHC.Generics (Generic)
 
 data LineColPos = LineColPos {lcpLine :: !Int, lcpColumn :: !Int, lcpPos :: !Int}
   deriving (Eq, Show)
@@ -35,7 +33,7 @@ instance FromJSON LineColPos where
       _ -> fail "Expected tuple of line, column, position"
 
 data Region = Region {rgStart :: !LineColPos, rgEnd :: !LineColPos}
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show)
 
 -- Ord instance defined explicitly for clarity.
 instance Ord Region where
