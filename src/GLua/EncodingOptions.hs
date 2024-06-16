@@ -1,7 +1,7 @@
 -- | Json encoding options
 module GLua.EncodingOptions where
 
-import qualified Data.Aeson    as Aeson
+import qualified Data.Aeson as Aeson
 
 -- | Default glualint json encoding options
 encodingOptions :: Aeson.Options
