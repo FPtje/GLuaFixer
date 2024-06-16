@@ -217,7 +217,7 @@ parseKeyword tok str =
   try
     ( do
         _ <- string str
-        (\s -> Identifier (str ++ s)) <$> many1 (pIdentifierCharacter)
+        (\s -> Identifier (str ++ s)) <$> many1 pIdentifierCharacter
           <|> return tok
         <?> "Keyword "
         ++ str
