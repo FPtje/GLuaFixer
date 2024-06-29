@@ -501,7 +501,7 @@ sem Else
                                     (:) $ warn @loc.elsePos EmptyElse
 sem AReturn
     | AReturn
-        values.inParentheses    = True
+        values.inParentheses    = False
         values.topLevel         = True
         lhs.mtokenPos           = @pos
     | NoReturn
@@ -549,7 +549,8 @@ sem PrefixExp
         lhs.hasSuffixes         = False
         expr.inParentheses      = True
         expr.topLevel           = True
-        +warnings               = if lint_redundantParentheses @lhs.config && null @suffixes.copy && (@lhs.inParentheses || (not @lhs.topLevel && @expr.isSimpleExpression))
+        +warnings               = if lint_redundantParentheses @lhs.config && null @suffixes.copy &&
+                                    ( @lhs.inParentheses || (not @lhs.topLevel && @expr.isSimpleExpression))
                                   then (:) $ warn @lhs.mtokenPos UnnecessaryParentheses
                                   else id
 
