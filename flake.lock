@@ -17,24 +17,42 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1680273054,
-        "narHash": "sha256-Bs6/5LpvYp379qVqGt9mXxxx9GSE789k3oFc+OAL07M=",
+        "lastModified": 1718490232,
+        "narHash": "sha256-0Fh3aJZuTJVmiiKY/5SyvHlfhZ3HeZTDUQnd+Fx6/Qo=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "3364b5b117f65fe1ce65a3cdd5612a078a3b31e3",
+        "rev": "ede5282c487a1fd2de64303ba59adad6726f1225",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "nixpkgs-unstable",
         "repo": "nixpkgs",
+        "rev": "ede5282c487a1fd2de64303ba59adad6726f1225",
         "type": "github"
       }
     },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "static-haskell-nix": "static-haskell-nix"
+      }
+    },
+    "static-haskell-nix": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1719753784,
+        "narHash": "sha256-Dg8ZXzTJ5wbxa8uc1MnAv4TuOfua2S6+wMUtu7m64dQ=",
+        "owner": "nh2",
+        "repo": "static-haskell-nix",
+        "rev": "d0f4678948b0e128e73ca4f5232b936bc02e38ef",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nh2",
+        "ref": "fp/fix-callPackage-dynamic-executables",
+        "repo": "static-haskell-nix",
+        "type": "github"
       }
     }
   },

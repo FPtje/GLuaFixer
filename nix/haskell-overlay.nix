@@ -5,10 +5,10 @@ let
   # https://github.com/UU-ComputerScience/uuagc/pull/11
   uuagc-source = fetchFromGitHub
     {
-      owner = "FPtje";
+      owner = "UU-ComputerScience";
       repo = "uuagc";
-      rev = "93783365b8e0771b092b9d99264227ca7c5d0823";
-      sha256 = "sha256-hvJ/GShwR1AvSofPmmR4FJMPUwUaCMiL1l1CKcKvQw0=";
+      rev = "7d1dcacb18846820f9f56bbf94209fd1c630fb97";
+      sha256 = "sha256-TbJbSRvGG/U5SCLgVICx82d5g2m42rZGFwuT4pX6a30=";
     };
 in
 {
