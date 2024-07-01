@@ -220,7 +220,7 @@ parseKeyword tok str =
         (\s -> Identifier (str ++ s)) <$> many1 pIdentifierCharacter
           <|> return tok
         <?> "Keyword "
-        ++ str
+          ++ str
     )
 
 -- | Parse just an identifier.

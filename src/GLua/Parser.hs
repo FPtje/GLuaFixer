@@ -368,19 +368,19 @@ parseSubExpression =
   ANil
     <$ pMTok Nil
     <|> AFalse
-    <$ pMTok TFalse
+      <$ pMTok TFalse
     <|> ATrue
-    <$ pMTok TTrue
+      <$ pMTok TTrue
     <|> parseNumber
     <|> AString
-    <$> parseString
+      <$> parseString
     <|> AVarArg
-    <$ pMTok VarArg
+      <$ pMTok VarArg
     <|> parseAnonymFunc
     <|> APrefixExpr
-    <$> parsePrefixExp
+      <$> parsePrefixExp
     <|> ATableConstructor
-    <$> parseTableConstructor
+      <$> parseTableConstructor
     <?> "expression"
 
 -- | Separate parser for anonymous function subexpression
@@ -487,9 +487,9 @@ pPFExprCallSuffix =
   Call
     <$> parseArgs
     <|> MetaCall
-    <$ pMTok Colon
-    <*> pName
-    <*> parseArgs
+      <$ pMTok Colon
+      <*> pName
+      <*> parseArgs
     <?> "function call"
 
 -- | Parse an indexing expression suffix
@@ -500,8 +500,8 @@ pPFExprIndexSuffix =
     <*> parseExpression
     <* pMTok RSquare
     <|> DotIndex
-    <$ pMTok Dot
-    <*> pName
+      <$ pMTok Dot
+      <*> pName
     <?> "indexation"
 
 -- | Function calls are prefix expressions, but the last suffix MUST be either a function call or a metafunction call
@@ -543,9 +543,9 @@ parseArgs =
     <*> option [] parseExpressionList
     <* pMTok RRound
     <|> TableArg
-    <$> parseTableConstructor
+      <$> parseTableConstructor
     <|> StringArg
-    <$> parseString
+      <$> parseString
     <?> "function arguments"
 
 -- | Table constructor
@@ -584,7 +584,7 @@ parseField =
     <*> parseExpression
     <|> parseNamedField
     <|> UnnamedField
-    <$> parseExpression
+      <$> parseExpression
     <?> "field"
 
 -- | Field separator, either comma or semicolon
