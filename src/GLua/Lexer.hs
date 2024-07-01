@@ -66,22 +66,17 @@ pIdentifierCharacter :: Parser Char
 pIdentifierCharacter = satisfy validChar
   where
     validChar :: Char -> Bool
-    validChar c =
-      cBetween c '0' '9'
-        || cBetween c 'A' 'Z'
-        || c == '_'
-        || cBetween c 'a' 'z'
-        || ord c >= 128
+    validChar c = cBetween c '0' '9' || nonDigitIdentifierCharacter c
 
 pNonDigitIdentifierCharacter :: Parser Char
-pNonDigitIdentifierCharacter = satisfy validChar
-  where
-    validChar :: Char -> Bool
-    validChar c =
-      cBetween c 'A' 'Z'
-        || c == '_'
-        || cBetween c 'a' 'z'
-        || ord c >= 128
+pNonDigitIdentifierCharacter = satisfy nonDigitIdentifierCharacter
+
+nonDigitIdentifierCharacter :: Char -> Bool
+nonDigitIdentifierCharacter c =
+  cBetween c 'A' 'Z'
+    || c == '_'
+    || cBetween c 'a' 'z'
+    || ord c >= 128
 
 cBetween :: Char -> Char -> Char -> Bool
 cBetween c left right = c >= left && c <= right
@@ -166,7 +161,7 @@ parseString =
 -- | Parse any kind of number.
 -- Except for numbers that start with a '.'. That's handled by parseDots to solve ambiguity.
 parseNumber :: Parser Token
-parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pBinary <|> pNumber) <*> (pLLULL <|> option "" parseNumberSuffix)) <?> "Number"
+parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pBinary <|> pNumber) <*> (pLLULL <|> option "" parseNumberSuffix)) <* lookAhead (satisfy $ not . nonDigitIdentifierCharacter) <?> "Number"
   where
     pNumber :: Parser String
     pNumber = (++) <$> many1 digit <*> option "" pDecimal
