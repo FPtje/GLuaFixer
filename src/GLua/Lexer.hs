@@ -5,6 +5,7 @@ module GLua.Lexer where
 
 import GLua.AG.Token (MToken (..), Token (..))
 
+import Control.Monad (void)
 import Data.Char (ord)
 import GLua.Position (LineColPos (..), Region (..))
 import Text.Parsec (
@@ -161,7 +162,7 @@ parseString =
 -- | Parse any kind of number.
 -- Except for numbers that start with a '.'. That's handled by parseDots to solve ambiguity.
 parseNumber :: Parser Token
-parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pBinary <|> pNumber) <*> (pLLULL <|> option "" parseNumberSuffix)) <* lookAhead (satisfy $ not . nonDigitIdentifierCharacter) <?> "Number"
+parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pBinary <|> pNumber) <*> (pLLULL <|> option "" parseNumberSuffix)) <* afterNumber <?> "Number"
   where
     pNumber :: Parser String
     pNumber = (++) <$> many1 digit <*> option "" pDecimal
@@ -194,6 +195,10 @@ parseNumber = TNumber <$> ((++) <$> (pHexadecimal <|> pBinary <|> pNumber) <*> (
 
     pULL :: Parser String
     pULL = "ULL" <$ oneOf ['U', 'u'] <* pLL
+
+    --
+    afterNumber :: Parser ()
+    afterNumber = lookAhead (void (satisfy (not . nonDigitIdentifierCharacter)) <|> eof)
 
 -- Parse the suffix of a number
 parseNumberSuffix :: Parser String
