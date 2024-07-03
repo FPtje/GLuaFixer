@@ -15,21 +15,17 @@ blocks:
       jobs:
         - name: Build
           commands:
-            - curl -L https://releases.nixos.org/nix/nix-2.12.0/install > install_nix.sh
-            - chmod +x install_nix.sh
-            - ./install_nix.sh --yes --daemon-user-count 1 --no-channel-add
-            - echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf
-            # Trusted user is needed for Nix to accept the glualint cachix as substituter
-            - echo "trusted-users = semaphore root" | sudo tee -a /etc/nix/nix.conf
-            # Restart Nix to enact trusted users
-            - sudo launchctl stop org.nixos.nix-daemon
-            - sudo launchctl start org.nixos.nix-daemon
-            - source /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
-            # Sleeping to make sure that Nix is available
-            - sleep 20
+            # GHCup options, can be found when downloading the script
+            - export BOOTSTRAP_HASKELL_NONINTERACTIVE=1
+            - export BOOTSTRAP_HASKELL_GHC_VERSION="9.6.6"
+            - curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
+            - source /Users/semaphore/.ghcup/env
             - checkout
-            - nix develop --accept-flake-config --profile dev-profile --command bash -c "cachix push glualint dev-profile && ./AGGenerator.sh && cabal v1-build"
-            - mv dist/build/glualint/glualint .
+            - cabal update
+            - cabal build --dependencies-only
+            - cabal exec bash ./AGGenerator.sh
+            - cabal build exe:glualint
+            - cp $(cabal list-bin glualint) .
             - TARNAME="glualint-$(./glualint --version)-OSX-x86_64.tar.gz"
             - cp installation-instructions/OSX.md installation_instructions.md
             - tar -zcvf $TARNAME glualint installation_instructions.md
