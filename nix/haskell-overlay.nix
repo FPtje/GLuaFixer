@@ -7,8 +7,8 @@ let
     {
       owner = "UU-ComputerScience";
       repo = "uuagc";
-      rev = "7d1dcacb18846820f9f56bbf94209fd1c630fb97";
-      sha256 = "sha256-TbJbSRvGG/U5SCLgVICx82d5g2m42rZGFwuT4pX6a30=";
+      rev = "e993213e5a4f09844863e536a9200dc0c046550d";
+      sha256 = "sha256-Fso+t3Hm2oXZCcuOzCfRbooCtA+7EG/+UjE58z6g7c0=";
     };
 in
 {
