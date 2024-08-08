@@ -14,6 +14,6 @@ makes sure that the library file can be found when running the executable.
 ## glualint on M1 devices
 
 Builds of `glualint` are only provided for the x86_64 version of OSX. If
-you have a device with an Apple Silicone (M1/M2/M3/etc.) chip, this compiled 
+you have a device with an Apple Silicon (M1/M2/M3/etc.) chip, this compiled 
 version of `glualint` requires you install Rosetta first. Follow the 
 instructions to install Rosetta here: https://support.apple.com/en-us/102527.
