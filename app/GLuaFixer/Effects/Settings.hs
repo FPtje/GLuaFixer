@@ -47,6 +47,7 @@ getSettings :: Settings :> es => FilePath -> Eff es LintSettings
 getSettings filepath = send $ GetSettings filepath
 
 newtype SettingsError = CouldNotParseSettings String
+  deriving (Eq, Show)
 
 -- | The default settings file
 settingsFile :: FilePath
