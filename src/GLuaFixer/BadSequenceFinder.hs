@@ -128,7 +128,6 @@ utilWarnings :: AParser String
 utilWarnings =
   libraryWarnings "util" $
     "Use tobool, without the util bit" <$ ident "tobool"
-      <|> "The function is broken" <$ ident "TraceEntityHull"
 
 -- | Warnings for things to do with self
 selfWarnings :: AParser String
