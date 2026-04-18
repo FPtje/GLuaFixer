@@ -17,8 +17,12 @@ jobs:
         with:
           name: glualint
           authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-      - name: Build Nix environment
+      - name: Build Nix environment (master)
+        if: github.ref == 'refs/heads/master'
         run: cachix watch-exec glualint -- nix print-dev-env --accept-flake-config .#ci > "$HOME/.devenv"
+      - name: Build Nix environment (PR)
+        if: github.ref != 'refs/heads/master'
+        run: nix print-dev-env --accept-flake-config .#ci > "$HOME/.devenv"
       - name: Activate Nix environment
         run: source "$HOME/.devenv" && env >> "$GITHUB_ENV"
 
