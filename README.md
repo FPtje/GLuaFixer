@@ -65,6 +65,7 @@ Example `glualint.json` with the default options:
     "lint_spaceBeforeComma": false,
     "lint_spaceAfterComma": false,
     "lint_maxLineLength": 0,
+    "lint_warningsAreErrors": true,
 
     "prettyprint_spaceBetweenParens": false,
     "prettyprint_spaceBetweenBrackets": false,
@@ -82,7 +83,6 @@ Example `glualint.json` with the default options:
     "prettyprint_indentation": "    ",
 
     "log_format": "auto",
-    "lint_warningsAreErrors": true
 }
 ```
 
