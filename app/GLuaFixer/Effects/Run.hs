@@ -28,7 +28,7 @@ import GLuaFixer.Effects.Interruptible (Interruptible, interruptibleFoldMStrict)
 import GLuaFixer.Effects.Logging (Logging, emitLintMessage, getLogFormat, putStrLnStdError, putStrLnStdOut, putStrStdOut)
 import GLuaFixer.Effects.Settings (Settings, SettingsError (CouldNotParseSettings), getSettingsForFile, runSettings, traceSettingsIfEnabled)
 import qualified GLuaFixer.Interface as Interface
-import GLuaFixer.LintMessage (sortLintMessages)
+import GLuaFixer.LintMessage (sortLintMessages, Severity (..), LintMessage (..))
 import GLuaFixer.LintSettings (
   LintSettings (..),
   StdInOrFiles (..),
@@ -249,8 +249,14 @@ lint lintSettings filepath contents = do
           let
             astLint = Interface.astLint filepath lintSettings ast
             msgs = sortLintMessages $ sourceLint ++ lextLint ++ astLint
+            hasErrors = any ((== LintError) . lintmsg_severity) msgs
+            hasWarnings = any ((== LintWarning) . lintmsg_severity) msgs
+            exitCode = case (hasErrors, hasWarnings) of
+              (True, _) -> ExitFailure 1
+              (_, True) | lintSettings.lint_warningsAreErrors -> ExitFailure 1
+              _ -> ExitSuccess
           mapM_ (emitLintMessage logFormat) msgs
-          pure $ if null msgs then ExitSuccess else ExitFailure 1
+          pure exitCode
 
 -- | Pretty print a file
 prettyprint
