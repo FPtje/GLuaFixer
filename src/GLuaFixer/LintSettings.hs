@@ -57,9 +57,9 @@ data LintSettings = LintSettings
   , lint_unusedVars :: !Bool
   , lint_unusedParameters :: !Bool
   , lint_unusedLoopVars :: !Bool
-, lint_inconsistentVariableStyle :: !Bool
-   , lint_warningsAreErrors :: !Bool
-   , lint_spaceBetweenParens :: !Bool
+  , lint_inconsistentVariableStyle :: !Bool
+  , lint_warningsAreErrors :: !Bool
+  , lint_spaceBetweenParens :: !Bool
   , lint_spaceBetweenBrackets :: !Bool
   , lint_spaceBetweenBraces :: !Bool
   , lint_spaceBeforeComma :: !Bool

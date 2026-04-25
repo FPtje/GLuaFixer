@@ -82,7 +82,7 @@ Example `glualint.json` with the default options:
     "prettyprint_assumeOperatorAssociativity": true,
     "prettyprint_indentation": "    ",
 
-    "log_format": "auto",
+    "log_format": "auto"
 }
 ```
 
