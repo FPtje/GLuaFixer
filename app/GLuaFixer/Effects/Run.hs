@@ -28,7 +28,7 @@ import GLuaFixer.Effects.Interruptible (Interruptible, interruptibleFoldMStrict)
 import GLuaFixer.Effects.Logging (Logging, emitLintMessage, getLogFormat, putStrLnStdError, putStrLnStdOut, putStrStdOut)
 import GLuaFixer.Effects.Settings (Settings, SettingsError (CouldNotParseSettings), getSettingsForFile, runSettings, traceSettingsIfEnabled)
 import qualified GLuaFixer.Interface as Interface
-import GLuaFixer.LintMessage (sortLintMessages, Severity (..), LintMessage (..))
+import GLuaFixer.LintMessage (LintMessage (..), Severity (..), sortLintMessages)
 import GLuaFixer.LintSettings (
   LintSettings (..),
   StdInOrFiles (..),
