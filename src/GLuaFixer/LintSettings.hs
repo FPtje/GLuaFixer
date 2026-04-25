@@ -57,8 +57,9 @@ data LintSettings = LintSettings
   , lint_unusedVars :: !Bool
   , lint_unusedParameters :: !Bool
   , lint_unusedLoopVars :: !Bool
-  , lint_inconsistentVariableStyle :: !Bool
-  , lint_spaceBetweenParens :: !Bool
+, lint_inconsistentVariableStyle :: !Bool
+   , lint_warningsAreErrors :: !Bool
+   , lint_spaceBetweenParens :: !Bool
   , lint_spaceBetweenBrackets :: !Bool
   , lint_spaceBetweenBraces :: !Bool
   , lint_spaceBeforeComma :: !Bool
@@ -106,6 +107,7 @@ defaultLintSettings =
     , lint_unusedParameters = False
     , lint_unusedLoopVars = False
     , lint_inconsistentVariableStyle = False
+    , lint_warningsAreErrors = True
     , lint_spaceBetweenParens = False
     , lint_spaceBetweenBrackets = False
     , lint_spaceBetweenBraces = False
@@ -153,6 +155,7 @@ instance FromJSON LintSettings where
       <*> v .:? "lint_unusedParameters" .!= lint_unusedParameters defaultLintSettings
       <*> v .:? "lint_unusedLoopVars" .!= lint_unusedLoopVars defaultLintSettings
       <*> v .:? "lint_inconsistentVariableStyle" .!= lint_inconsistentVariableStyle defaultLintSettings
+      <*> v .:? "lint_warningsAreErrors" .!= lint_warningsAreErrors defaultLintSettings
       <*>
       -- Backwards compatible change: accept both the newer spaceBetween and the older
       -- spaceAfter
@@ -234,6 +237,7 @@ instance ToJSON LintSettings where
       , "lint_unusedParameters" .= lint_unusedParameters ls
       , "lint_unusedLoopVars" .= lint_unusedLoopVars ls
       , "lint_inconsistentVariableStyle" .= lint_inconsistentVariableStyle ls
+      , "lint_warningsAreErrors" .= lint_warningsAreErrors ls
       , "lint_spaceBetweenParens" .= lint_spaceBetweenParens ls
       , "lint_spaceBetweenBrackets" .= lint_spaceBetweenBrackets ls
       , "lint_spaceBetweenBraces" .= lint_spaceBetweenBraces ls
