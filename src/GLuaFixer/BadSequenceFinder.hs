@@ -55,13 +55,6 @@ libraryWarnings s p = do
 
   p
 
--- | Warnings for the ai library
-aiWarnings :: AParser String
-aiWarnings =
-  libraryWarnings "ai" $
-    "The function is broken" <$ ident "GetScheduleID"
-      <|> "The function is broken" <$ ident "GetTaskID"
-
 -- | Warnings for the math library
 mathWarnings :: AParser String
 mathWarnings =
@@ -196,7 +189,6 @@ deprecatedSequence opts =
               -- Deprecated meta functions
               try metaFuncWarnings
                 -- Library functions
-                <|> try aiWarnings
                 <|> try mathWarnings
                 <|> try spawnmenuWarnings
                 <|> try stringWarnings
