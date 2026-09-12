@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# NOTE: Deprecated! Throws error from nix. Will require serious investigation to fix.
+
 # This script builds an aarch64-linux version of GLuaLint. This script is
 # designed to be called from a non-aarch64-linux device, to contact an
 # aarch64-linux device to do the actual building.
