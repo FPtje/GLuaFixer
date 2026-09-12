@@ -56,7 +56,12 @@ Attribute grammar sources (`.ag`) are compiled to Haskell by `uuagc`. Each `.ag`
 
 ## Release
 
-Release scripts at root: `release-linux.sh`, `release-aarch64-linux.sh` (requires `CACHIX_AUTH_TOKEN`). Uses Nix with static-haskell-nix for static binaries. OSX builds via Semaphore CI.
+1. Check if `CACHIX_AUTH_TOKEN` is in the environment. If not, stop immediately and ask to re-open harness with environment variable set.
+2. If not provided, ask what the version number should be. Mention the current version number from `glualint.cabal`
+3. Update the version in `glualint.cabal`, run `git add glualint.cabal && git commit -m "<version number here>"`. Do not push.
+4. Create a git tag with the name being just the version number. Do not push the tag
+5. Run the release scripts `release-linux.sh`, or `release-aarch64-linux.sh` (requires `CACHIX_AUTH_TOKEN`). Run the script that matches the current architecture.
+6. Generate a human readable changelog, based on the git commits since last release. Give it as answer, and ask for human to push commit and tags, and to then upload output files to GitHub's tag release at `https://github.com/FPtje/GLuaFixer/releases/tag/<version number>`. Ask the user to also run the release script for the other architecture and upload that.
 
 ## Gotchas
 
